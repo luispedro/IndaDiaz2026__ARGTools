@@ -21,3 +21,4 @@ split_data_resfinder.py
 data/*
 contigs
 
+genes_prot_dna.csv
