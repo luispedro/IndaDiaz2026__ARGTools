@@ -337,6 +337,9 @@ awk '{sum = 0; for (i = 2; i <= NF; i++) sum += $i; print sum}' unigene-environm
 ```
 
 ## Complementing argAnnot info
+- A manual curation of abricate + card is in abricate-card-manual-curation.txt
+- resfinder_ARO_mapping.tsv was retrieved from argAnnot
+- The curation for abricate with megares and ncbi was done as follows:
 
 ```bash
 cd /work/microbiome/users/juan/arg_compare/check_missing_annot
