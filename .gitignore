@@ -8,6 +8,7 @@ resfinder_dna/*
 
 check_missing_annot/*.txt
 check_missing_annot/*.tsv
+check_missing_annot/*.json
 
 arg_length_fna.tsv
 arg_length_faa.tsv
