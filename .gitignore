@@ -1,25 +1,47 @@
+# fna, faa datasets 
+data/*
+
+# Results from snakemake on the different types of data
 dna/*
 protein/*
 resfinder_dna/*
 
+# Still working on the contigs pipeline, and later on metagenomic reads
+contigs
+
+# Snakemake files 
 !dna/Snakefile_dna
 !protein/Snakefile_protein
 !resfinder_dna/Snakefile_resfinder_dna
 
+# Help files to complement the annotation with AROs
 check_missing_annot/*.txt
 check_missing_annot/*.tsv
 check_missing_annot/*.json
 
+# Length of unigenes
 arg_length_fna.tsv
 arg_length_faa.tsv
+length_fna.tsv
+length_faa.tsv
+
+# Unigenes flagged that are not coming from metagenomic samples
 unigene-environment-no-abundance.tsv
 args_without_abundance.txt
 unigenes_with_abundance.txt
-length_fna.tsv
-length_faa.tsv
+
+# Metadata for metagenomic samples
+metadata_GMGC10.sample.meta.tsv
+
+
+# Results from 
+# retrieve_unigenes_and_aros.R
+genes_prot_dna.csv
+abundances_per_tool_and_unigene.rds
+abundance_per_tool.rds
+abundance_per_tool.csv
+results_tools.rds
+
+# Never got to use it
 split_data_resfinder.py
 
-data/*
-contigs
-
-genes_prot_dna.csv

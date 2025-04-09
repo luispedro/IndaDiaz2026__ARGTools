@@ -664,18 +664,15 @@ sum(unique(args_abundances$X) %in% df2$Term_ID)
 sum(!unique(args_abundances$X) %in% df2$Term_ID)
 
 # rgi.diamond
-d <- rgi.diamond %>% filter(!is.na(parent)) %>% mutate(ARO = paste0("ARO:", ARO))
-d$ARO[d$ARO == "ARO:NA"] <- ""
+d <- rgi.diamond %>% filter(!is.na(parent)) 
 args_abundances <- args_abundances %>% mutate(rgi.diamond.ARO = d$ARO[match(X, d$query)], rgi.diamond.parent = d$parent[match(X, d$query)])
 
 # rgi.diamond.prot
-d <- rgi.diamond.prot %>% filter(!is.na(parent)) %>% mutate(ARO = paste0("ARO:", ARO))
-d$ARO[d$ARO == "ARO:NA"] <- ""
+d <- rgi.diamond.prot %>% filter(!is.na(parent)) 
 args_abundances <- args_abundances %>% mutate(rgi.diamond.prot.ARO = d$ARO[match(X, d$query)], rgi.diamond.prot.parent = d$parent[match(X, d$query)])
 
 # rgi.blast
-d <- rgi.blast %>% filter(!is.na(parent)) %>% mutate(ARO = paste0("ARO:", ARO))
-d$ARO[d$ARO == "ARO:NA"] <- ""
+d <- rgi.blast %>% filter(!is.na(parent)) 
 args_abundances <- args_abundances %>% mutate(rgi.blast.ARO = d$ARO[match(X, d$query)], rgi.blast.parent = d$parent[match(X, d$query)])
 
 # deeparg
@@ -701,19 +698,19 @@ d <- amrfinder.norm.prot %>% filter(!is.na(parent))
 args_abundances <- args_abundances %>% mutate(amrfinder.norm.prot.ARO = d$ARO[match(X, d$query)], amrfinder.norm.prot.parent = d$parent[match(X, d$query)])
 
 # abricate 
-d <- abricate.argannot.norm %>% filter(!is.na(parent)) %>% mutate(ARO = V16)
+d <- abricate.argannot.norm %>% filter(!is.na(parent)) 
 args_abundances <- args_abundances %>% mutate(abricate.argannot.norm.ARO = d$ARO[match(X, d$query)], abricate.argannot.norm.parent = d$parent[match(X, d$query)])
 
 d <- abricate.card.norm %>% filter(!is.na(parent))
 args_abundances <- args_abundances %>% mutate(abricate.card.norm.ARO = d$ARO[match(X, d$query)], abricate.card.norm.parent = d$parent[match(X, d$query)])
 
-d <- abricate.megares.norm %>% filter(!is.na(parent)) %>% mutate(ARO = V16)
+d <- abricate.megares.norm %>% filter(!is.na(parent)) 
 args_abundances <- args_abundances %>% mutate(abricate.megares.norm.ARO = d$ARO[match(X, d$query)], abricate.megares.norm.parent = d$parent[match(X, d$query)])
 
-d <- abricate.ncbi.norm %>% filter(!is.na(parent)) %>% mutate(ARO = V16)
+d <- abricate.ncbi.norm %>% filter(!is.na(parent)) 
 args_abundances <- args_abundances %>% mutate(abricate.ncbi.norm.ARO = d$ARO[match(X, d$query)], abricate.ncbi.norm.parent = d$parent[match(X, d$query)])
 
-d <- abricate.resfinder.norm %>% filter(!is.na(parent)) %>% mutate(ARO = V16)
+d <- abricate.resfinder.norm %>% filter(!is.na(parent)) 
 args_abundances <- args_abundances %>% mutate(abricate.resfinder.norm.ARO = d$ARO[match(X, d$query)], abricate.resfinder.norm.parent = d$parent[match(X, d$query)])
 
 # resfinder
@@ -721,8 +718,8 @@ d <- resfinder.norm %>% filter(!is.na(parent))
 args_abundances <- args_abundances %>% mutate(resfinder.norm.ARO = d$ARO[match(X, d$query)], resfinder.norm.parent = d$parent[match(X, d$query)])
 
 
-head(args_abundances)
 
+#saveRDS(args_abundances, file = "abundances_per_tool_and_unigene.rds", compress = T)
 
 abundance_parent <- bind_rows(args_abundances %>% group_by(sample, rgi.diamond.parent) %>% 
   summarise(scaled = sum(scaled), raw = sum(raw), raw_unique = sum(raw_unique), normed10m = sum(normed10m)) %>% 
@@ -784,11 +781,12 @@ abundance_parent <- bind_rows(args_abundances %>% group_by(sample, rgi.diamond.p
     summarise(scaled = sum(scaled), raw = sum(raw), raw_unique = sum(raw_unique), normed10m = sum(normed10m)) %>% 
     mutate(tool = "resfinder", parent = resfinder.norm.parent) %>% ungroup() %>% select(sample, parent, tool, scaled, raw, raw_unique, normed10m))
 
-metadata <- read.delim("~/metadata_GMGC10.sample.meta.tsv")
-abundance_parent <- abundance_parent %>% filter(!is.na(parent))
-abundance_parent <- abundance_parent %>% mutate(habitat = metadata$habitat[match(sample, metadata$sample_id)])
-saveRDS(abundance_parent, file = "abundance_per_tool.rds", compress = T)
+metadata <- read.delim("metadata_GMGC10.sample.meta.tsv")
+abundance_parent <- abundance_parent %>% filter(!is.na(parent)) %>% 
+  mutate(habitat = metadata$habitat[match(sample, metadata$sample_id)])
 
+saveRDS(abundance_parent, file = "abundance_per_tool.rds", compress = T)
+write.csv(abundance_parent, file = "abundance_per_tool.csv", row.names = F)
 
 
 
