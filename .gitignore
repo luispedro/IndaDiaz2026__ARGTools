@@ -42,6 +42,7 @@ abundances_per_tool_and_unigene.rds
 abundance_per_tool.rds
 abundance_per_tool.csv
 results_tools.rds
+diversity_per_tool.rds
 
 # Never got to use it
 split_data_resfinder.py
