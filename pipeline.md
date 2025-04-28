@@ -354,8 +354,8 @@ mamba run -n rgi rgi main -a DIAMOND -i tmp.fna -o abricate_megares --local --cl
 paste <(awk -F"\t" '{print $1}' abricate_megares.txt |awk -F" " '{print $1}' | awk '{ sub(/_[^_]*$/, "", $1); print }') abricate_megares.txt  > abricate_annotation_megares.tsv
 
 # fARGene
-mamba run -n rgi rgi main -a DIAMOND -i ../dna/fargene_predicted.fasta -o fargene_predicted_fna --local --clean -t contig 
-mamba run -n rgi rgi main -a DIAMOND -i ../protein/fargene_predicted.fasta -o fargene_prot_predicted_faa --local --clean -t protein 
+mamba run -n rgi rgi main -a DIAMOND -i ../dna/fargene_predicted.fasta -o fargene_predicted_fna --local --clean -t contig --include_loose
+mamba run -n rgi rgi main -a DIAMOND -i ../protein/fargene_predicted.fasta -o fargene_prot_predicted_faa --local --clean -t protein --include_loose
 ```
 
 ## Creating the table of abundance of ARGs

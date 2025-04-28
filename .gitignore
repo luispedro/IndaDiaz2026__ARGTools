@@ -33,7 +33,6 @@ unigenes_with_abundance.txt
 # Metadata for metagenomic samples
 metadata_GMGC10.sample.meta.tsv
 
-
 # Results from 
 # retrieve_unigenes_and_aros.R
 code_R_analysis/.Rapp.history
@@ -44,6 +43,5 @@ code_R_analysis/output_abundance_diversity_resistome/*
 
 # Never got to use it
 split_data_resfinder.py
-
-# Old file
+genes_prot_dna.csv
 

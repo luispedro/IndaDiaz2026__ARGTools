@@ -295,7 +295,9 @@ fargene_with_rgi$query <- gsub('tmp_', '', fargene_with_rgi$query)
 fargene_with_rgi <- fargene_with_rgi %>%
   mutate(ARO = paste0("ARO:", ARO))
 
-fargene <- fargene %>% mutate(id = fargene_with_rgi$Best_Identities[match(query, fargene_with_rgi$query)])
+fargene <- fargene %>% 
+  mutate(id = fargene_with_rgi$Best_Identities[match(query, fargene_with_rgi$query)],
+         aro.rgi = fargene_with_rgi$ARO[match(query, fargene_with_rgi$query)])
 rm(fargene_with_rgi)
 
 #
@@ -328,7 +330,9 @@ fargene_with_rgi$query <- gsub('tmp_', '', fargene_with_rgi$query)
 fargene_with_rgi <- fargene_with_rgi %>%
   mutate(ARO = paste0("ARO:", ARO))
 
-fargene.prot <- fargene.prot %>% mutate(id = fargene_with_rgi$Best_Identities[match(query, fargene_with_rgi$query)])
+fargene.prot <- fargene.prot %>% 
+  mutate(id = fargene_with_rgi$Best_Identities[match(query, fargene_with_rgi$query)],
+         aro.rgi = fargene_with_rgi$ARO[match(query, fargene_with_rgi$query)])
 rm(fargene_with_rgi)
 
 # abricate
@@ -550,9 +554,10 @@ rm(abricate_ncbi_missing_aro, abricate_megares_missing_aro, resfinder_missing_ar
 # I need to include those from abricate.CARD at some point 
 # I need to fix by hand those AROs missing in each tool
 
-fargene <- fargene %>% mutate(ARO = as.vector(fargene2ARO[new_class]))
-fargene.prot <- fargene.prot %>% mutate(ARO = as.vector(fargene2ARO[new_class]))
-
+fargene <- fargene %>% mutate(ARO = as.vector(fargene2ARO[new_class]),
+                              aro.rgi = ifelse(is.na(aro.rgi), "", aro.rgi))
+fargene.prot <- fargene.prot %>% mutate(ARO = as.vector(fargene2ARO[new_class]),
+                                        aro.rgi = ifelse(is.na(aro.rgi), "", aro.rgi))
 
 
 aros <- tibble(data.frame(rbind(cbind(rgi.diamond$tool, rgi.diamond$Best_Hit_ARO, rgi.diamond$ARO),
@@ -737,6 +742,14 @@ lst <- list(deeparg.norm = deeparg.norm, deeparg.norm.prot = deeparg.norm.prot,
 lst <- lapply(lst, function(x) x %>% mutate(parent = df2$Parent_ID[match(ARO, df2$Term_ID)], 
                                      parent_description = df2$Parent_Label[match(ARO, df2$Term_ID)],
                                      new_level = df2$new_level[match(ARO, df2$Term_ID)]))
+
+lst$fargene <- lst$fargene %>% mutate(parent.rgi = df2$Parent_ID[match(aro.rgi, df2$Term_ID)],
+                                      parent_description.rgi = df2$Parent_Label[match(aro.rgi, df2$Term_ID)],
+                                      new_level.rgi = df2$new_level[match(aro.rgi, df2$Term_ID)])
+
+lst$fargene.prot <- lst$fargene.prot %>% mutate(parent.rgi = df2$Parent_ID[match(aro.rgi, df2$Term_ID)],
+                                                parent_description.rgi = df2$Parent_Label[match(aro.rgi, df2$Term_ID)],
+                                                new_level.rgi = df2$new_level[match(aro.rgi, df2$Term_ID)])
 
 saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools.rds", compress = T)
 
@@ -962,7 +975,6 @@ for(j in 1:length(seeds)){
 saveRDS(df, file = "code_R_analysis/output_abundance_diversity_resistome/core_resistome.rds", compress = T)
 write.csv(df, file = "code_R_analysis/output_abundance_diversity_resistome/core_resistome.csv", row.names = F)
 
-data.frame(df %>% group_by(tool, habitat, cut, cnt) %>% summarise(n = n()))
 
 
 
