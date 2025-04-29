@@ -901,6 +901,10 @@ lst_abundance_diversity <- lst_abundance_diversity %>%
 saveRDS(lst_abundance_diversity, file = "code_R_analysis/output_abundance_diversity_resistome/abundance_diversity.rds", compress = T)
 write.csv(lst_abundance_diversity, file = "code_R_analysis/output_abundance_diversity_resistome/abundance_diversity.csv", row.names = F)
 
+for(j in 1:length(lst)){
+  write.csv(lst[[j]], file = paste0("code_R_analysis/output_abundance_diversity_resistome/processed_tool.",names(lst)[j],".csv"), row.names = F)
+}
+
 
 #lst_abundance_diversity %>% group_by(habitat) %>% summarise(n = n_distinct(sample)) 
 
