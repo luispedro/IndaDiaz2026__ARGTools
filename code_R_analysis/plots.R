@@ -12,11 +12,11 @@ core <- readRDS("code_R_analysis/output_abundance_diversity_resistome/core_resis
 pan <- readRDS("code_R_analysis/output_abundance_diversity_resistome/pan_resistome.rds")
 
 
-pal <- c("#543005", "#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#f5f5f5", "#c7eae5", "#80cdc1", "#35978f", "#01665e", "#003c30")
+#pal <- c("#543005", "#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#f5f5f5", "#c7eae5", "#80cdc1", "#35978f", "#01665e", "#003c30")
 pal_12 <- c("#a6cee3", "#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928")
 pal_8 <-  c("#a6cee3", "#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00")
 
-pal_latent <- c("#00B5E2", "#013B67", "#CC0C01", "#985428", "#73006D", "#E08728", "#377E60", "#FD8CC0")
+#pal_latent <- c("#00B5E2", "#013B67", "#CC0C01", "#985428", "#73006D", "#E08728", "#377E60", "#FD8CC0")
 
 
 # HABITATS
@@ -31,39 +31,40 @@ SO <- c(rep("Humans", 5), rep("Mammals", 4),
 
 names(SO) <- EN
 
+tools_levels <- c("DeepARG (nt)", "DeepARG (a.a.)", "RGI (BLAST  nt)", 
+                  "RGI (DIAMOND  nt)", "RGI (DIAMOND  a.a.)", "fARGene (nt)", 
+                  "fARGene (a.a.)", "ResFinder (nt)", "AMRFinderPlus (nt)", "AMRFinderPlus (a.a.)", 
+                  "ABRicate (ARG-ANNOT - nt)", "ABRicate (CARD - nt)", 
+                  "ABRicate (MEGARES - nt)", "ABRicate (NCBI - nt)", "ABRicate (ResFinder - nt)")
+
 # changing habitats and tools to factor
-abundance_parent$habitat <- factor(abundance_parent$habitat, levels = EN)
-abundance_parent$habitat2 <- factor(SO[abundance_parent$habitat], levels = unique(SO))
-abundance_parent$tool <- factor(abundance_parent$tool, 
-                                levels = c("rgi.diamond", "rgi.diamond.prot", "rgi.blast", "deeparg", "deeparg.prot", 
-                                "fargene", "fargene.prot", "resfinder", "amrfinder", "amrfinder.prot", "abricate.argannot", 
-                                "abricate.card", "abricate.megares", "abricate.ncbi", "abricate.resfinder"))
 
-diversity_parent$habitat <- factor(diversity_parent$habitat, levels = EN)
-diversity_parent$habitat2 <- factor(SO[diversity_parent$habitat], levels = unique(SO))
-diversity_parent$tool <- factor(diversity_parent$tool, 
-                                levels = c("rgi.diamond", "rgi.diamond.prot", "rgi.blast", "deeparg", "deeparg.prot", 
-                                           "fargene", "fargene.prot", "resfinder", "amrfinder", "amrfinder.prot", "abricate.argannot", 
-                                           "abricate.card", "abricate.megares", "abricate.ncbi", "abricate.resfinder"))
-
-# add ontology description
-abundance_parent <- abundance_parent %>% mutate(parent_label = df2$Parent_Label[match(parent,df2$Parent_ID)])
-diversity_parent <- diversity_parent %>% mutate(parent_label = df2$Parent_Label[match(parent,df2$Parent_ID)])
-
-# add the condense ontology abbreviations
-abundance_parent <- abundance_parent %>% mutate(new_level = new_level_df$new[match(parent_label, new_level_df$old)])
-diversity_parent <- diversity_parent %>% mutate(new_level = new_level_df$new[match(parent_label, new_level_df$old)])
+abundance$habitat <- factor(abundance$habitat, levels = EN)
+abundance$habitat2 <- factor(SO[abundance$habitat], levels = unique(SO))
+abundance$tool <- factor(abundance$tool, levels = tools_levels)
 
 ## factors for new_level, we take the highest abundance per ontology by tool
-factor_new_level <- abundance_parent %>% ungroup() %>% 
-  group_by(tool, new_level) %>% summarise(total = sum(normed10m)) %>%
-  ungroup() %>% arrange(tool, desc(total)) %>% 
-  group_by(tool, new_level) %>%  ungroup() %>% select(new_level) %>% distinct() %>% pull()
+factor_aro <- abundance %>% ungroup() %>% filter(aggregation %in% "ARO") %>%
+  group_by(aggregation, tool, gene ) %>% summarise(total = sum(normed10m)) %>%
+  ungroup() %>% arrange(aggregation, tool, desc(total)) %>% 
+  group_by(aggregation, tool, gene) %>%  ungroup() %>% select(gene) %>% distinct() %>% pull()
+  
+factor_parent <- abundance %>% ungroup() %>% filter(aggregation %in% "parent_description") %>%
+  group_by(aggregation, tool, gene ) %>% summarise(total = sum(normed10m)) %>%
+    ungroup() %>% arrange(aggregation, tool, desc(total)) %>% 
+    group_by(aggregation, tool, gene) %>%  ungroup() %>% select(gene) %>% distinct() %>% pull()
+  
+factor_new_level <- abundance %>% ungroup() %>% filter(aggregation %in% "new_level") %>%
+  group_by(aggregation, tool, gene ) %>% summarise(total = sum(normed10m)) %>%
+    ungroup() %>% arrange(aggregation, tool, desc(total)) %>% 
+    group_by(aggregation, tool, gene) %>%  ungroup() %>% select(gene) %>% distinct() %>% pull()
 
-factor_new_level2 <- c(factor_new_level[seq(1, length(factor_new_level), by = 4)],
-                       factor_new_level[seq(1, length(factor_new_level), by = 4) + 1],
-                       factor_new_level[seq(1, length(factor_new_level), by = 4) + 2],
-                       factor_new_level[seq(1, length(factor_new_level), by = 4) + 3])
+
+
+factor_new_level2 <- c(factor_new_level[seq(1, length(factor_new_level), by = 3)],
+                       factor_new_level[seq(1, length(factor_new_level), by = 3) + 1],
+                       factor_new_level[seq(1, length(factor_new_level), by = 3) + 2],
+                       factor_new_level[seq(1, length(factor_new_level), by = 3) + 3])
 
 
 

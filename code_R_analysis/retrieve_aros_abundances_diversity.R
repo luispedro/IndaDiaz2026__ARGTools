@@ -772,19 +772,19 @@ abundance_parent <- function(args_abundances, d){
                                   parent_description = d$parent_description[match(X, d$query)],
                                   new_level = d$new_level[match(X, d$query)])
   
-  Y_aro <- Y %>% group_by(sample, aro) %>% 
+  Y_aro <- Y %>% filter(!is.na(new_level))  %>% group_by(sample, aro) %>% 
     summarise(scaled = sum(scaled), raw = sum(raw), raw_unique = sum(raw_unique), normed10m = sum(normed10m), unigenes = n_distinct(X)) %>% 
     mutate(tool = d$tool[1]) %>% ungroup() %>% select(sample, aro, tool, scaled, raw, raw_unique, normed10m, unigenes) %>%
     rename(gene = aro) %>% mutate(aggregation = "ARO") %>% 
     select(sample, gene, aggregation, tool, scaled, raw, raw_unique, normed10m, unigenes)
   
-  Y_parent_description <- Y %>% group_by(sample, parent_description) %>% 
+  Y_parent_description <- Y %>% filter(!is.na(new_level)) %>% group_by(sample, parent_description) %>% 
     summarise(scaled = sum(scaled), raw = sum(raw), raw_unique = sum(raw_unique), normed10m = sum(normed10m), unigenes = n_distinct(X)) %>% 
     mutate(tool = d$tool[1]) %>% ungroup() %>% select(sample, parent_description, tool, scaled, raw, raw_unique, normed10m, unigenes) %>%
     rename(gene = parent_description) %>% mutate(aggregation = "parent_description") %>% 
     select(sample, gene, aggregation, tool, scaled, raw, raw_unique, normed10m, unigenes)
   
-  Y_new_level <- Y %>% group_by(sample, new_level) %>% 
+  Y_new_level <- Y %>% filter(!is.na(new_level)) %>% group_by(sample, new_level) %>% 
     summarise(scaled = sum(scaled), raw = sum(raw), raw_unique = sum(raw_unique), normed10m = sum(normed10m), unigenes = n_distinct(X)) %>% 
     mutate(tool = d$tool[1]) %>% ungroup() %>% select(sample, new_level, tool, scaled, raw, raw_unique, normed10m, unigenes) %>%
     rename(gene = new_level) %>% mutate(aggregation = "new_level") %>% 
