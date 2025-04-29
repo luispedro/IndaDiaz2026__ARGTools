@@ -431,6 +431,7 @@ card_gene_aro <- card_gene_aro %>% mutate(aro = paste0("ARO:",aro))
 manually_curated <- read.table("check_missing_annot/abricate-card-manual-curation.txt", stringsAsFactors = F, text = T)
 manually_curated <- data.frame(gene = sapply(strsplit(manually_curated$V1, split = ","), function(x) x[1]), aro = sapply(strsplit(manually_curated$V1, split = ","), function(x) x[2]))
 manually_curated <- manually_curated %>% mutate(aro = paste0("ARO:",aro))
+
 # add them to the data retrieved from json file
 
 card_gene_aro <- card_gene_aro %>% bind_rows(manually_curated)

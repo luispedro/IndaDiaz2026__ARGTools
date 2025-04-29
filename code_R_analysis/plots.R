@@ -1,111 +1,34 @@
-#rgi.blast
-#rgi.diamond
-#deeparg.norm
-#fargene
-#amrfinder.norm.prot
-#abricate.argannot.norm
-#abricate.card.norm
-#abricate.megares.norm
-#abricate.ncbi.norm
-#abricate.resfinder.norm
-#resfinder.norm
-
 library(dplyr)
 library(ggplot2)
 library(ggVennDiagram)
 library(gridExtra)
-library(ggradar)
 library(tidyverse)
 
-new_level <- c("chloramphenicol phosphotransferase", "CHL ph.",
-               "ciprofloxacin phosphotransferase", "CIP ph.",
-               "viomycin phosphotransferase", "VIO ph. ",
-               "major facilitator superfamily (MFS) antibiotic efflux pump", "MFS - efflux p.",
-               "class C beta-lactamase", "Class C",
-               "aminoglycoside bifunctional resistance protein", "Aminoglycoside b.",
-               "streptothricin acetyltransferase (SAT)", "SAT",
-               "AAC(2')", "AAC",
-               "AAC(6')", "AAC",
-               "AAC(3)", "AAC",
-               "APH(3')", "APH",
-               "APH(6)" , "APH",
-               "class A beta-lactamase", "Class A",
-               "macrolide phosphotransferase (MPH)", "MPH",
-               "class B (metallo-) beta-lactamase", "Class B",
-               "class D beta-lactamase", "Class D",
-               "quinolone resistance protein (qnr)", "QNR",
-               "Erm 23S ribosomal RNA methyltransferase", "ERM",
-               "APH(2'')", "APH",
-               "tetracycline inactivation enzyme", "TET - enzyme",
-               "tetracycline-resistant ribosomal protection protein", "TET - RPG",
-               "gene(s) or protein(s) associated with a glycopeptide resistance cluster", "GPA",
-               "protein(s) and two-component regulatory system modulating antibiotic efflux", "Efflux p.",
-               "fosfomycin inactivation enzyme", "FO",
-               "antibiotic resistant dihydrofolate reductase", "DHFR",
-               "rifampin-resistant RNA polymerase-binding protein", "RIF",
-               "antibiotic resistant gene variant or mutant", "V/M",            
-               "gene involved in antibiotic sequestration", "Sequestration",
-               "gene modulating beta-lactam resistance", "Beta-lactam modulation",
-               "rifampin inactivation enzyme", "RIF",
-               "nitroimidazole reductase", "NTR",
-               "cpa acetyltransferase", "CPA ac.",
-               "protein(s) conferring resistance via host-dependent nutrient acquisition", "Host-dependent",
-               "protein modulating permeability to antibiotic", "Permeability modulation",
-               "chloramphenicol acetyltransferase (CAT)", "CAT",
-               "streptogramin inactivation enzyme", "Streptogramin enzyme",
-               "gene altering cell wall charge", "Cell wall charge",
-               "ANT(2'')", "ANT",
-               "ANT(9)", "ANT",
-               "ANT(4')", "ANT",
-               "APH(3'')", "APH",
-               "lincosamide nucleotidyltransferase (LNU)", "LNU",
-               "ANT(3'')", "ANT",
-               "gene involved in self-resistance to antibiotic", "Self-resistance",
-               "ANT(6)", "ANT",
-               "APH(9)", "APH",
-               "APH(7'')", "APH",
-               "sulfonamide resistant sul", "SUL",
-               "ABC-F ATP-binding cassette ribosomal protection protein", "ABC-F",
-               "macrolide glycosyltransferase", "MGT",
-               "macrolide esterase", "MEs",
-               "fusidic acid inactivation enzyme", "FUS enzyme",
-               "Bah amidohydrolase", "Bah amidohydrolase",
-               "Target protecting FusB-type protein conferring resistance to Fusidic acid", "FUS protection",
-               "APH(4)", "APH",
-               "gene conferring resistance via absence", "Absence",
-               "glycopeptide resistance gene cluster", "GPA",
-               "beta-lactam resistant penicillin-binding proteins", "PBP",
-               "Edeine acetyltransferase", "EdeQ",
-               "rifamycin-resistant beta-subunit of RNA polymerase (rpoB)", "rpoB",
-               "efflux pump complex or subunit conferring antibiotic resistance", "Efflux p.",
-               "protein(s) conferring antibiotic resistance via molecular bypass", "Molecular bypass",
-               "antibiotic target modifying enzyme", "Target-modifying enzyme",
-               "antibiotic inactivation enzyme", "Inactivation enzyme")
-
-odd_vals  <- new_level[seq(1, length(new_level), by = 2)]
-even_vals <- new_level[seq(2, length(new_level), by = 2)]
-new_level_df <- df <- data.frame(old = odd_vals, new = even_vals)
-rm(new_level, even_vals, odd_vals)
+setwd("~/Documents/GitHub/arg_compare/")
+df2 <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.rds")
+lst <- readRDS("code_R_analysis/output_abundance_diversity_resistome/results_tools.rds")
+abundance <- readRDS("code_R_analysis/output_abundance_diversity_resistome/abundance_diversity.rds")
+core <- readRDS("code_R_analysis/output_abundance_diversity_resistome/core_resistome.rds")
+pan <- readRDS("code_R_analysis/output_abundance_diversity_resistome/pan_resistome.rds")
 
 
-df2 <- readRDS(file = "~/df2.rds")
-abundance_parent <- readRDS("GitHub/arg_compare/abundance_per_tool.rds")
-diversity_parent <- readRDS("GitHub/arg_compare/diversity_per_tool.rds")
-
-#pal0 <- c("#8c510a","#bf812d","#dfc27d","#f6e8c3","#c7eae5","#80cdc1","#35978f","#01665e")
 pal <- c("#543005", "#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#f5f5f5", "#c7eae5", "#80cdc1", "#35978f", "#01665e", "#003c30")
-pal2a <- c("#00B5E2", "#013B67", "#CC0C01", "#985428", "#73006D", "#E08728", "#377E60", "#FD8CC0")
-pal3a <- c("#00B5E2", "#377E60", "#CC0C01", "#985428", "#73006D", "#E08728",  "#FD8CC0")
-pal4 <- c("#a6611a", "#dfc27d", "#80cdc1", "#018571")
-pal5 <- c("#a6611a", "#dfc27d", "grey30", "#80cdc1", "#018571")
+pal_12 <- c("#a6cee3", "#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928")
+pal_8 <-  c("#a6cee3", "#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00")
+
+pal_latent <- c("#00B5E2", "#013B67", "#CC0C01", "#985428", "#73006D", "#E08728", "#377E60", "#FD8CC0")
+
 
 # HABITATS
 EN <- c("human gut", "human oral",  "human skin", "human nose", "human vagina", 
-        "dog gut", "cat gut", "mouse gut", "pig gut", "wastewater", "marine", "freshwater",  
-        "soil" , "amplicon", "isolate",  "built-environment" )
+        "dog gut", "cat gut", "mouse gut", "pig gut", "wastewater", "marine", 
+        "freshwater", "soil" , "amplicon", "isolate",  "built-environment" )
 
 # SOURCE FOR EACH HABITAT
-SO <- c(rep("Humans", 5), rep("Mammals", 4),  "Wastewater", "Marine", "Freshwater", "Soil", rep("Other", 3))
+SO <- c(rep("Humans", 5), rep("Mammals", 4),  
+        "Wastewater", "Marine", "Freshwater", 
+        "Soil", rep("Other", 3))
+
 names(SO) <- EN
 
 # changing habitats and tools to factor
