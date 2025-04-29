@@ -14,6 +14,7 @@ contigs
 !protein/Snakefile_protein
 !resfinder_dna/Snakefile_resfinder_dna
 
+
 # Help files to complement the annotation with AROs
 check_missing_annot/*.txt
 check_missing_annot/*.tsv
@@ -40,6 +41,8 @@ code_R_analysis/.Rapp.history
 code_R_analysis/.R*
 .R*
 code_R_analysis/output_abundance_diversity_resistome/*
+!code_R_analysis/output_abundance_diversity_resistome/README.md
+code_R_analysis/.DS_Store
 *.DS_Store
 .DS_Store
 
