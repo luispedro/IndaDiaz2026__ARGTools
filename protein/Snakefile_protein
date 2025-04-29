@@ -28,14 +28,14 @@ model_class = dict(zip(class_ab, models))
 
 rule all:
     input:
-        reads_fargene_out = expand(work_dir+"/fargene_results/{runs}-{class_ab}.tsv", runs=runs, class_ab=class_ab),
-        genes_fargene_out = expand(work_dir+"/fargene_predicted/{runs}-{class_ab}.fasta", runs=runs, class_ab=class_ab),
-        hmm_fargene_out = expand(work_dir+"/fargene_hmm/{runs}-{class_ab}_hmm.txt", runs=runs, class_ab=class_ab),
-        out_rgi_diamond = expand(work_dir+"/rgi_diamond/{runs}_rgi.tsv", runs=runs),
-        #out_rgi_blast = expand(work_dir+"/rgi_blast/{runs}_rgi.tsv", runs=runs),
-        out_deeparg_prot = expand(work_dir+"/deeparg/{runs}.ARG", runs=runs),
-        out_deeparg_prot_potential = expand(work_dir+"/deeparg/{runs}.potential.ARG", runs=runs),
-        out_amrfinder_prot = expand(work_dir+"/amrfinder/{runs}.tsv", runs=runs)
+        #reads_fargene_out = expand(work_dir+"/fargene_results/{runs}-{class_ab}.tsv", runs=runs, class_ab=class_ab),
+        #genes_fargene_out = expand(work_dir+"/fargene_predicted/{runs}-{class_ab}.fasta", runs=runs, class_ab=class_ab),
+        #hmm_fargene_out = expand(work_dir+"/fargene_hmm/{runs}-{class_ab}_hmm.txt", runs=runs, class_ab=class_ab),
+        #out_rgi_diamond = expand(work_dir+"/rgi_diamond/{runs}_rgi.tsv", runs=runs),
+        out_rgi_blast = expand(work_dir+"/rgi_blast/{runs}_rgi.tsv", runs=runs),
+        #out_deeparg_prot = expand(work_dir+"/deeparg/{runs}.ARG", runs=runs),
+        #out_deeparg_prot_potential = expand(work_dir+"/deeparg/{runs}.potential.ARG", runs=runs),
+        #out_amrfinder_prot = expand(work_dir+"/amrfinder/{runs}.tsv", runs=runs)
 
 rule fargene:
     input:
@@ -110,6 +110,29 @@ rule rgi:
           cat tmpout.txt > {output.out_rgi_diamond}
         else
           touch {output.out_rgi_diamond}
+        fi
+        """
+
+rule rgiblast:
+    input:
+        comp_file1 = expand(data_dir+"{{runs}}", runs=runs)
+    output:
+        out_rgi_blast = work_dir+"/rgi_blast/{runs}_rgi.tsv"
+    params:
+        num_of_processes = 4,
+        work_dire = work_dir
+    threads: 4
+    shadow: "minimal"
+    shell:
+        """
+        echo "RGI  {wildcards.runs} "
+        if [ -s {input.comp_file1} ]; then
+          gunzip <{input.comp_file1} > tmp.faa
+          mamba run -n rgi rgi load --card_json /work/microbiome/users/juan/rgi/card.json --local
+          mamba run -n rgi rgi main -a BLAST -i tmp.faa -o tmpout --local --clean -t protein --num_threads {params.num_of_processes}
+          cat tmpout.txt > {output.out_rgi_blast}
+        else
+          touch {output.out_rgi_blast}
         fi
         """
 
