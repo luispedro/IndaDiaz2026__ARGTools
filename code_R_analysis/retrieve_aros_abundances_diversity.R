@@ -5,17 +5,19 @@ library(rdflib)
 library(stringr)
 library(jsonlite)
 
-
 ################################################################################################################################################
-################################################################################################################################################
-################################################################################################################################################
-# wanted ontologies from OLS
-# manually curated to match several tools 
-
+# working directory
 setwd("~/Documents/GitHub/arg_compare/")
 
-higher_ontology <- paste0("ARO:", c("3000557", "0000010", "3000519", "3000185", "3000381", "3000159", "3000012"))
 
+# wanted ontologies from OLS
+# lower ontology is the prefered level
+# for example 
+# anything within (with lower ontology) antibiotic target modifying enzyme 
+# ARO:3000519 will be  assigned ARO:3000519, except for 
+# Erm 23S ribosomal RNA methyltransferase ARO:3000560
+
+higher_ontology <- paste0("ARO:", c("3000557", "0000010", "3000519", "3000185", "3000381", "3000159", "3000012"))
 lowest_ontology <- c(paste0("ARO:", c("3000341", "3000322", "3000345", "3004257", "3007419", "3004276", "3004275", "3000229", "3000225", "3000228",
                                       "3000128", "3000127", "3000126", "3000155", "3000151", "3000154", "3000153", "3004260", "3000078", "3000004", 
                                       "3000076", "3000075", "3007074", "3000122", "3000249", "3004467", "3004064", "3000342", "3003025", "3000221", 
@@ -25,6 +27,7 @@ lowest_ontology <- c(paste0("ARO:", c("3000341", "3000322", "3000345", "3004257"
                                       "3000100", "3007429", "3000270", "3000451", "3002976", "3007425", "3004916")))
 
 ontologies <- c(lowest_ontology, higher_ontology)
+# This are the original levels 
 # description of each ARO
 # antibiotic inactivation enzyme ARO:3000557 NOT IN 
 #   # AAC(2') ARO:3000341 (alternatively only ARO:3000121)
@@ -33,7 +36,7 @@ ontologies <- c(lowest_ontology, higher_ontology)
 #   # cpa ARO:3004257
 #   # aminoglycoside bifunctional ARO:3007419
 #   # ant2 ARO:3004276 (alternatively only ARO:3000218)
-#    # ant3 ARO:3004275 (alternatively only ARO:3000218)
+#   # ant3 ARO:3004275 (alternatively only ARO:3000218)
 #   # ant4 ARO:3000229 (alternatively only ARO:3000218)
 #   # ant6 ARO:3000225 (alternatively only ARO:3000218)
 #   # ant9 ARO:3000228 (alternatively only ARO:3000218)
@@ -105,16 +108,21 @@ ontologies <- c(lowest_ontology, higher_ontology)
 
 
 ## FARGENE CONVERSIONS
-
-
+## simplified names for fargene models 
 fg_class <- c("aac2p","aac6p","aac6p","aac3", "aph3p","aph6p","class_a","aac3", "mph",
              "class_b1_b2", "class_b3","class_d","aac6p","erm","class_d","class_c",
              "aph2b","erm","tet_enzyme", "tet_rpg", "tet_efflux", "qnr")
 
-#  Since there are different HMM's per class, we reduce them to just the class 
+# Output names of the models
+# since there are different HMM's per class, 
+# we reduce them to just the class 
+
 names(fg_class) <- c("aac2p","aac6p_1","aac6p_2","aac3_2", "aph3p","aph6p","class_a","aac3_1", "mph",
                     "class_b1_b2", "class_b3","class_d1","aac6p_3","erm_2","class_d2","class_c",
                     "aph2b","erm_1","tet_enzyme", "tet_rpg", "tet_efflux", "qnr")
+
+# This applies for both fargene_results and fargene_hmm files.
+# To fetch the hmm score we also need the model name from the hmm file below
 
 hmm_models <- c("aac2p", "aac3_1", "aac3_2", "aac6p_1", "aac6p_2", "aac6p_3", "aph2b", "aph3p", "aph6p", "class_b1_b2", "class_b3",
                "class_c", "class_a", "tet_efflux", "tet_enzyme", 
@@ -126,7 +134,7 @@ names(hmm_models) <- c("aac2p-aligned", "aac3_class1-aligned", "aac3_class2-alig
 "macrolide_phosphotransferases-aligned", "methyltransferase_grp1-aligned", "methyltransferase_grp2-aligned", 
 "oxa_g1_70_centroids-aligned", "oxa_g2_70_centroids-aligned", "rpg_reference_sequences-aligned", "pmqnr_20120719.pfa")
 
-# The fargene classes corresponding to CARD aros 
+# Manually assigned aros to fargene classes
 fargene2ARO <- c("ARO:3000341", "ARO:3000322", "ARO:3000345", "ARO:3000128", "ARO:3000126", "ARO:3000151",
                  "ARO:3000078", "ARO:3000004", "ARO:3000004", "ARO:3000076", "ARO:3000075",
                  "ARO:3000560", "ARO:3000333", "ARO:3000036", "ARO:0000002", "ARO:0010002", "ARO:3000419")
@@ -211,17 +219,37 @@ process_terms_fast <- function(term_list, parent_map, label_map) {
 # read the results per tool
 # amrfinder
 
+
+# In all tools, we standardize the unigene column to query
+# if the tool reports gene class and subclass, we call rename them
+# we assigned tool name as well
+
+
+# amrfinder 
 amrfinder.norm <- read.delim("dna/amrfinder.norm.tsv") %>% 
   rename(query = Contig.id) %>% 
   rename(ARG.class = Class) %>% 
   rename(ARG.subclass = Subclass) %>%
-  mutate(tool = "AMRFinderPlus (nt)", id = X..Identity.to.reference)
+  mutate(tool = "AMRFinderPlus (nt)", id = X..Identity.to.reference) %>% 
+  group_by(query) %>% 
+  arrange(desc(X..Identity.to.reference + X..Coverage.of.reference), 
+          desc(Alignment.length)) %>%
+  slice_head(n=1) %>% ungroup()
+# 1 copy of 6 unigenes removed (repeated)
 
 amrfinder.norm.prot <- read.delim("protein/amrfinder.norm.tsv") %>% 
   rename(query = Protein.id) %>% 
   rename(ARG.class = Class) %>% 
   rename(ARG.subclass = Subclass) %>%
-  mutate(tool = "AMRFinderPlus (a.a.)", id = X..Identity.to.reference)
+  mutate(tool = "AMRFinderPlus (a.a.)", id = X..Identity.to.reference) %>% 
+  group_by(query) %>% 
+  arrange(desc(X..Identity.to.reference + X..Coverage.of.reference), 
+          desc(Alignment.length)) %>%
+  slice_head(n=1) %>% ungroup()
+
+# 1 copy of 8 unigenes removed (repeated)
+
+
 
 # deeparg
 deeparg.norm <- read.delim("dna/deeparg.norm.tsv") %>% 
@@ -229,39 +257,71 @@ deeparg.norm <- read.delim("dna/deeparg.norm.tsv") %>%
   rename(ARG.class = predicted_ARG.class) %>%
   mutate(tool = "DeepARG (nt)", id = identity)
 
+# no repeated unigenes 
+
 deeparg.norm.prot <- read.delim("protein/deeparg.norm.tsv") %>% 
   rename(query = read_id) %>% 
   rename(ARG.class = predicted_ARG.class) %>%
   mutate(tool = "DeepARG (a.a.)", id = identity)
 
+# no repeated unigenes 
+
+
+
 # rgi
-rgi.diamond <- read.delim("dna/rgi_diamond.tsv")
-rgi.diamond <- rgi.diamond[,-c(1,18,19,20)]
-rgi.diamond$query <- gsub('.{2}$', '', rgi.diamond$Contig)
-rgi.diamond <- rgi.diamond %>% rename(ARG.class = AMR.Gene.Family) %>%
+rgi.diamond <- read.delim("dna/rgi_diamond.tsv") %>% 
+  select(-c(ORF_ID, Predicted_DNA, Predicted_Protein, CARD_Protein_Sequence)) %>% 
+  mutate(query = gsub('.{2}$', '', Contig)) %>% 
+  rename(ARG.class = AMR.Gene.Family) %>%
   mutate(ARO = paste0("ARO:", ARO)) %>%
-  mutate(tool = "RGI (DIAMOND  nt)", id = Best_Identities)
+  mutate(tool = "RGI (DIAMOND  nt)", id = Best_Identities) %>% 
+  group_by(query) %>% 
+  arrange(desc(Best_Identities), 
+          desc(Best_Hit_Bitscore), 
+          desc(Percentage.Length.of.Reference.Sequence)) %>%
+  slice_head(n=1) %>% ungroup()
 
-rgi.blast <- read.delim("dna/rgi_blast.tsv")
-rgi.blast <- rgi.blast[,-c(1,18,19,20)]
-rgi.blast$query <- gsub('.{2}$', '', rgi.blast$Contig)  
-rgi.blast <- rgi.blast %>% rename(ARG.class = AMR.Gene.Family) %>%
+# 4 repeated unigenes, 6 copies deleted 
+
+rgi.blast <- read.delim("dna/rgi_blast.tsv") %>% 
+  select(-c(ORF_ID, Predicted_DNA, Predicted_Protein, CARD_Protein_Sequence)) %>% 
+  mutate(query = gsub('.{2}$', '', Contig)) %>% 
+  rename(ARG.class = AMR.Gene.Family) %>%
   mutate(ARO = paste0("ARO:", ARO)) %>%
-  mutate(tool = "RGI (BLAST  nt)", id = Best_Identities)
+  mutate(tool = "RGI (DIAMOND  nt)", id = Best_Identities) %>% 
+  group_by(query) %>% 
+  arrange(desc(Best_Identities), 
+          desc(Best_Hit_Bitscore), 
+          desc(Percentage.Length.of.Reference.Sequence)) %>%
+  slice_head(n=1) %>% ungroup()
 
-rgi.diamond.prot <- read.delim("protein/rgi_diamond.tsv")
-rgi.diamond.prot <- rgi.diamond.prot[,-c(18,19,20)]
-rgi.diamond.prot$query <- rgi.diamond.prot$ORF_ID
-rgi.diamond.prot <- rgi.diamond.prot %>% rename(ARG.class = AMR.Gene.Family) %>%
+
+# 4 repeated unigenes, 7 copies deleted 
+
+rgi.diamond.prot <- read.delim("protein/rgi_diamond.tsv") %>% 
+  select(-c(Predicted_DNA, Predicted_Protein, CARD_Protein_Sequence)) %>% 
+  mutate(query = ORF_ID) %>% 
+  rename(ARG.class = AMR.Gene.Family) %>% 
   mutate(ARO = paste0("ARO:", ARO)) %>%
   mutate(tool = "RGI (DIAMOND  a.a.)", id = Best_Identities)
 
-# fargene
-fargene <- read.delim("dna/fargene_results.tsv", header = F)
-fargene$query <- gsub('.{2}$', '', fargene$V1)
-fargene$new_class = fg_class[fargene$V5]
+# no repeated unigenes
 
+
+# fargene
+fargene <- read.delim("dna/fargene_results.tsv", header = F) %>%
+  mutate(query = gsub('.{2}$', '', V1)) %>% 
+  mutate(new_class =  fg_class[V5]) %>% 
+  group_by(query, new_class) %>% 
+  slice_head(n=1) %>% ungroup()
+
+# 48 observations with repeated class were deleted 
+
+fargene %>% group_by(query) %>% mutate(n = n_distinct(new_class)) %>% filter(n >1)
+
+# no unigene  repeated 
 ## remove duplicated queries with different classes 
+
 d1 <- duplicated(paste(fargene$query, fargene$new_class))
 d2 <- duplicated(fargene$query)
 number_remove_fargene <- sum(!(!fargene$query %in% fargene$query[!fargene$query %in% fargene$query[d1] & fargene$query %in% fargene$query[d2]]))
@@ -273,26 +333,34 @@ number_remove_fargene_same_class <- sum(duplicated(fargene$query))
 rm(d1, d2)
 
 # load the hmm scores
-hmm <- read.table("dna/fargene_hmm.txt", quote="\"", comment.char="")
-hmm$query <- gsub('.{2}$', '', hmm$V1)
-hmm$q1 <- sapply(strsplit(hmm$V1, split = "GMGC10"), function(x) paste0("GMGC10",x[length(x)]))
-hmm$new_class <- hmm_models[hmm$V4]
-hmm$q1 <- gsub('.{2}$', '', hmm$q1)
-hmm$q1 <- sapply(strsplit(hmm$q1, split = "_seq"), function(x) x[1])
-hmm <- hmm[order(hmm$V14, decreasing = T),]
-fargene$hmm <- hmm$V14[match(paste(fargene$query, fargene$V5), paste(hmm$q1, hmm$new_class))]
-fargene <- fargene %>%
-  mutate(tool = "fARGene (nt)")
+hmm <- read.table("dna/fargene_hmm.txt", quote="\"", comment.char="") %>%
+  mutate(query = gsub('.{2}$', '', V1),
+         q1 = sapply(strsplit(V1, split = "GMGC10"), function(x) paste0("GMGC10",x[length(x)])),
+         new_class = hmm_models[V4]) %>% 
+  mutate(q1 = gsub('.{2}$', '', q1)) %>% 
+  mutate(q1 = sapply(strsplit(q1, split = "_seq"), function(x) x[1])) %>% 
+  arrange(query, desc(V14)) 
+
+fargene <- fargene %>% 
+  mutate(hmm = hmm$V14[match(paste(query, V5), paste(hmm$q1, hmm$new_class))],
+         tool = "fARGene (nt)") 
+
+fargene <- fargene %>% ungroup() %>% 
+  group_by(query) %>% 
+  arrange(desc(hmm)) %>% 
+  slice_head(n=1) %>% 
+  ungroup()
+# 19 observations with different class were deleted, 1 observation left per unigene 
 
 rm(hmm)
+
 ## identity levels with RGI (loose, strict, perfect) for those genes identified by fargene
 
-fargene_with_rgi <- read.delim("check_missing_annot/fargene_predicted_fna.txt")
-fargene_with_rgi <- fargene_with_rgi[,-c(1,18,19,20)]
-fargene_with_rgi$query <- gsub(' ', '', fargene_with_rgi$Contig)
-fargene_with_rgi$query <- gsub('.{2}$', '', fargene_with_rgi$query)
-fargene_with_rgi$query <- gsub('tmp_', '', fargene_with_rgi$query)
-fargene_with_rgi <- fargene_with_rgi %>%
+fargene_with_rgi <- read.delim("check_missing_annot/fargene_predicted_fna.txt") %>% 
+  select(-c(ORF_ID, Predicted_DNA, Predicted_Protein, CARD_Protein_Sequence)) %>% 
+  mutate(query = gsub(' ', '', Contig)) %>% 
+  mutate(query = gsub('.{2}$', '', query)) %>% 
+  mutate(query = gsub('tmp_', '', query)) %>% 
   mutate(ARO = paste0("ARO:", ARO))
 
 fargene <- fargene %>% 
@@ -302,71 +370,149 @@ rm(fargene_with_rgi)
 
 #
 
-fargene.prot <- read.delim("protein/fargene_results.tsv", header = F)
-fargene.prot$query <- fargene.prot$V1 
-fargene.prot$new_class = fg_class[fargene.prot$V5]
-# load the HMM scores 
-hmm.prot <- read.table("protein/fargene_hmm.txt", quote="\"", comment.char="")
-hmm.prot$new_class = hmm_models[hmm.prot$V4]
-hmm.prot$q1 = hmm.prot$V1
-hmm.prot <- hmm.prot[order(hmm.prot$V14, decreasing = T),]
-fargene.prot$hmm <- hmm.prot$V14[match(paste(fargene.prot$V1, fargene.prot$V5), paste(hmm.prot$q1, hmm.prot$new_class))]
+fargene.prot <- read.delim("protein/fargene_results.tsv", header = F) %>% 
+  mutate(query = V1, 
+         new_class = fg_class[V5]) %>%
+  group_by(query, new_class) %>% 
+  slice_head(n = 1) %>% ungroup()
 
-number_remove_fargene.prot_same_class <- sum(duplicated(fargene.prot$V1))
-fargene.prot <- fargene.prot[!duplicated(fargene.prot$V1),]
+# 41 unigenes with repeated class, 41 observations deleted, 1 left per unigene 
+
+# load the HMM scgroup_by()# load the HMM scores 
+hmm.prot <- read.table("protein/fargene_hmm.txt", quote="\"", comment.char="") %>%
+  mutate(new_class = hmm_models[V4], q1 = V1) %>% 
+  arrange(q1, desc(V14))
+
+fargene.prot <- fargene.prot %>% 
+  mutate(hmm = hmm.prot$V14[match(paste(V1, V5), paste(hmm.prot$q1, hmm.prot$new_class))])
+
+fargene.prot <- fargene.prot %>% ungroup() %>%
+  group_by(query) %>% arrange(desc(hmm)) %>% slice_head(n=1) %>% ungroup()
+
 rm(hmm.prot)
 
-fargene$new_class[fargene$new_class %in% "aph6p"] <- "aph6"
-fargene.prot$new_class[fargene.prot$new_class %in% "aph6p"] <- "aph6"
+# 19 unigenes with different class, 19 observations removed, 1 left per unigene   
+# fargene.prot %>% group_by(query) %>% mutate(n = n()) %>% filter(n >1) %>% select(query) %>% distinct()
+
+# rename aph6p in fargene and fargene.prot
+
+fargene.prot <- fargene.prot %>% 
+  mutate(new_class = ifelse(new_class %in% "aph6p", "aph6", new_class))
+fargene <- fargene %>% 
+  mutate(new_class = ifelse(new_class %in% "aph6p", "aph6", new_class))
+
 fargene.prot <- fargene.prot %>%
   mutate(tool = "fARGene (a.a.)")
 
 # identity levels with RGI 
 
-fargene_with_rgi <- read.delim("check_missing_annot/fargene_prot_predicted_faa.txt")
-fargene_with_rgi$query <- gsub(' ', '', fargene_with_rgi$ORF_ID)
-#fargene_with_rgi$query <- gsub('.{2}$', '', fargene_with_rgi$query)
-fargene_with_rgi$query <- gsub('tmp_', '', fargene_with_rgi$query)
-fargene_with_rgi <- fargene_with_rgi %>%
-  mutate(ARO = paste0("ARO:", ARO))
+fargene_with_rgi <- read.delim("check_missing_annot/fargene_prot_predicted_faa.txt") %>% 
+  mutate(query = gsub(' ', '', ORF_ID)) %>% 
+  mutate(query = gsub('tmp_', '', query),
+         ARO = paste0("ARO:", ARO))
 
 fargene.prot <- fargene.prot %>% 
   mutate(id = fargene_with_rgi$Best_Identities[match(query, fargene_with_rgi$query)],
          aro.rgi = fargene_with_rgi$ARO[match(query, fargene_with_rgi$query)])
+
 rm(fargene_with_rgi)
 
 # abricate
 
-abricate.argannot.norm <- read.delim("dna/abricate-argannot.norm.tsv", header=FALSE, comment.char="#")
-abricate.argannot.norm <- abricate.argannot.norm[,-1]
-abricate.argannot.norm <- abricate.argannot.norm %>% rename(query = V2, ARO = V16)
-abricate.argannot.norm$ARG.class <- str_match(abricate.argannot.norm$V14, "\\(([^)]+)\\)")[,2]
-abricate.argannot.norm$gene <- sub("\\([^)]*\\)", "", abricate.argannot.norm$V14) 
-abricate.argannot.norm <- abricate.argannot.norm %>%
-  mutate(tool = "ABRicate (ARG-ANNOT - nt)", id = V11)
+abricate.argannot.norm <- read.delim("dna/abricate-argannot.norm.tsv", header=FALSE, comment.char="#") %>%
+  select(-V1) %>% 
+  rename(query = V2, ARO = V16) %>% 
+  mutate(ARG.class = str_match(V14, "\\(([^)]+)\\)")[,2],
+         gene = sub("\\([^)]*\\)", "", V14),
+         tool = "ABRicate (ARG-ANNOT - nt)", 
+         id = V11) %>% 
+  group_by(query) %>% 
+  arrange(desc(id) + desc(V10)) %>% 
+  slice_head(n = 1) %>% 
+  ungroup()
 
-abricate.card.norm <- read.delim("dna/abricate-card.tsv", header=FALSE, comment.char="#")
-abricate.card.norm <- abricate.card.norm[,-1]
-abricate.card.norm <- abricate.card.norm %>% rename(query = V2, ARG.class = V15) %>%
-  mutate(tool = "ABRicate (CARD - nt)", id = V11)
+# 6 unigenes with repeated observations, 1 with same gene class, 6 observations removed 
+# abricate.argannot.norm %>% group_by(query) %>% mutate(n = n()) %>% filter(n>1) %>% select(query) %>% distinct()
 
-abricate.megares.norm <- read.delim("dna/abricate-megares.norm.tsv", header=FALSE, comment.char="#")
-abricate.megares.norm <- abricate.megares.norm[,-1] %>% rename(query = V2, ARO = V16) %>%
-  mutate(tool = "ABRicate (MEGARES - nt)", id = V11)
 
-abricate.ncbi.norm <- read.delim("dna/abricate-ncbi.norm.tsv", header=FALSE, comment.char="#")
-abricate.ncbi.norm <- abricate.ncbi.norm[,-1] %>% rename(query = V2) %>% rename(ARG.class = V15, gene = V14, ARO = V16) %>%
-  mutate(tool = "ABRicate (NCBI - nt)", id = V11)
+abricate.card.norm <- read.delim("dna/abricate-card.tsv", header=FALSE, comment.char="#") %>%
+  select(-V1) %>% 
+  rename(query = V2, ARG.class = V15) %>%
+  mutate(tool = "ABRicate (CARD - nt)", id = V11) %>% 
+  group_by(query) %>% 
+  arrange(desc(id) + desc(V10)) %>% 
+  slice_head(n = 1) %>% 
+  ungroup()
 
-abricate.resfinder.norm <- read.delim("dna/abricate-resfinder.norm.tsv", header=FALSE, comment.char="#")
-abricate.resfinder.norm <- abricate.resfinder.norm[,-1] %>% rename(query = V2, drug = V15, gene = V14, ARO = V16) %>%
-  mutate(tool = "ABRicate (ResFinder - nt)", id = V11)
+# 18 unigenes with repeated observations, 2 with same gene class, 6 observations removed , 1 left per unigene
+# abricate.card.norm  %>% group_by(query) %>% mutate(n = n()) %>% filter(n>1) %>% select(query) %>% distinct()
+# abricate.card.norm  %>% group_by(query, ARG.class) %>% mutate(n = n()) %>% filter(n>1) 
+# ARO COMES LATER 
+
+abricate.megares.norm <- read.delim("dna/abricate-megares.norm.tsv", header=FALSE, comment.char="#") %>%
+  select(-V1) %>% 
+  rename(query = V2, ARO = V16) %>%
+  mutate(tool = "ABRicate (MEGARES - nt)", id = V11) %>% 
+  group_by(query) %>% 
+  arrange(desc(id) + desc(V10)) %>% 
+  slice_head(n = 1) %>% 
+  ungroup()
+
+# 20 unigenes with repeated observations, 20 observations removed , 1 left per unigene
+# abricate.megares.norm  %>% group_by(query) %>% mutate(n = n()) %>% filter(n>1) %>% select(query) %>% distinct()
+
+abricate.ncbi.norm <- read.delim("dna/abricate-ncbi.norm.tsv", header=FALSE, comment.char="#") %>%
+  select(-V1) %>% 
+  rename(query = V2) %>% rename(ARG.class = V15, gene = V14, ARO = V16) %>%
+  mutate(tool = "ABRicate (NCBI - nt)", id = V11) %>% 
+  group_by(query) %>% 
+  arrange(desc(id) + desc(V10)) %>% 
+  slice_head(n = 1) %>% 
+  ungroup()
+
+# 10 unigenes with repeated observations (1 same gene), 10 observations removed , 1 left per unigene
+# abricate.ncbi.norm  %>% group_by(query) %>% mutate(n = n()) %>% filter(n>1) 
+# abricate.ncbi.norm  %>% group_by(query) %>% mutate(n = n()) %>% filter(n>1) %>% select(query) %>% distinct()
+
+
+abricate.resfinder.norm <- read.delim("dna/abricate-resfinder.norm.tsv", header=FALSE, comment.char="#") %>%
+  select(-V1) %>% 
+  rename(query = V2, drug = V15, gene = V14, ARO = V16) %>%
+  mutate(tool = "ABRicate (ResFinder - nt)", id = V11) %>% 
+  group_by(query) %>% 
+  arrange(desc(id) + desc(V10)) %>% 
+  slice_head(n = 1) %>% 
+  ungroup()
+
+# 7 unigenes with repeated observations, 7 observations removed , 1 left per unigene
+# abricate.resfinder.norm  %>% group_by(query) %>% mutate(n = n()) %>% filter(n>1) 
+# abricate.resfinder.norm  %>% group_by(query) %>% mutate(n = n()) %>% filter(n>1) %>% select(query) %>% distinct()
+
 
 # resfinder
-resfinder.norm <- read.delim("dna/resfinder_table.norm.tsv")
-resfinder.norm <- resfinder.norm %>% rename(query = Contig) %>% rename(gene = Resistance.gene) %>%
-  mutate(tool = "ResFinder (nt)", id = Identity)
+resfinder.norm <- read.delim("dna/resfinder_table.norm.tsv") %>% 
+  rename(query = Contig) %>% rename(gene = Resistance.gene) %>%
+  mutate(tool = "ResFinder (nt)", id = Identity)  
 
+
+# resfinder.norm  %>% group_by(query) %>% mutate(n = n()) %>% filter(n>1) 
+# resfinder.norm  %>% group_by(query) %>% mutate(n = n()) %>% filter(n>1) %>% select(query) %>% distinct()
+# resfinder.norm  %>% group_by(query, gene) %>% mutate(n = n()) %>% filter(n>1)
+# resfinder.norm  %>% group_by(query, gene) %>% mutate(n = n()) %>% filter(n>1) %>% select(query) %>% distinct()
+
+# 220 repeated unigenes
+# 109 have the same gene 
+## 113 have different gene 
+
+resfinder.norm <- resfinder.norm %>% 
+  group_by(query, gene) %>% 
+  arrange(desc(id) + desc(Coverage)) %>% 
+  slice_head(n = 1) %>% 
+  ungroup() %>% 
+  group_by(query) %>% 
+  arrange(desc(id) + desc(Coverage)) %>% 
+  slice_head(n = 1) %>% 
+  ungroup()
 
 
 ################################################################################################################################################
@@ -388,7 +534,9 @@ for(j in 1:nrow(resfinder.norm)){
   }
 }
 
-resfinder.norm$ARG.class <- phenotypes_resfiner$Class[v]
+resfinder.norm <- resfinder.norm %>% 
+  mutate(ARG.class = phenotypes_resfiner$Class[v])
+
 rm(phenotypes_resfiner, v)
 
 
@@ -425,6 +573,7 @@ for(j in 1:(length(card_data)-3)){
 }
 
 rm(card_data)
+
 card_gene_aro <- card_gene_aro %>% mutate(aro = paste0("ARO:",aro))
 
 # load the manually curated AROS
@@ -469,9 +618,9 @@ resfinder_missing_aro <- tibble(gene=abricate.resfinder.norm$V6[j], accession=ab
 k <- match(paste(abricate.resfinder.norm$V6[j], abricate.resfinder.norm$V13[j], sep = "_"), resfinder_ARO_mapping$Original.ID)
 
 abricate.resfinder.norm$ARO[j]  <- paste0("ARO:", resfinder_ARO_mapping$ARO[k])
-abricate.resfinder.norm$ARO[abricate.resfinder.norm$ARO == "ARO:NA"] <- ""
 
-rm(j, k)
+abricate.resfinder.norm <- abricate.resfinder.norm %>% 
+  mutate(ARO = ifelse(ARO == "ARO:NA", "", ARO))
 
 
 ################################################################################################################################################
@@ -484,6 +633,7 @@ for(j in 1:length(d)){
 }
 d2 <- as.data.frame(d2)
 d2$V2[d2$V2=="ARO:"] <- ""
+
 j <- which(resfinder.norm$ARO == "")
 resfinder.norm$ARO[j] <- d2$V2[match(resfinder.norm$Accession.no.[j], d2$d)]
 
@@ -726,8 +876,11 @@ rm(new_level, even_vals, odd_vals)
 
 df2 <- df2 %>% mutate(new_level = new_level_df$new[match(Parent_Label, new_level_df$old)])
 
-saveRDS(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.rds")
-write.csv(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.csv",  row.names = F)
+# saveRDS(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.rds")
+# write.csv(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.csv",  row.names = F)
+
+saveRDS(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level_no_repeated_unigenes_in_each_tool.rds")
+write.csv(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level_no_repeated_unigenes_in_each_tool.csv",  row.names = F)
 
 ################################################################################################################################################
 ################################################################################################################################################
@@ -752,7 +905,8 @@ lst$fargene.prot <- lst$fargene.prot %>% mutate(parent.rgi = df2$Parent_ID[match
                                                 parent_description.rgi = df2$Parent_Label[match(aro.rgi, df2$Term_ID)],
                                                 new_level.rgi = df2$new_level[match(aro.rgi, df2$Term_ID)])
 
-saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools.rds", compress = T)
+# saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools.rds", compress = T)
+saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools_not_repeated_unigenes.rds", compress = T)
 
 ################################################################################################################################################
 ################################################################################################################################################
@@ -766,9 +920,9 @@ args_abundances <- read.delim("data/abundances/args_abundances.tsv")
 sum(unique(args_abundances$X) %in% df2$Term_ID)
 
 # abundance parent 
-abundance_parent <- function(args_abundances, d){
+abundance_parent <- function(abund_df, d){
   d <- d %>% filter(!is.na(parent)) 
-  Y <- args_abundances %>% mutate(aro = d$ARO[match(X, d$query)], 
+  Y <- abund_df %>% mutate(aro = d$ARO[match(X, d$query)], 
                                   parent_description = d$parent_description[match(X, d$query)],
                                   new_level = d$new_level[match(X, d$query)])
   
@@ -793,96 +947,15 @@ abundance_parent <- function(args_abundances, d){
   Y_aro <- Y_aro %>% bind_rows(Y_parent_description, Y_new_level)
   
   return(Y_aro)
-  
 }
 
-lst_abundance_diversity <- do.call(rbind, lapply(lst, function(d) abundance_parent(args_abundances, d)))
+abundance_parent_split <- function(abund_split, lst){
+  Y <-  do.call(rbind, future_lapply(lst, function(d) abundance_parent(abund_split, d)))
+  return(Y)
+}
 
 
-# # rgi.diamond
-# d <- lst$rgi.diamond %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(rgi.diamond.ARO = d$ARO[match(X, d$query)], 
-#                                               rgi.diamond.parent = d$parent[match(X, d$query)],
-#                                               rgi.diamond.new_level = d$new_level[match(X, d$query)])
-# 
-# # rgi.diamond.prot
-# d <- lst$rgi.diamond.prot %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(rgi.diamond.prot.ARO = d$ARO[match(X, d$query)], 
-#                                               rgi.diamond.prot.parent = d$parent[match(X, d$query)],
-#                                               rgi.diamond.prot.new_level = d$new_level[match(X, d$query)])
-# 
-# # rgi.blast
-# d <- lst$rgi.blast %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(rgi.blast.ARO = d$ARO[match(X, d$query)], 
-#                                               rgi.blast.parent = d$parent[match(X, d$query)],
-#                                               rgi.blast.new_level = d$new_level[match(X, d$query)])
-# 
-# # deeparg
-# d <- lst$deeparg.norm %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(deeparg.norm.ARO = d$ARO[match(X, d$query)], 
-#                                               deeparg.norm.parent = d$parent[match(X, d$query)],
-#                                               deeparg.norm.new_level = d$new_level[match(X, d$query)])
-# 
-# d <- lst$deeparg.norm.prot %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(deeparg.norm.prot.ARO = d$ARO[match(X, d$query)], 
-#                                               deeparg.norm.prot.parent = d$parent[match(X, d$query)],
-#                                               deeparg.norm.prot.new_level = d$new_level[match(X, d$query)])
-# 
-# # fargene
-# d <- lst$fargene %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(fargene.ARO = d$ARO[match(X, d$query)], 
-#                                               fargene.parent = d$parent[match(X, d$query)],
-#                                               fargene.new_level = d$new_level[match(X, d$query)])
-# 
-# d <- lst$fargene.prot %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(fargene.prot.ARO = d$ARO[match(X, d$query)], 
-#                                               fargene.prot.parent = d$parent[match(X, d$query)],
-#                                               fargene.prot.new_level = d$new_level[match(X, d$query)])
-# 
-# # amrfinder
-# d <- lst$amrfinder.norm %>% filter(!is.na(parent))
-# args_abundances <- args_abundances %>% mutate(amrfinder.norm.ARO = d$ARO[match(X, d$query)], 
-#                                               amrfinder.norm.parent = d$parent[match(X, d$query)],
-#                                               amrfinder.norm.new_level = d$new_level[match(X, d$query)])
-# 
-# d <- lst$amrfinder.norm.prot %>% filter(!is.na(parent))
-# args_abundances <- args_abundances %>% mutate(amrfinder.norm.prot.ARO = d$ARO[match(X, d$query)], 
-#                                               amrfinder.norm.prot.parent = d$parent[match(X, d$query)],
-#                                               amrfinder.norm.prot.new_level = d$new_level[match(X, d$query)])
-# 
-# # abricate 
-# d <- lst$abricate.argannot.norm %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(abricate.argannot.norm.ARO = d$ARO[match(X, d$query)], 
-#                                               abricate.argannot.norm.parent = d$parent[match(X, d$query)],
-#                                               abricate.argannot.norm.new_level = d$new_level[match(X, d$query)])
-# 
-# d <- lst$abricate.card.norm %>% filter(!is.na(parent))
-# args_abundances <- args_abundances %>% mutate(abricate.card.norm.ARO = d$ARO[match(X, d$query)], 
-#                                               abricate.card.norm.parent = d$parent[match(X, d$query)],
-#                                               abricate.card.norm.new_level = d$new_level[match(X, d$query)])
-# 
-# d <- lst$abricate.megares.norm %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(abricate.megares.norm.ARO = d$ARO[match(X, d$query)], 
-#                                               abricate.megares.norm.parent = d$parent[match(X, d$query)],
-#                                               abricate.megares.norm.new_level = d$new_level[match(X, d$query)])
-# 
-# d <- lst$abricate.ncbi.norm %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(abricate.ncbi.norm.ARO = d$ARO[match(X, d$query)], 
-#                                               abricate.ncbi.norm.parent = d$parent[match(X, d$query)],
-#                                               abricate.ncbi.norm.new_level = d$new_level[match(X, d$query)])
-# 
-# d <- lst$abricate.resfinder.norm %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(abricate.resfinder.norm.ARO = d$ARO[match(X, d$query)], 
-#                                               abricate.resfinder.norm.parent = d$parent[match(X, d$query)],
-#                                               abricate.resfinder.norm.new_level = d$new_level[match(X, d$query)])
-# 
-# # resfinder
-# d <- lst$resfinder.norm %>% filter(!is.na(parent)) 
-# args_abundances <- args_abundances %>% mutate(resfinder.norm.ARO = d$ARO[match(X, d$query)], 
-#                                               resfinder.norm.parent = d$parent[match(X, d$query)],
-#                                               resfinder.norm.new_level = d$new_level[match(X, d$query)])
-# 
-# saveRDS(args_abundances, file = "abundances_per_tool_and_unigene.rds", compress = T)
+lst_abundance_diversity <- do.call(rbind, lapply(lst, function(d) {abundance_parent(args_abundances %>% filter(raw_unique > 0), d) }))
 
 
 metadata <- read.delim("data/metadata_GMGC10.sample.meta.tsv")
@@ -943,22 +1016,22 @@ filter_samples_core <- function(args_abundances_core, d){
 
 core_resistome <- function(args_abundances, samples_to_collect, sed, lst, mx_sample_size, j, cuts, df) {
   set.seed(seed = sed)
-  
   samples_to_collect2 <- samples_to_collect  %>%
-    slice_sample(n = mx_sample_size,  replace = FALSE) %>%  
+    slice_sample(n = mx_sample_size,  replace = FALSE) %>%
     ungroup() %>% select(sample) %>% pull()
-  
+
   args_abundances_core <- args_abundances %>% filter(sample %in% samples_to_collect2)
   args_abundances_core <- do.call(rbind, lapply(lst, function(d) filter_samples_core(args_abundances_core, d)))
   args_abundances_core_cut <- do.call(rbind, lapply(seq_along(cuts), function(k) {cut_size_core(args_abundances_core, cuts[k])}))
-  
+
   df <- df %>% bind_rows(args_abundances_core_cut)
   df <- df %>% ungroup() %>% group_by(X, new_level, tool, habitat, cut) %>%
-    summarise(cnt = sum(cnt)) 
-  
+    summarise(cnt = sum(cnt))
   return(df)
 }
 
+
+#future_lapply
 #seeds <- seq(2001, 2002, 1)
 seeds <- seq(2001, 2500, 1)
 cuts <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
@@ -972,9 +1045,10 @@ samples_to_collect <- args_abundances %>%
   ungroup() %>%
   group_by(habitat)
 
+
 for(j in 1:length(seeds)){
   print(j)
-  df <- core_resistome(args_abundances,  samples_to_collect, seeds[j], lst, 100, j, cuts, df)
+  df <- core_resistome(args_abundances %>% filter(raw_unique > 0),  samples_to_collect, seeds[j], lst, 100, j, cuts, df)
 }
 
 saveRDS(df, file = "code_R_analysis/output_abundance_diversity_resistome/core_resistome.rds", compress = T)
@@ -1034,7 +1108,7 @@ df.pan2 <- data.frame( tool = NULL, habitat = NULL, gene_class= NULL, aggregatio
 
 for(j in 1:length(seeds)){
   print(j)
-  df.pan2 <- pan_resistome(args_abundances,  samples_to_collect, seeds[j], lst, 100, j, df.pan2)
+  df.pan2 <- pan_resistome(args_abundances %>% filter(raw_unique > 0),  samples_to_collect, seeds[j], lst, 100, j, df.pan2)
 }
 
 saveRDS(df.pan2, file = "code_R_analysis/output_abundance_diversity_resistome/pan_resistome.rds", compress = T)

@@ -68,15 +68,13 @@ factor_new_level2 <- c(factor_new_level[seq(1, length(factor_new_level), by = 3)
 
 
 
-abundance_parent$new_level <- factor(abundance_parent$new_level, levels = factor_new_level2)
-diversity_parent$new_level <- factor(diversity_parent$new_level, levels = factor_new_level2)
+#abundance_parent$new_level <- factor(abundance_parent$new_level, levels = factor_new_level2)
+#diversity_parent$new_level <- factor(diversity_parent$new_level, levels = factor_new_level2)
+
 
 # factor for habitat
-abundance_parent$habitat <- factor(abundance_parent$habitat, levels = EN)
-abundance_parent$habitat <- as.character(abundance_parent$habitat)
-
-diversity_parent$habitat <- factor(diversity_parent$habitat, levels = EN)
-diversity_parent$habitat <- as.character(diversity_parent$habitat)
+abundance$habitat <- factor(abundance$habitat, levels = EN)
+abundance$habitat <- as.character(abundance$habitat)
 
 # environments that we are not interested in
 not_env <- c("built-environment", "amplicon", "isolate")
