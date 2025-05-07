@@ -5,12 +5,12 @@ library(gridExtra)
 library(tidyverse)
 
 setwd("~/Documents/GitHub/arg_compare/")
-df2 <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level_no_repeated_unigenes_in_each_tool.rds")
-lst <- readRDS("code_R_analysis/output_abundance_diversity_resistome/results_tools_not_repeated_unigenes.rds")
+df2 <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.rds")
+lst <- readRDS("code_R_analysis/output_abundance_diversity_resistome/results_tools.rds")
 
-lst$rgi.blast$tool <- "RGI (BLAST  nt)"
-       
+
 abundance <- readRDS("code_R_analysis/output_abundance_diversity_resistome/abundance_diversity.rds")
+
 #core <- readRDS("code_R_analysis/output_abundance_diversity_resistome/core_resistome.rds")
 #pan <- readRDS("code_R_analysis/output_abundance_diversity_resistome/pan_resistome.rds")
 
@@ -19,6 +19,9 @@ abundance <- readRDS("code_R_analysis/output_abundance_diversity_resistome/abund
 #pal <- c("#543005", "#8c510a", "#bf812d", "#dfc27d", "#f6e8c3", "#f5f5f5", "#c7eae5", "#80cdc1", "#35978f", "#01665e", "#003c30")
 pal_12 <- c("#a6cee3", "#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928")
 pal_8 <-  c("#a6cee3", "#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00")
+pal_10 <-  c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c", "#fb9a99", "#e31a1c", "#fdbf6f", "#ff7f00", "#cab2d6", "#6a3d9a")
+
+
 
 #pal_latent <- c("#00B5E2", "#013B67", "#CC0C01", "#985428", "#73006D", "#E08728", "#377E60", "#FD8CC0")
 
@@ -35,17 +38,28 @@ SO <- c(rep("Humans", 5), rep("Mammals", 4),
 
 names(SO) <- EN
 
-tools_levels <- c("DeepARG (nt)", "DeepARG (a.a.)", "RGI (BLAST  nt)", "RGI (BLAST  a.a.)", 
-                  "RGI (DIAMOND  nt)", "RGI (DIAMOND  a.a.)", "fARGene (nt)", 
-                  "fARGene (a.a.)", "ResFinder (nt)", "AMRFinderPlus (nt)", "AMRFinderPlus (a.a.)", 
+tools_levels <- c("DeepARG (nt)", "DeepARG (aa)", "RGI (BLAST - nt)", "RGI (BLAST - aa)", 
+                  "RGI (DIAMOND - nt)", "RGI (DIAMOND - aa)", "fARGene (nt)", 
+                  "fARGene (aa)", "ResFinder (nt)", "AMRFinderPlus (nt)", "AMRFinderPlus (aa)", 
                   "ABRicate (ARG-ANNOT - nt)", "ABRicate (CARD - nt)", 
                   "ABRicate (MEGARES - nt)", "ABRicate (NCBI - nt)", "ABRicate (ResFinder - nt)")
 
-# changing habitats and tools to factor
 
-abundance$habitat <- factor(abundance$habitat, levels = EN)
-abundance$habitat2 <- factor(SO[abundance$habitat], levels = unique(SO))
-abundance$tool <- factor(abundance$tool, levels = tools_levels)
+
+abundance <- abundance %>% mutate( tool = 
+                     ifelse(tool == "RGI (BLAST nt)", "RGI (BLAST - nt)",
+                     ifelse(tool == "RGI (BLAST aa)", "RGI (BLAST - aa)",
+                     ifelse(tool == "RGI (DIAMOND aa)", "RGI (DIAMOND - aa)",
+                     ifelse(tool == "RGI (DIAMOND nt)", "RGI (DIAMOND - nt)", tool)))))
+
+lst$rgi.blast <- lst$rgi.blast %>% mutate(tool =  "RGI (BLAST - nt)")
+lst$rgi.diamond <- lst$rgi.diamond %>% mutate(tool =  "RGI (DIAMOND - nt)")
+lst$rgi.diamond.prot <- lst$rgi.diamond.prot %>% mutate(tool =  "RGI (DIAMOND - aa)")
+
+# changing habitats and tools to factor
+abundance <- abundance %>% mutate(habitat = factor(habitat, levels = EN),
+                                  habitat2 = factor(SO[habitat], levels = unique(SO)),
+                                  tool = factor(tool, levels = tools_levels))
 
 ## factors for new_level, we take the highest abundance per ontology by tool
 factor_aro <- abundance %>% ungroup() %>% filter(aggregation %in% "ARO") %>%
@@ -62,7 +76,6 @@ factor_new_level <- abundance %>% ungroup() %>% filter(aggregation %in% "new_lev
   group_by(aggregation, tool, gene ) %>% summarise(total = sum(normed10m)) %>%
     ungroup() %>% arrange(aggregation, tool, desc(total)) %>% 
     group_by(aggregation, tool, gene) %>%  ungroup() %>% select(gene) %>% distinct() %>% pull()
-
 
 
 factor_new_level2 <- c(factor_new_level[seq(1, length(factor_new_level), by = 3)],
@@ -97,8 +110,14 @@ unigenes_with_abundance <- args_abundances  %>% filter(!habitat %in% not_env) %>
 # total numbrer of unigenes captured with the tools
 
 
+unigenes <- do.call(rbind, lapply(lst, function(x) x[,c("query","tool")])) #%>%
+  #mutate(tool = ifelse(tool == "DeepARG (a.a.)", "DeepARG (aa)",
+  #ifelse(tool == "RGI (BLAST  a.a.)", "RGI (BLAST - aa)",
+  #ifelse(tool == "RGI (DIAMOND  a.a.)", "RGI (DIAMOND - aa)",
+  #ifelse(tool == "RGI (DIAMOND  nt)", "RGI (DIAMOND - nt)",
+  #ifelse(tool == "fARGene (a.a.)", "fARGene (aa)",
+  #ifelse(tool == "AMRFinderPlus (a.a.)", "AMRFinderPlus (aa)", tool)))))))
 
-unigenes <- do.call(rbind, lapply(lst, function(x) x[,c("query","tool")]))
 length(unique(unigenes$query))
 unigenes %>% group_by(tool) %>% summarise(n = n_distinct(query)) %>% ungroup() %>% arrange(n)
 
@@ -106,16 +125,19 @@ do.call(rbind, lapply(lst, function(x) x[,c("tool","ARO")])) %>%
   group_by(tool) %>% mutate(N = n()) %>% filter(ARO == "") %>% mutate(n = n()) %>% 
   summarise( p = n[1] / N[1])
 
+## UNIGENES missing aro
 do.call(rbind, lapply(lst, function(x) x[,c("query","ARO")])) %>% 
   group_by(query) %>% slice_head(n = 1) %>% ungroup() %>%
   mutate(N = n()) %>% filter(ARO == "") %>% mutate(n = n()) %>% 
   summarise( p = n[1] / N[1])
 
+## NUMBER OF PARENT CLASSES 
 do.call(rbind, lapply(lst, function(x) x[,c("tool","parent_description")])) %>% 
   summarise(N = n_distinct(parent_description))
+
 # sample outliers
-extreme_samples <- total_abundance_sample %>% filter(total > quantile(total, probs = .9977)) %>%
-  ungroup() %>% select(sample) %>% pull()
+# extreme_samples <- total_abundance_sample %>% filter(total > quantile(total, probs = .9977)) %>%
+#  ungroup() %>% select(sample) %>% pull()
 
 
 get_accumulated_count <- function(x) {
@@ -126,13 +148,23 @@ get_accumulated_count <- function(x) {
     mutate(prop = cumsum(n) / sum(n))
   return(y)
 }
-  
+
+# NUMBER OF GENES PER CLASS PER TOOL  ORDERED BY PROPORTION ON THE TOOL
 class_per_tool <- do.call(rbind, lapply(lst, function(x) get_accumulated_count(x)))
+
 data.frame(class_per_tool %>% group_by(tool) %>% 
   arrange(desc(prop), .by_group = TRUE) %>%  # or arrange by time/order column if you have one
   mutate(next_x = lead(prop)) %>%
   filter(prop > 0.5 | (lag(prop) > 0.5 & prop <= 0.5)) %>%
   select(-next_x))
+
+# NUMBER OF GENES PER CLASS PER TOOL, 
+# N total genes in all tools and classes, 
+# M total genes per class in all tools
+# P proportion of class in total (all tools)
+# ntool total genes per tool
+# n total genes per class in specific tool
+# p proportion of class in specific tool
 
 proportion_new_level_tool <- do.call(rbind, lapply(lst, function(x) x[,c("query","tool","new_level")])) %>% 
   mutate(N = n_distinct(query)) %>% 
@@ -143,8 +175,13 @@ proportion_new_level_tool <- do.call(rbind, lapply(lst, function(x) x[,c("query"
   arrange(desc(n)) %>% mutate(p = n/ntool)
 
 proportion_new_level_tool %>% filter(P > .04) %>% group_by(new_level) %>% slice_head(n=1) %>% ungroup() %>% summarise(s = sum(P))
+
+# sum of propotions for GPA AND EFFLUX
 proportion_new_level_tool %>% filter(new_level %in% c("GPA","Efflux p.")) %>% group_by(tool) %>% summarise(N = sum(N), M = sum(M), ntool = sum(ntool), n = sum(n), p = sum(p))
+
+# sum of propotions for BETA-LACTAM
 proportion_new_level_tool %>% filter(new_level %in% c("Class A", "Class B", "Class D", "Class C")) %>% group_by(tool) %>% summarise(N = sum(N), M = sum(M), P = sum(P), ntool = sum(ntool), n = sum(n), p = sum(p))
+
 
 do.call(rbind, lapply(lst, function(x) x[,c("query","tool","new_level")])) %>% 
   mutate(N = n_distinct(query)) %>% 
@@ -156,9 +193,470 @@ do.call(rbind, lapply(lst, function(x) x[,c("query","tool","new_level")])) %>%
 ### conformity (overlap)
 
 
+unigenes_per_tool <- do.call(rbind, lapply(seq_along(1:length(lst)), function(j) data.frame(tool = lst[[j]]$tool, query = lst[[j]]$query, 
+                                                                                            ARO = lst[[j]]$ARO, parent = lst[[j]]$parent, 
+                                                                                            parent_description = lst[[j]]$parent_description,
+                                                                                            id = lst[[j]]$id, new_level = lst[[j]]$new_level)))
+#unigenes_per_tool <- unigenes_per_tool #%>%
+  #mutate(tool = ifelse(tool == "DeepARG (a.a.)", "DeepARG (aa)",
+  #ifelse(tool == "RGI (BLAST a.a.)", "RGI (BLAST - aa)",
+  #ifelse(tool == "RGI (DIAMOND a.a.)", "RGI (DIAMOND - aa)",
+  #ifelse(tool == "RGI (DIAMOND  nt)", "RGI (DIAMOND - nt)",
+  #ifelse(tool == "fARGene (a.a.)", "fARGene (aa)",
+  #ifelse(tool == "AMRFinderPlus (a.a.)", "AMRFinderPlus (aa)", tool)))))))
+
+#unigenes_per_tool <- unigenes_per_tool %>% filter(!is.na(parent)) %>% distinct()
+
+
+tool_2 <- c("DeepARG (nt)", "RGI (DIAMOND - nt)", "fARGene (nt)", "AMRFinderPlus (aa)", "ResFinder (nt)",
+            "ABRicate (ARG-ANNOT - nt)", "ABRicate (CARD - nt)", "ABRicate (MEGARES - nt)", "ABRicate (NCBI - nt)",
+            "ABRicate (ResFinder - nt)")
+
+tools_per_unigene <- unigenes_per_tool %>% ungroup() %>% filter(tool %in% tool_2) %>% 
+  arrange(query) %>% 
+  group_by(query) %>% 
+  mutate(n_tools = n()) %>% 
+  mutate(single = (n_tools ==1)) 
+
+alt_name_tools <- c("DeepARG_nt", "RGI_DIAMOND_nt", "fARGene_nt", "AMRFinderPlus_aa", "ResFinder_nt",
+                    "ABRicate_ARGANNOT_nt", "ABRicate_CARD_nt", "ABRicate_MEGARES_nt", "ABRicate_NCBI_nt",
+                    "ABRicate_ResFinder_nt")
+
+names(alt_name_tools) <- tool_2
+
+tools_per_unigene <- tools_per_unigene %>% mutate(tool = alt_name_tools[tool])
+
+gene.tool2 <- tools_per_unigene %>% select(tool, query, new_level) %>% distinct() %>% 
+  mutate(v = T) %>% group_by(tool, new_level) %>% pivot_wider(names_from = tool, values_from = v) 
+
+pairwise_match <- combn(colnames(gene.tool2[,-c(1,2)]), 2, function(cols) {
+  sum(gene.tool2[[cols[1]]] & gene.tool2[[cols[2]]], na.rm = TRUE)
+})
+
+PM <- matrix(0, ncol(gene.tool2[,-c(1,2)]), ncol(gene.tool2[,-c(1,2)]),
+             dimnames = list(colnames(gene.tool2[,-c(1,2)]), colnames(gene.tool2[,-c(1,2)])))
+PM <- data.frame(PM)
+PM <- PM[0,]
+PM$tool <- NULL
+PM$new_level <- NULL
+
+for(j in unique(gene.tool2$new_level)){
+  pairwise_match <- combn(colnames(gene.tool2[gene.tool2$new_level == j,-c(1,2)]), 2, function(cols) {
+    sum(gene.tool2[gene.tool2$new_level ==j, cols[1]] & gene.tool2[gene.tool2$new_level ==j, cols[2]], na.rm = TRUE)
+  })
+  pairwise_matrix <- matrix(0, ncol(gene.tool2[,-c(1,2)]), ncol(gene.tool2[,-c(1,2)]),
+                            dimnames = list(colnames(gene.tool2[,-c(1,2)]), colnames(gene.tool2[,-c(1,2)])))
+  pairwise_matrix[lower.tri(pairwise_matrix)] <- pairwise_match
+  pairwise_matrix[upper.tri(pairwise_matrix)] <- t(pairwise_matrix)[upper.tri(pairwise_matrix)]
+  pairwise_matrix <- data.frame(pairwise_matrix)
+  pairwise_matrix$tool <- rownames(pairwise_matrix)
+  rownames(pairwise_matrix) <- NULL
+  pairwise_matrix$new_level <- j
+  PM <- rbind.data.frame(PM, pairwise_matrix)
+}
+
+
+PM_long <- PM %>% 
+  pivot_longer(
+    cols = -c(tool, new_level),
+    names_to = "variable",
+    values_to = "value"
+  ) 
+
+
+row_sums <- PM_long %>% ungroup() %>%
+  group_by(new_level, tool) %>%
+  summarise(row_sum = sum(value))
+
+
+row_sums <- tools_per_unigene %>% group_by(tool, new_level) %>% 
+  summarise(row_sum = n_distinct(query))
+
+col_sums <- tools_per_unigene %>% group_by(tool, new_level) %>% 
+  summarise(col_sum = n_distinct(query)) %>% 
+  rename(variable = tool)
+
+PM_long <- PM_long %>% mutate(tool = factor(tool, levels = unique(PM_long$tool)))
+PM_long <- PM_long %>% mutate(variable = factor(variable, levels = unique(PM_long$tool)))
+row_sums <- row_sums %>% ungroup() %>% mutate(tool = factor(tool, levels = unique(PM_long$tool)))
+col_sums <- col_sums %>% ungroup() %>% mutate(variable = factor(variable, levels = unique(PM_long$tool)))
+
+PM_new <- PM_long %>%
+  left_join(row_sums, by = c("new_level", "tool")) %>%
+  left_join(col_sums, by = c("new_level", "variable")) %>%
+  mutate(
+    i = as.numeric(tool),
+    j = as.numeric(variable),
+    adjusted = case_when(
+      i < j ~ value / col_sum,     # upper triangle
+      i > j ~ value / col_sum,     # lower triangle
+      TRUE ~ NA                 # diagonal stays the same
+    )
+  )
+
+
+PM_new %>% filter(new_level %in% "GPA", tool %in% c("RGI_DIAMOND_nt", "DeepARG_nt"), variable %in% c("RGI_DIAMOND_nt", "DeepARG_nt"))
+PM_new %>% filter(new_level %in% "Efflux p.", tool %in% c("RGI_DIAMOND_nt", "DeepARG_nt"), variable %in% c("RGI_DIAMOND_nt", "DeepARG_nt"))
+
+overlap_tool <- PM_new %>% group_by(tool, variable) %>% summarise(value = sum(value, na.rm = T), 
+                                                  row_sum = sum(row_sum, na.rm = T),
+                                                  col_sum = sum(col_sum, na.rm = T), i = i[1], j = j[1])
+overlap_tool <- overlap_tool %>% 
+  filter(tool != variable) %>%
+  mutate(p1 = value/row_sum, p2 = value/col_sum, p3 = value / (row_sum + col_sum - value))
+
+# jaccard index
+JI <- overlap_tool %>% ungroup() %>% group_by(tool) %>% arrange(tool, desc(p3)) %>% select(tool, variable, p3) %>%
+  mutate( pair = paste(pmin(as.character(tool), as.character(variable)), 
+                       pmax(as.character(tool), as.character(variable)))) %>%
+  group_by(pair) %>% slice_head(n = 1) %>% ungroup() %>% arrange(desc(p3) )
+
+data.frame(JI)
+
+
+# mean and median recall and FNR
+PM_new %>% filter(tool != variable) %>% ungroup() %>% filter( !is.na(col_sum)) %>%
+  mutate(recall = value / col_sum, fnr = (row_sum - value) / row_sum ) %>% 
+  mutate(recall = ifelse(is.na(row_sum), NA, recall), fnr = ifelse(is.na(row_sum), NA, fnr)) %>%
+  group_by(tool, new_level) %>% 
+  summarise(mn_recall = mean(recall, na.rm = T), med_recall = median(recall, na.rm = T),
+            mn_fnr = mean(fnr, na.rm = T), med_fnr = median(fnr, na.rm = T)) %>%
+  ungroup() %>%
+  group_by(tool) %>% 
+  summarise(MN_recall = mean(mn_recall, na.rm = T), MED_recall = median(med_recall, na.rm = T),
+            MN_fnr = mean(mn_fnr, na.rm = T), MED_fnr = median(med_fnr, na.rm = T))
 
 
 
+# fargene mean and median recall and FNR
+PM_new %>% filter(tool != variable) %>% ungroup() %>% filter( !is.na(col_sum)) %>%
+  mutate(recall = value / col_sum, fnr = (row_sum - value) / row_sum ) %>% 
+  mutate(recall = ifelse(is.na(row_sum), NA, recall), fnr = ifelse(is.na(row_sum), NA, fnr)) %>%
+  group_by(tool, new_level) %>% 
+  summarise(mn_recall = mean(recall, na.rm = T), med_recall = median(recall, na.rm = T),
+            mn_fnr = mean(fnr, na.rm = T), med_fnr = median(fnr, na.rm = T)) %>%
+  ungroup() %>% filter(tool == "fARGene_nt" & !is.na(mn_recall))
+
+PM_new %>% filter(tool != variable) %>% ungroup() %>% filter( !is.na(col_sum)) %>%
+  mutate(recall = value / col_sum, fnr = (row_sum - value) / row_sum ) %>% 
+  mutate(recall = ifelse(is.na(row_sum), NA, recall), fnr = ifelse(is.na(row_sum), NA, fnr)) %>%
+  group_by(tool, new_level) %>% 
+  summarise(mn_recall = mean(recall, na.rm = T), med_recall = median(recall, na.rm = T),
+            mn_fnr = mean(fnr, na.rm = T), med_fnr = median(fnr, na.rm = T)) %>%
+  ungroup() %>% filter(tool == "AMRFinderPlus_aa" & !is.na(mn_recall))
+
+
+as.data.frame(table(lst$amrfinder.norm.prot$new_level, lst$amrfinder.norm.prot$Method)) %>% 
+  pivot_wider(names_from = Var2, values_from = Freq) %>% 
+  arrange(desc(HMM))
+
+data.frame(hm_recall_fnr_1 %>% filter(tool %in% "AMRFinderPlus_aa"  & value > 0) %>% 
+             group_by(tool, new_level) %>% summarise(M_R = median(recall)))
+
+data.frame(hm_recall_fnr_1 %>% filter(tool %in% "AMRFinderPlus_aa" & !variable %in% "fARGene_nt" & value > 0) %>% 
+  group_by(tool, new_level) %>% summarise(M_R = median(recall)))
+
+hm_recall_fnr_1 %>% filter(tool %in% c("AMRFinderPlus_aa", "ABRicate_MEGARES_nt") & !variable %in% "fARGene_nt" & value > 0) %>% 
+             group_by(tool, new_level) %>% 
+  summarise(mn_recall = mean(recall, na.rm = T), med_recall = median(recall, na.rm = T),
+            mn_fnr = mean(fnr, na.rm = T), med_fnr = median(fnr, na.rm = T),
+            iqr_recall = IQR(recall, na.rm = T), iqr_fnr = IQR(fnr, na.rm = T),
+            sum_row = sum(row_sum - value, na.rm = T)) %>%
+  ungroup() %>%
+  group_by(tool) %>% 
+  summarise(MN_recall = mean(mn_recall, na.rm = T), MED_recall = median(med_recall, na.rm = T),
+            MN_fnr = mean(mn_fnr, na.rm = T), MED_fnr = median(med_fnr, na.rm = T),
+            iqr_med_recall = IQR(med_recall, na.rm = T), iqr_med_fnr = IQR(med_fnr, na.rm = T),
+            SUM_row = sum(sum_row, na.rm = T))
+
+# summary 1 - calculation of recall and fnr per tool and gene class
+hm_recall_fnr_1 <- PM_new %>% filter(tool != variable) %>% ungroup() %>% filter( !is.na(col_sum)) %>%
+  mutate(recall = value / col_sum, fnr = (row_sum - value) / row_sum ) %>% 
+  mutate(recall = ifelse(is.na(row_sum), NA, recall), fnr = ifelse(is.na(row_sum), NA, fnr))
+
+# summary 2 -  medians of recall and fnr per tool and gene class, accross all other tools
+
+hm_recall_fnr_2 <- hm_recall_fnr_1 %>% 
+  group_by(tool, new_level) %>%
+  summarise(mn_recall = mean(recall, na.rm = T), med_recall = median(recall, na.rm = T),
+            mn_fnr = mean(fnr, na.rm = T), med_fnr = median(fnr, na.rm = T),
+            iqr_recall = IQR(recall, na.rm = T), iqr_fnr = IQR(fnr, na.rm = T),
+            sum_row = sum(row_sum - value, na.rm = T))
+
+# summary 2 -  medians of the medians of recall and fnr per tool accross gene class after accross tool
+
+hm_recall_fnr_3 <- hm_recall_fnr_2 %>%
+  ungroup() %>%
+  group_by(tool) %>% 
+  summarise(MN_recall = mean(mn_recall, na.rm = T), MED_recall = median(med_recall, na.rm = T),
+            MN_fnr = mean(mn_fnr, na.rm = T), MED_fnr = median(med_fnr, na.rm = T),
+            iqr_med_recall = IQR(med_recall, na.rm = T), iqr_med_fnr = IQR(med_fnr, na.rm = T),
+            SUM_row = sum(sum_row, na.rm = T))
+
+
+# unique genes per tool
+tools_per_unigene %>% group_by(query) %>% filter(tool == "AMRFinderPlus_aa") %>% 
+  ungroup() %>% group_by(n_tools) %>% summarise(n = n()) %>% mutate( p = n/sum(n)) %>% filter(n_tools == 1)
+
+tools_per_unigene %>% group_by(query) %>% filter(tool == "ABRicate_ResFinder_nt") %>% 
+  ungroup() %>% group_by(n_tools) %>% summarise(n = n()) %>% mutate( p = n/sum(n)) %>% filter(n_tools == 1)
+
+tools_per_unigene %>% group_by(query) %>% filter(tool == "ABRicate_CARD_nt") %>% 
+  ungroup() %>% group_by(n_tools) %>% summarise(n = n()) %>% mutate( p = n/sum(n)) %>% filter(n_tools == 1)
+
+tools_per_unigene %>% group_by(query) %>% filter(tool == "ABRicate_ARGANNOT_nt") %>% 
+  ungroup() %>% group_by(n_tools) %>% summarise(n = n()) %>% mutate( p = n/sum(n)) %>% filter(n_tools == 1)
+
+tools_per_unigene %>% group_by(query) %>% filter(tool == "ABRicate_NCBI_nt") %>% 
+  ungroup() %>% group_by(n_tools) %>% summarise(n = n()) %>% mutate( p = n/sum(n)) %>% filter(n_tools == 1)
+
+tools_per_unigene %>% group_by(query) %>% filter(tool == "ABRicate_MEGARES_nt") %>% 
+  ungroup() %>% group_by(n_tools) %>% summarise(n = n()) %>% mutate( p = n/sum(n)) %>% filter(n_tools == 1)
+
+tools_per_unigene %>% group_by(query) %>% filter(tool == "RGI_DIAMOND_nt") %>% 
+  ungroup() %>% group_by(n_tools) %>% summarise(n = n()) %>% mutate( p = n/sum(n)) %>% filter(n_tools == 1)
+
+tools_per_unigene %>% group_by(query) %>% filter(tool == "DeepARG_nt") %>% 
+  ungroup() %>% group_by(n_tools, new_level) %>% summarise(n = n())  %>% filter(n_tools == 1) %>% arrange(desc(n))
+
+
+
+# ggplot(hm_recall_fnr_2, aes(x = new_level, y = tool, size = 1 - iqr_recall, color = exp(med_recall))) +
+#   geom_point() +
+#   scale_size_continuous(range = c(0.05, 10)) +
+#   scale_color_gradient2(low = "white",  high = "red", midpoint = max(exp(1))/2) +
+#   theme_minimal() +
+#   theme(axis.title.y = element_blank(),
+#         axis.ticks.y = element_blank())
+
+alt_name_tools_rev <- names(alt_name_tools)
+names(alt_name_tools_rev) <- alt_name_tools
+
+ 
+
+hm_recall_fnr_2 <- hm_recall_fnr_2 %>% mutate(tool = as.vector(alt_name_tools_rev[as.character(tool)]))
+hm_recall_fnr_2 <- hm_recall_fnr_2 %>% mutate(tool = factor(tool, levels = tools_levels))
+
+general_size <- 10
+
+plot_recall <- ggplot(hm_recall_fnr_2, aes(x = tool, y = med_recall, fill = tool)) +
+  geom_boxplot() +
+  scale_fill_manual(values = pal_10) +
+  theme_minimal() +
+  ylab("Recall") +
+  xlab("Tool") +
+  theme(panel.border = element_rect(fill = "transparent", color = "black", linewidth = 2),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, size = general_size),
+        axis.text.y = element_text(size = general_size),
+        axis.title = element_text(size = general_size + 2, face = "bold"))
+
+plot_recall
+
+plot_fnr <- ggplot(hm_recall_fnr_2, aes(x = tool, y = med_fnr, fill = tool)) +
+  geom_boxplot() +
+  scale_fill_manual(values = pal_10) +
+  theme_minimal() +
+  ylab("False Negative Rate") +
+  xlab("Tool") +
+  #scale_x_continuous(breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1)) +
+  theme(panel.border = element_rect(fill = "transparent", color = "black", linewidth = 2),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 90, size = general_size),
+        axis.text.y = element_text(size = general_size),
+        axis.title = element_text(size = general_size + 2, face = "bold"))
+
+plot_fnr
+
+
+df$facet_var <- gsub(" ", "\n", df$facet_var)
+
+hm_recall_fnr_2 <- hm_recall_fnr_2 %>% 
+  filter(!is.na(new_level)) %>% 
+  mutate(strip = gsub("\\(", "\n\\(", tool)) %>%
+  mutate(strip = factor(strip, levels = gsub("\\(", "\n\\(", levels(tool))))
+
+recall_heatmap <- ggplot(hm_recall_fnr_2, aes(x = med_recall, y = new_level, fill = 1-iqr_recall)) +
+  geom_col() +
+  #scale_fill_gradient2(low = "white",  high = "red") +
+  scale_fill_viridis_c() + 
+  facet_grid(. ~ strip) +
+  theme_minimal() +
+  labs(fill = "1 - IQR") +
+  xlab("Recall") +
+  scale_x_continuous(breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1)) +
+  theme(axis.title.y = element_blank(),
+        legend.position = "bottom",
+        panel.border = element_rect(fill = "transparent", color = "black", linewidth = 1),
+        axis.text.x = element_text( size = general_size),
+        axis.text.y = element_text(size = general_size),
+        strip.text = element_text(size = general_size, face = "bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.title = element_text(size = general_size + 2, face = "bold"))
+
+recall_heatmap
+
+fnr_heatmap <- ggplot(hm_recall_fnr_2 %>% filter(!is.na(new_level)), aes(x = med_fnr, y = new_level, fill = 1-iqr_fnr)) +
+  geom_col() +
+  #scale_fill_gradient2(low = "white",  high = "red") +
+  scale_fill_viridis_c() + 
+  facet_grid(. ~ strip) +
+  theme_minimal() +
+  labs(fill = "1 - IQR") +
+  xlab("False Negative Rate") +
+  scale_x_continuous(breaks = c(0, 0.5, 1), labels = c(0, 0.5, 1)) +
+  theme(axis.title.y = element_blank(),
+        legend.position = "bottom",
+        panel.border = element_rect(fill = "transparent", color = "black", linewidth = 1),
+        axis.text.x = element_text( size = general_size),
+        axis.text.y = element_text(size = general_size),
+        strip.text = element_text(size = general_size, face = "bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.title = element_text(size = general_size + 2, face = "bold"))
+
+fnr_heatmap
+
+pal15_rep <- c(rep("#a6cee3",2), rep("#1f78b4",3), rep("#b2df8a",2), 
+  rep("#33a02c", 1), rep("#fb9a99",2), pal_10[6:10])
+
+plot_count_genes_tool <- unigenes  %>% mutate(tool = factor(tool, levels = tools_levels)) %>%
+  ggplot(aes( x = tool)) +
+  geom_bar(aes(fill = tool), color = "black") +
+  scale_fill_manual(values = pal15_rep) +
+  theme_minimal() +
+  #scale_y_log10(breaks = scales::trans_breaks("log10", function(x) 10^x),
+  #              labels = scales::trans_format("log10", scales::math_format(10^.x)))  + 
+  ylab("Number of detected ARGs") +
+  xlab("Tool") +
+  labs(fill = "") +
+  scale_y_continuous(breaks = c(25000, 50000,75000,100000,125000), labels = c("25,000", "50,000", "75,000","100,000","125,000")) +
+  theme(
+    legend.position = "none",
+    panel.border = element_rect(fill = "transparent", color = "black", linewidth = 1),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.title = element_text(size = general_size + 2, face = "bold"),
+    axis.text.x = element_text(angle = 90, size = general_size),
+    axis.text.y = element_text(size = general_size))
+
+plot_count_genes_tool
+
+dev.off()
+ggsave("~/Documents/plots_project/count_genes_per_tool.svg", plot_count_genes_tool, width = 10, height = 6)
+dev.off()
+
+
+dev.off()
+ggsave("~/Documents/plots_project/recall.svg", plot_recall, width = 10, height = 6)
+dev.off()
+
+dev.off()
+ggsave("~/Documents/plots_project/fnr.svg", plot_fnr, width = 10, height = 6)
+dev.off()
+
+dev.off()
+ggsave("~/Documents/plots_project/recall_heatmap.svg", recall_heatmap  , width = 14, height = 12)
+dev.off()
+
+dev.off()
+ggsave("~/Documents/plots_project/fnr_heatmap.svg", fnr_heatmap, width = 14, height = 12)
+dev.off()
+
+
+JI %>% 
+  mutate(x1 = factor(as.vector(alt_name_tools_rev[as.character(tool)]), levels = tools_levels)) %>% 
+  mutate(x2 = factor(as.vector(alt_name_tools_rev[as.character(variable)]), levels = tools_levels)) %>%
+  ggplot(aes(x = x1, y = x2, fill = p3)) +
+  geom_tile() +
+  #scale_fill_gradient2(low = "white",  high = "red") +
+  scale_fill_viridis_c() + 
+  theme_minimal() +
+  labs(fill = "Jaccaard index") +
+  xlab("") +
+  theme(axis.title.y = element_blank(),
+        legend.position = "bottom",
+        panel.border = element_rect(fill = "transparent", color = "black", linewidth = 1),
+        axis.text.x = element_text(angle = 90, size = general_size),
+        axis.text.y = element_text(size = general_size),
+        strip.text = element_text(size = general_size, face = "bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.title = element_text(size = general_size + 2, face = "bold"))
+
+
+
+
+unigenes_per_tool %>% filter(tool %in% tool_2) %>% 
+  group_by(query) %>% 
+  mutate(n = n_distinct(tool))  %>% 
+  mutate(n = n > 1) %>% 
+ggplot( aes(id, colour = tool, linetype = n)) +
+  geom_freqpoly(binwidth = 1) +
+  facet_wrap(. ~ tool, scales = "free_y")
+
+
+table(lst$amrfinder.norm.prot$ARG.class, lst$amrfinder.norm.prot$Method)
+
+unigenes_per_tool %>% filter(tool %in% tool_2 & id < 60) %>% 
+  group_by(query) %>% 
+  mutate(n = n_distinct(tool))  %>% 
+  mutate(n = n > 1) %>% 
+  ggplot( aes(id, colour = tool, linetype = n)) +
+  geom_freqpoly(binwidth = 1) +
+  facet_wrap(. ~ tool, scales = "free_y")
+
+
+unigenes_per_tool %>% filter(tool %in% tool_2 & id < 70) %>% 
+  group_by(query) %>% 
+  mutate(n = n_distinct(tool))  %>% 
+  mutate(n = n > 1) %>% 
+  ggplot( aes(new_level, fill = tool)) +
+  geom_bar() +
+  facet_wrap(. ~ tool, scales = "free_y")
+
+
+
+unigenes_per_tool %>% filter(tool %in% c("RGI (DIAMOND - nt)", "DeepARG (nt)") & id < 60) %>% 
+  group_by(query) %>% 
+  mutate(n = n_distinct(tool))  %>% 
+  mutate(n = n > 1) %>% 
+  ungroup() %>% group_by(tool, new_level, n) %>% 
+  summarise(N = n())
+
+
+unigenes_per_tool %>% 
+  group_by(tool) %>% mutate(total_tool = n()) %>% ungroup() %>%
+  group_by(tool, new_level) %>% mutate(total_class = n()) %>% ungroup() %>%
+  filter(tool %in% c("RGI (DIAMOND - nt)", "DeepARG (nt)") & id < 60) %>% 
+  group_by(query) %>% 
+  mutate(n = n_distinct(tool))  %>% 
+  mutate(n = n > 1) %>% 
+  ungroup() %>% group_by(tool, new_level, n) %>% 
+  summarise(total_tool = total_tool[1], total_class = total_class[1], N = n()) %>% ungroup() %>% group_by(tool) %>% mutate(p = N / sum(N)) %>%
+  mutate(P = N / total_class) %>%
+  arrange(desc(P), desc(p))
+
+unigenes_per_tool %>% 
+  group_by(tool) %>% mutate(total_tool = n()) %>% ungroup() %>%
+  group_by(tool, new_level) %>% mutate(total_class = n()) %>% ungroup() %>%
+  filter(tool %in% c("RGI (DIAMOND - nt)", "DeepARG (nt)") & id < 60) %>% 
+  group_by(query) %>% 
+  mutate(n = n_distinct(tool))  %>% 
+  mutate(n = n > 1) %>% 
+  ungroup() %>% group_by(tool, new_level, n) %>% 
+  summarise(total_tool = total_tool[1], total_class = total_class[1], N = n()) %>% 
+  ungroup() %>% group_by(tool) %>% mutate(p = N / sum(N)) %>%
+  mutate(P = N / total_class) %>%
+  arrange(desc(P), desc(p))
+
+##################################################################################################################################################################
+##################################################################################################################################################################
+##################################################################################################################################################################
+##################################################################################################################################################################
+##################################################################################################################################################################
+##################################################################################################################################################################
 
 
 # tools selected to plot
@@ -538,145 +1036,7 @@ dev.off()
 ########################################################################################
 
 
-lst <- readRDS("GitHub/arg_compare/results_tools.rds")
 
-fargene_with_rgi <- read.delim("GitHub/arg_compare/check_missing_annot/fargene_predicted_fna.txt")
-fargene_with_rgi <- fargene_with_rgi[,-c(1,18,19,20)]
-fargene_with_rgi$query <- gsub(' ', '', fargene_with_rgi$Contig)
-fargene_with_rgi$query <- gsub('.{2}$', '', fargene_with_rgi$query)
-fargene_with_rgi$query <- gsub('tmp_', '', fargene_with_rgi$query)
-fargene_with_rgi <- fargene_with_rgi %>%
-  mutate(ARO = paste0("ARO:", ARO))
-sum(fargene_with_rgi$query %in% lst$fargene$query)
-sum(!fargene_with_rgi$query %in% lst$fargene$query)
-sum(lst$fargene$query %in% fargene_with_rgi$query)
-sum(!lst$fargene$query %in% fargene_with_rgi$query)
-
-number_unigenes_per_tool <- sapply(lst, function(x) length(unique(x$query)))
-
-names(lst)
-
-lst$deeparg.norm.prot$id <- lst$deeparg.norm.prot$identity
-lst$deeparg.norm$id <- lst$deeparg.norm$identity
-#lst$fargene$id <- lst$fargene$hmm
-lst$fargene$id <- fargene_with_rgi$Best_Identities[match(lst$fargene$query, fargene_with_rgi$query)]
-lst$fargene.prot$id <- lst$fargene.prot$hmm
-lst$rgi.blast$id <- lst$rgi.blast$Best_Identities
-lst$rgi.diamond$id <- lst$rgi.diamond$Best_Identities
-lst$rgi.diamond.prot$id <- lst$rgi.diamond.prot$Best_Identities
-lst$amrfinder.norm$id <- lst$amrfinder.norm$X..Identity.to.reference
-lst$amrfinder.norm.prot$id <- lst$amrfinder.norm.prot$X..Identity.to.reference
-lst$abricate.argannot.norm$id <- lst$abricate.argannot.norm$V11
-lst$abricate.card.norm$id <- lst$abricate.card.norm$V11
-lst$abricate.megares.norm$id <- lst$abricate.megares.norm$V11
-lst$abricate.ncbi.norm$id <- lst$abricate.ncbi.norm$V11
-lst$abricate.resfinder.norm$id <- lst$abricate.resfinder.norm$V11
-lst$resfinder.norm$id <- lst$resfinder.norm$Identity
-
-unigenes_per_tool <- do.call(rbind, lapply(seq_along(1:length(lst)), function(j) data.frame(tool = rep(names(lst)[j], dim(lst[[j]])[1]), query = lst[[j]]$query, 
-                                                                                            ARO = lst[[j]]$ARO, parent = lst[[j]]$parent, 
-                                                                                            parent_description = lst[[j]]$parent_description,
-                                                                                            id = lst[[j]]$id)))
-
-unigenes_per_tool <- unigenes_per_tool %>% filter(!is.na(parent)) %>% distinct()
-
-
-tool_2 <- c("deeparg.norm", "rgi.diamond", "fargene", "amrfinder.norm.prot", "abricate.argannot.norm",
-            "abricate.card.norm", "abricate.megares.norm", "abricate.ncbi.norm", "abricate.resfinder.norm",
-            "resfinder.norm")
-
-tools_per_unigene <- unigenes_per_tool %>% ungroup() %>% filter(tool %in% tool_2) %>% 
-  arrange(query) %>% 
-  group_by(query) %>% 
-  mutate(n_tools = n()) %>% 
-  mutate(single = (n_tools ==1)) 
-
-
-tools_per_unigene$new_level <- new_level_df$new[match(tools_per_unigene$parent_description, new_level_df$old)]
-tools_per_unigene[duplicated(paste(tools_per_unigene$tool, tools_per_unigene$query)),]
-
-########################################################################
-#########################################################################
-#########################################################################
-# heatmaps
-
-gene.tool2 <- tools_per_unigene %>% select(tool, query, new_level) %>% distinct() %>% 
-  mutate(v = T) %>% group_by(tool, new_level) %>% pivot_wider(names_from = tool, values_from = v) 
-
-pairwise_match <- combn(colnames(gene.tool2[,-c(1,2)]), 2, function(cols) {
-  sum(gene.tool2[[cols[1]]] & gene.tool2[[cols[2]]], na.rm = TRUE)
-})
-
-PM <- matrix(0, ncol(gene.tool2[,-c(1,2)]), ncol(gene.tool2[,-c(1,2)]),
-                          dimnames = list(colnames(gene.tool2[,-c(1,2)]), colnames(gene.tool2[,-c(1,2)])))
-PM <- data.frame(PM)
-PM <- PM[0,]
-PM$tool <- NULL
-PM$new_level <- NULL
-
-for(j in unique(gene.tool2$new_level)){
-  pairwise_match <- combn(colnames(gene.tool2[gene.tool2$new_level == j,-c(1,2)]), 2, function(cols) {
-    sum(gene.tool2[gene.tool2$new_level ==j, cols[1]] & gene.tool2[gene.tool2$new_level ==j, cols[2]], na.rm = TRUE)
-  })
-  pairwise_matrix <- matrix(0, ncol(gene.tool2[,-c(1,2)]), ncol(gene.tool2[,-c(1,2)]),
-                            dimnames = list(colnames(gene.tool2[,-c(1,2)]), colnames(gene.tool2[,-c(1,2)])))
-  pairwise_matrix[lower.tri(pairwise_matrix)] <- pairwise_match
-  pairwise_matrix[upper.tri(pairwise_matrix)] <- t(pairwise_matrix)[upper.tri(pairwise_matrix)]
-  pairwise_matrix <- data.frame(pairwise_matrix)
-  pairwise_matrix$tool <- rownames(pairwise_matrix)
-  rownames(pairwise_matrix) <- NULL
-  pairwise_matrix$new_level <- j
-  PM <- rbind.data.frame(PM, pairwise_matrix)
-}
-
-
-PM %>% filter(tool %in% "fargene")
-
-PM_long <- PM %>% 
-  pivot_longer(
-    cols = -c(tool, new_level),
-    names_to = "variable",
-    values_to = "value"
-  ) 
-
-data.frame(PM_long %>% filter(tool %in% "fargene"))
-PM_long %>% filter(tool %in% "fargene") %>% group_by(new_level) %>% summarise(n = sum(value))
-
-PM_long %>% filter(variable %in% "fargene")
-PM_long %>% filter(variable %in% "fargene") %>% group_by(new_level) %>% summarise(n = sum(value))
-
-row_sums <- PM_long %>% ungroup() %>%
-  group_by(new_level, tool) %>%
-  summarise(row_sum = sum(value))
-
-
-row_sums <- tools_per_unigene %>% group_by(tool, new_level) %>% 
-  summarise(row_sum = n_distinct(query))
-
-col_sums <- tools_per_unigene %>% group_by(tool, new_level) %>% 
-  summarise(col_sum = n_distinct(query)) %>% 
-  rename(variable = tool)
-
-PM_long <- PM_long %>% mutate(tool = factor(tool, levels = unique(PM_long$tool)))
-PM_long <- PM_long %>% mutate(variable = factor(variable, levels = unique(PM_long$tool)))
-row_sums <- row_sums %>% ungroup() %>% mutate(tool = factor(tool, levels = unique(PM_long$tool)))
-col_sums <- col_sums %>% ungroup() %>% mutate(variable = factor(variable, levels = unique(PM_long$tool)))
-
-PM_new <- PM_long %>%
-  left_join(row_sums, by = c("new_level", "tool")) %>%
-  left_join(col_sums, by = c("new_level", "variable")) %>%
-  mutate(
-    i = as.numeric(tool),
-    j = as.numeric(variable),
-    adjusted = case_when(
-      i < j ~ value / col_sum,     # upper triangle
-      i > j ~ value / col_sum,     # lower triangle
-      TRUE ~ NA                 # diagonal stays the same
-    )
-  )
-
-
-PM_new %>% filter(new_level %in% "GPA", tool %in% c("rgi.diamond", "deeparg.norm"), variable %in% c("rgi.diamond", "deeparg.norm"))
 
 
 ## function

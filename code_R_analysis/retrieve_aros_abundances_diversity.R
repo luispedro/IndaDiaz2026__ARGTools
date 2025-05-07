@@ -241,7 +241,7 @@ amrfinder.norm.prot <- read.delim("protein/amrfinder.norm.tsv") %>%
   rename(query = Protein.id) %>% 
   rename(ARG.class = Class) %>% 
   rename(ARG.subclass = Subclass) %>%
-  mutate(tool = "AMRFinderPlus (a.a.)", id = X..Identity.to.reference) %>% 
+  mutate(tool = "AMRFinderPlus (aa)", id = X..Identity.to.reference) %>% 
   group_by(query) %>% 
   arrange(desc(X..Identity.to.reference + X..Coverage.of.reference), 
           desc(Alignment.length)) %>%
@@ -262,7 +262,7 @@ deeparg.norm <- read.delim("dna/deeparg.norm.tsv") %>%
 deeparg.norm.prot <- read.delim("protein/deeparg.norm.tsv") %>% 
   rename(query = read_id) %>% 
   rename(ARG.class = predicted_ARG.class) %>%
-  mutate(tool = "DeepARG (a.a.)", id = identity)
+  mutate(tool = "DeepARG (aa)", id = identity)
 
 # no repeated unigenes 
 
@@ -274,7 +274,7 @@ rgi.diamond <- read.delim("dna/rgi_diamond.tsv") %>%
   mutate(query = gsub('.{2}$', '', Contig)) %>% 
   rename(ARG.class = AMR.Gene.Family) %>%
   mutate(ARO = paste0("ARO:", ARO)) %>%
-  mutate(tool = "RGI (DIAMOND  nt)", id = Best_Identities) %>% 
+  mutate(tool = "RGI (DIAMOND nt)", id = Best_Identities) %>% 
   group_by(query) %>% 
   arrange(desc(Best_Identities), 
           desc(Best_Hit_Bitscore), 
@@ -288,7 +288,7 @@ rgi.blast <- read.delim("dna/rgi_blast.tsv") %>%
   mutate(query = gsub('.{2}$', '', Contig)) %>% 
   rename(ARG.class = AMR.Gene.Family) %>%
   mutate(ARO = paste0("ARO:", ARO)) %>%
-  mutate(tool = "RGI (BLAST  nt)", id = Best_Identities) %>% 
+  mutate(tool = "RGI (BLAST nt)", id = Best_Identities) %>% 
   group_by(query) %>% 
   arrange(desc(Best_Identities), 
           desc(Best_Hit_Bitscore), 
@@ -303,7 +303,7 @@ rgi.diamond.prot <- read.delim("protein/rgi_diamond.tsv") %>%
   mutate(query = ORF_ID) %>% 
   rename(ARG.class = AMR.Gene.Family) %>% 
   mutate(ARO = paste0("ARO:", ARO)) %>%
-  mutate(tool = "RGI (DIAMOND  a.a.)", id = Best_Identities)
+  mutate(tool = "RGI (DIAMOND aa)", id = Best_Identities)
 
 # no repeated unigenes
 
@@ -393,7 +393,7 @@ fargene <- fargene %>%
   mutate(new_class = ifelse(new_class %in% "aph6p", "aph6", new_class))
 
 fargene.prot <- fargene.prot %>%
-  mutate(tool = "fARGene (a.a.)")
+  mutate(tool = "fARGene (aa)")
 
 # identity levels with RGI 
 
@@ -898,8 +898,6 @@ lst$fargene.prot <- lst$fargene.prot %>% mutate(parent.rgi = df2$Parent_ID[match
 
 # saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools.rds", compress = T)
 
-lst$rgi.blast$tool <- "RGI (BLAST  nt)"
-
 saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools_not_repeated_unigenes.rds", compress = T)
 
 ################################################################################################################################################
@@ -911,7 +909,7 @@ saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/resul
 args_abundances <- read.delim("data/abundances/args_abundances.tsv")
 
 # any unigenes from abundance missing in the aro reference
-sum(unique(args_abundances$X) %in% df2$Term_ID)
+# sum(unique(args_abundances$X) %in% df2$Term_ID)
 
 # abundance parent 
 abundance_parent <- function(abund_df, d){
@@ -943,10 +941,10 @@ abundance_parent <- function(abund_df, d){
   return(Y_aro)
 }
 
-abundance_parent_split <- function(abund_split, lst){
-  Y <-  do.call(rbind, lapply(lst, function(d) abundance_parent(abund_split, d)))
-  return(Y)
-}
+# abundance_parent_split <- function(abund_split, lst){
+#  Y <-  do.call(rbind, lapply(lst, function(d) abundance_parent(abund_split, d)))
+#  return(Y)
+# }
 
 
 lst_abundance_diversity <- do.call(rbind, lapply(lst, function(d) {abundance_parent(args_abundances %>% filter(raw_unique > 0), d) }))
