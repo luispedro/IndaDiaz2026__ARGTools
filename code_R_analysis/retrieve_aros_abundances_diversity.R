@@ -867,11 +867,11 @@ rm(new_level, even_vals, odd_vals)
 
 df2 <- df2 %>% mutate(new_level = new_level_df$new[match(Parent_Label, new_level_df$old)])
 
-# saveRDS(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.rds")
-# write.csv(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.csv",  row.names = F)
+saveRDS(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.rds")
+write.csv(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.csv",  row.names = F)
 
-saveRDS(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level_no_repeated_unigenes_in_each_tool.rds")
-write.csv(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level_no_repeated_unigenes_in_each_tool.csv",  row.names = F)
+#saveRDS(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level_no_repeated_unigenes_in_each_tool.rds")
+#write.csv(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level_no_repeated_unigenes_in_each_tool.csv",  row.names = F)
 
 ################################################################################################################################################
 ################################################################################################################################################
@@ -896,9 +896,9 @@ lst$fargene.prot <- lst$fargene.prot %>% mutate(parent.rgi = df2$Parent_ID[match
                                                 parent_description.rgi = df2$Parent_Label[match(aro.rgi, df2$Term_ID)],
                                                 new_level.rgi = df2$new_level[match(aro.rgi, df2$Term_ID)])
 
-# saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools.rds", compress = T)
+saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools.rds", compress = T)
 
-saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools_not_repeated_unigenes.rds", compress = T)
+# saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools_not_repeated_unigenes.rds", compress = T)
 
 ################################################################################################################################################
 ################################################################################################################################################
