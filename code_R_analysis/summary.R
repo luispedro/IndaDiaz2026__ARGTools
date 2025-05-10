@@ -385,7 +385,7 @@ hm_recall_fnr_2 <- hm_recall_fnr_1 %>%
 
 # summary 2 -  medians of the medians of recall and fnr per tool accross gene class after accross tool
 
-hm_recall_fnr_3 <- hm_recall_fnr_2 %>%
+ hm_recall_fnr_2 %>% filter(!tool %in% c("fARGene (nt)", "AMRFinderPlus (aa)")) %>% 
   ungroup() %>%
   group_by(tool) %>% 
   summarise(MN_recall = mean(mn_recall, na.rm = T), MED_recall = median(med_recall, na.rm = T),
@@ -393,6 +393,13 @@ hm_recall_fnr_3 <- hm_recall_fnr_2 %>%
             iqr_med_recall = IQR(med_recall, na.rm = T), iqr_med_fnr = IQR(med_fnr, na.rm = T),
             SUM_row = sum(sum_row, na.rm = T))
 
+hm_recall_fnr_3 <- hm_recall_fnr_2 %>%
+  ungroup() %>%
+  group_by(tool) %>% 
+  summarise(MN_recall = mean(mn_recall, na.rm = T), MED_recall = median(med_recall, na.rm = T),
+            MN_fnr = mean(mn_fnr, na.rm = T), MED_fnr = median(med_fnr, na.rm = T),
+            iqr_med_recall = IQR(med_recall, na.rm = T), iqr_med_fnr = IQR(med_fnr, na.rm = T),
+            SUM_row = sum(sum_row, na.rm = T))
 
 # unique genes per tool
 tools_per_unigene %>% group_by(query) %>% filter(tool == "AMRFinderPlus_aa") %>% 
@@ -618,15 +625,21 @@ unigenes_per_tool %>% filter(tool %in% tool_2 & id < 70) %>%
 
 
 
-unigenes_per_tool %>% filter(tool %in% c("RGI (DIAMOND - nt)", "DeepARG (nt)") & id < 60) %>% 
+t70 <- unigenes_per_tool %>% 
+  group_by(tool) %>% mutate(total_tool = n()) %>% ungroup() %>%
+  group_by(tool, new_level) %>% mutate(total_class = n()) %>% ungroup() %>%
+  filter(tool %in% c("RGI (DIAMOND - nt)", "DeepARG (nt)") & id < 70) %>% 
   group_by(query) %>% 
   mutate(n = n_distinct(tool))  %>% 
   mutate(n = n > 1) %>% 
   ungroup() %>% group_by(tool, new_level, n) %>% 
-  summarise(N = n())
+  summarise(total_tool = total_tool[1], total_class = total_class[1], N_tool_class_bool = n()) %>% 
+  mutate(p_bool = N_tool_class_bool / sum(N_tool_class_bool)) %>%
+  ungroup() %>% group_by(tool) %>% mutate(p_tool = N_tool_class_bool / sum(N_tool_class_bool)) %>%
+  mutate(P = N_tool_class_bool / total_class) %>%
+  arrange(tool, desc(N_tool_class_bool), desc(P), desc(p_tool), desc(p_bool)) 
 
-
-unigenes_per_tool %>% 
+t60 <- unigenes_per_tool %>% 
   group_by(tool) %>% mutate(total_tool = n()) %>% ungroup() %>%
   group_by(tool, new_level) %>% mutate(total_class = n()) %>% ungroup() %>%
   filter(tool %in% c("RGI (DIAMOND - nt)", "DeepARG (nt)") & id < 60) %>% 
@@ -634,22 +647,202 @@ unigenes_per_tool %>%
   mutate(n = n_distinct(tool))  %>% 
   mutate(n = n > 1) %>% 
   ungroup() %>% group_by(tool, new_level, n) %>% 
-  summarise(total_tool = total_tool[1], total_class = total_class[1], N = n()) %>% ungroup() %>% group_by(tool) %>% mutate(p = N / sum(N)) %>%
-  mutate(P = N / total_class) %>%
-  arrange(desc(P), desc(p))
+  summarise(total_tool = total_tool[1], total_class = total_class[1], N_tool_class_bool = n()) %>% 
+  mutate(p_bool = N_tool_class_bool / sum(N_tool_class_bool)) %>%
+  ungroup() %>% group_by(tool) %>% mutate(p_tool = N_tool_class_bool / sum(N_tool_class_bool)) %>%
+  mutate(P = N_tool_class_bool / total_class) %>%
+  arrange(tool, desc(N_tool_class_bool), desc(P), desc(p_tool), desc(p_bool))
 
-unigenes_per_tool %>% 
+t50 <- unigenes_per_tool %>% 
   group_by(tool) %>% mutate(total_tool = n()) %>% ungroup() %>%
   group_by(tool, new_level) %>% mutate(total_class = n()) %>% ungroup() %>%
-  filter(tool %in% c("RGI (DIAMOND - nt)", "DeepARG (nt)") & id < 60) %>% 
+  filter(tool %in% c("RGI (DIAMOND - nt)", "DeepARG (nt)") & id < 50) %>% 
   group_by(query) %>% 
   mutate(n = n_distinct(tool))  %>% 
   mutate(n = n > 1) %>% 
   ungroup() %>% group_by(tool, new_level, n) %>% 
-  summarise(total_tool = total_tool[1], total_class = total_class[1], N = n()) %>% 
-  ungroup() %>% group_by(tool) %>% mutate(p = N / sum(N)) %>%
-  mutate(P = N / total_class) %>%
-  arrange(desc(P), desc(p))
+  summarise(total_tool = total_tool[1], total_class = total_class[1], N_tool_class_bool = n()) %>% 
+  mutate(p_bool = N_tool_class_bool / sum(N_tool_class_bool)) %>%
+  ungroup() %>% group_by(tool) %>% mutate(p_tool = N_tool_class_bool / sum(N_tool_class_bool)) %>%
+  mutate(P = N_tool_class_bool / total_class) %>%
+  arrange(tool, desc(N_tool_class_bool), desc(P), desc(p_tool), desc(p_bool))
+
+data.frame(t60)
+t70 %>% filter(!n) %>% ungroup() %>% group_by(tool) %>% summarise(n = n(), min_ptool = min(p_tool), min_pbool = min(p_bool), md_bool = median(p_bool), mn_bool = mean(p_bool))
+t60 %>% filter(!n) %>% ungroup() %>% group_by(tool) %>% summarise(n = n(), min_ptool = min(p_tool), min_pbool = min(p_bool), md_bool = median(p_bool), mn_bool = mean(p_bool))
+
+t60 %>% filter(!n, p_bool> 0.95) %>% ungroup() %>% group_by(tool) %>% summarise(N = sum(N_tool_class_bool), n = n(), min_ptool = min(p_tool), min_pbool = min(p_bool), md_bool = median(p_bool), mn_bool = mean(p_bool))
+t60 %>% filter(n, p_bool> 0.95) %>% ungroup() %>% group_by(tool) %>% summarise(N = sum(N_tool_class_bool), n = n(), min_ptool = min(p_tool), min_pbool = min(p_bool), md_bool = median(p_bool), mn_bool = mean(p_bool))
+t70 %>% filter(!n, p_bool> 0.95) %>% ungroup() %>% group_by(tool) %>% summarise(N = sum(N_tool_class_bool), n = n(), min_ptool = min(p_tool), min_pbool = min(p_bool), md_bool = median(p_bool), mn_bool = mean(p_bool))
+t70 %>% filter(n, p_bool> 0.95) %>% ungroup() %>% group_by(tool) %>% summarise(N = sum(N_tool_class_bool), n = n(), min_ptool = min(p_tool), min_pbool = min(p_bool), md_bool = median(p_bool), mn_bool = mean(p_bool))
+t70 %>% ungroup() %>% group_by(n, tool) %>% summarise(N = sum(N_tool_class_bool), classes = n(), min_ptool = min(p_tool), min_pbool = min(p_bool), md_bool = median(p_bool), mn_bool = mean(p_bool))
+t70 %>% filter(p_bool> 0.9) %>% ungroup() %>% group_by(n, tool) %>% summarise(N = sum(N_tool_class_bool), classes = n(), min_ptool = min(p_tool), min_pbool = min(p_bool), md_bool = median(p_bool), mn_bool = mean(p_bool))
+
+t50 
+t50 %>% filter(p_bool> 0.9) %>% ungroup() %>% group_by(n, tool) %>% summarise(N = sum(N_tool_class_bool), classes = n(), min_ptool = min(p_tool), min_pbool = min(p_bool), md_bool = median(p_bool), mn_bool = mean(p_bool))
+
+t70 %>% filter(p_bool< 0.9)
+data.frame(hm_recall_fnr_2 %>% filter(tool %in% "DeepARG (nt)") %>% 
+  arrange(med_recall) %>% filter(new_level %in% (t70 %>% filter(p_bool> 0.9, !n, tool %in% "DeepARG (nt)") %>% select(new_level) %>% pull())))
+
+data.frame(hm_recall_fnr_2 %>% filter(tool %in% "RGI (DIAMOND - nt)") %>% 
+             arrange(med_recall) %>% filter(new_level %in% (t70 %>% filter(p_bool> 0.9, !n, tool %in% "RGI (DIAMOND - nt)") %>% select(new_level) %>% pull())))
+
+data.frame(hm_recall_fnr_2 %>% filter(tool %in% "RGI (DIAMOND - nt)") %>% 
+             arrange(med_recall) %>% filter(new_level %in% (t50 %>% filter(p_bool> 0.9, !n, tool %in% "RGI (DIAMOND - nt)") %>% select(new_level) %>% pull())))
+
+sum(lst$rgi.diamond$id < 70)
+
+
+
+
+
+####
+
+t50_fa <- unigenes_per_tool %>% 
+  group_by(tool) %>% mutate(total_tool = n()) %>% ungroup() %>%
+  group_by(tool, new_level) %>% mutate(total_class = n()) %>% ungroup() %>%
+  filter(tool %in% c("fARGene (nt)", "AMRFinderPlus (aa)") & id < 50) %>% 
+  group_by(query) %>% 
+  mutate(n = n_distinct(tool))  %>% 
+  mutate(n = n > 1) %>% 
+  ungroup() %>% group_by(tool, new_level, n) %>% 
+  summarise(total_tool = total_tool[1], total_class = total_class[1], N_tool_class_bool = n()) %>% 
+  mutate(p_bool = N_tool_class_bool / sum(N_tool_class_bool)) %>%
+  ungroup() %>% group_by(tool) %>% mutate(p_tool = N_tool_class_bool / sum(N_tool_class_bool)) %>%
+  mutate(P = N_tool_class_bool / total_class) %>%
+  arrange(tool, desc(N_tool_class_bool), desc(P), desc(p_tool), desc(p_bool)) 
+
+t70_fa <- unigenes_per_tool %>% 
+  group_by(tool) %>% mutate(total_tool = n()) %>% ungroup() %>%
+  group_by(tool, new_level) %>% mutate(total_class = n()) %>% ungroup() %>%
+  filter(tool %in% c("fARGene (nt)", "AMRFinderPlus (aa)") & id < 70) %>% 
+  group_by(query) %>% 
+  mutate(n = n_distinct(tool))  %>% 
+  mutate(n = n > 1) %>% 
+  ungroup() %>% group_by(tool, new_level, n) %>% 
+  summarise(total_tool = total_tool[1], total_class = total_class[1], N_tool_class_bool = n()) %>% 
+  mutate(p_bool = N_tool_class_bool / sum(N_tool_class_bool)) %>%
+  ungroup() %>% group_by(tool) %>% mutate(p_tool = N_tool_class_bool / sum(N_tool_class_bool)) %>%
+  mutate(P = N_tool_class_bool / total_class) %>%
+  arrange(tool, desc(N_tool_class_bool), desc(P), desc(p_tool), desc(p_bool)) 
+
+t70_fa %>% filter(p_bool> 0.9) %>% ungroup() %>% group_by(n, tool) %>% summarise(N = sum(N_tool_class_bool), classes = n(), min_ptool = min(p_tool), min_pbool = min(p_bool), md_bool = median(p_bool), mn_bool = mean(p_bool))
+
+
+
+plot(lst$deeparg.norm$id, lst$deeparg.norm$probability)
+plot(lst$deeparg.norm$id, lst$deeparg.norm$alignment.length)
+plot(lst$deeparg.norm$id, lst$deeparg.norm$alignment.bitscore)
+plot(lst$deeparg.norm$alignment.bitscore, lst$deeparg.norm$id)
+plot(lst$deeparg.norm$alignment.length, lst$deeparg.norm$probability)
+plot(lst$deeparg.norm$alignment.length, lst$deeparg.norm$alignment.bitscore)
+plot(lst$deeparg.norm$alignment.bitscore, lst$deeparg.norm$probability)
+
+sum(lst$deeparg.norm$id < 60 & lst$deeparg.norm$probability>.95)
+hist(lst$deeparg.norm$alignment.bitscore[lst$deeparg.norm$id < 60 & lst$deeparg.norm$probability>.95])
+hist(lst$deeparg.norm$alignment.length[lst$deeparg.norm$id < 60 & lst$deeparg.norm$probability>.95])
+
+##################################################################################################################################################################
+##################################################################################################################################################################
+##################################################################################################################################################################
+##################################################################################################################################################################
+##################################################################################################################################################################
+##################################################################################################################################################################
+
+
+core <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/core_resistome.rds")
+pan <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/pan_resistome.rds")
+
+
+# abundance %>% filter(!habitat %in% c( "amplicon", "isolate",  "built-environment" )) %>% 
+#  select(sample) %>% distinct() %>% mutate(n = n())
+
+core <- core %>% mutate(habitat = factor(habitat, levels = EN))
+pan <- pan %>% mutate(habitat = factor(habitat, levels = EN))
+pan <- pan %>% mutate(tool = ifelse(tool == "RGI (DIAMOND nt)", "RGI (DIAMOND - nt)", tool))
+core <- core %>% mutate(tool = ifelse(tool == "RGI (DIAMOND nt)", "RGI (DIAMOND - nt)", tool))
+
+sumcore <- core %>% filter(cut %in% 0.5 & cnt >= 400, !habitat %in% c( "amplicon", "isolate",  "built-environment" ),
+                           tool %in% tool_2) %>% ungroup() %>% 
+  group_by(new_level, tool, habitat) %>% summarise(unigenes = n_distinct(X))  %>% 
+  mutate(tool = factor(tool, levels = tool_2))
+
+sumpan <-pan %>% ungroup() %>% group_by(tool, habitat, aggregation, gene_class) %>% 
+  summarise(md = median(unigenes), mn = mean(unigenes)) %>%
+  filter(aggregation == "new_level", !habitat %in% c( "amplicon", "isolate",  "built-environment" ),
+         tool %in% tool_2) %>% mutate(tool = factor(tool, levels = tool_2))
+
+sumpan %>% filter(habitat %in% c("human gut")) %>% 
+ggplot(aes(x = tool, y = mn)) +
+  geom_col(aes(fill = gene_class)) +
+  theme_minimal() +
+  labs(fill = "Gene class") +
+  xlab("Tool") +
+  xlab("Size pan-resistome") +
+  theme(axis.title.y = element_blank(),
+        #legend.position = "bottom",
+        panel.border = element_rect(fill = "transparent", color = "black", linewidth = 1),
+        axis.text.x = element_text(angle = 90, size = general_size),
+        axis.text.y = element_text(size = general_size),
+        strip.text = element_text(size = general_size, face = "bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.title = element_text(size = general_size + 2, face = "bold"))
+
+
+sumpan %>% filter(habitat %in% c("wastewater")) %>% 
+  ggplot(aes(x = tool, y = mn)) +
+  geom_col(aes(fill = gene_class)) +
+  theme_minimal() +
+  labs(fill = "Gene class") +
+  xlab("Tool") +
+  xlab("Size pan-resistome") +
+  theme(axis.title.y = element_blank(),
+        #legend.position = "bottom",
+        panel.border = element_rect(fill = "transparent", color = "black", linewidth = 1),
+        axis.text.x = element_text(angle = 90, size = general_size),
+        axis.text.y = element_text(size = general_size),
+        strip.text = element_text(size = general_size, face = "bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.title = element_text(size = general_size + 2, face = "bold"))
+
+
+sumcore %>% filter(habitat %in% c("human gut")) %>% 
+  ggplot(aes(x = tool, y = unigenes)) +
+  geom_col(aes(fill = new_level)) +
+  theme_minimal() +
+  labs(fill = "Gene class") +
+  xlab("Tool") +
+  xlab("Size core-resistome") +
+  theme(axis.title.y = element_blank(),
+        #legend.position = "bottom",
+        panel.border = element_rect(fill = "transparent", color = "black", linewidth = 1),
+        axis.text.x = element_text(angle = 90, size = general_size),
+        axis.text.y = element_text(size = general_size),
+        strip.text = element_text(size = general_size, face = "bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.title = element_text(size = general_size + 2, face = "bold"))
+
+
+sumcore %>% filter(habitat %in% c("pig gut")) %>% 
+  ggplot(aes(x = tool, y = unigenes)) +
+  geom_col(aes(fill = new_level)) +
+  theme_minimal() +
+  labs(fill = "Gene class") +
+  xlab("Tool") +
+  xlab("Size core-resistome") +
+  theme(axis.title.y = element_blank(),
+        #legend.position = "bottom",
+        panel.border = element_rect(fill = "transparent", color = "black", linewidth = 1),
+        axis.text.x = element_text(angle = 90, size = general_size),
+        axis.text.y = element_text(size = general_size),
+        strip.text = element_text(size = general_size, face = "bold"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        axis.title = element_text(size = general_size + 2, face = "bold"))
 
 ##################################################################################################################################################################
 ##################################################################################################################################################################

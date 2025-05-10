@@ -896,6 +896,16 @@ lst$fargene.prot <- lst$fargene.prot %>% mutate(parent.rgi = df2$Parent_ID[match
                                                 parent_description.rgi = df2$Parent_Label[match(aro.rgi, df2$Term_ID)],
                                                 new_level.rgi = df2$new_level[match(aro.rgi, df2$Term_ID)])
 
+lst$fargene <- lst$fargene %>% mutate(manual.ARO = ARO, manual.parent = parent, manual.parent_description = parent_description,
+                                      manual.new_level = new_level,
+                                      ARO = aro.rgi, parent = parent.rgi, parent_description = parent_description.rgi,
+                                      new_level = new_level.rgi)
+
+lst$fargene.prot <- lst$fargene.prot %>% mutate(manual.ARO = ARO, manual.parent = parent, manual.parent_description = parent_description,
+                                      manual.new_level = new_level,
+                                      ARO = aro.rgi, parent = parent.rgi, parent_description = parent_description.rgi,
+                                      new_level = new_level.rgi)
+
 saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools.rds", compress = T)
 
 # saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools_not_repeated_unigenes.rds", compress = T)
@@ -985,8 +995,8 @@ args_abundances <- args_abundances %>%
 cut_size_core <- function(Y, cut) {
     Y_cnt <- Y %>% ungroup() %>% filter(p >= cut) %>%
       mutate(cut = cut, cnt = 1) %>% 
-      group_by(X, new_level, tool, habitat, cut) %>%
-      ungroup() %>% select(X, new_level, tool, habitat, cut, cnt)
+      group_by(ARO, new_level, tool, habitat, cut) %>%
+      ungroup() %>% select(ARO, new_level, tool, habitat, cut, cnt)
   return(Y_cnt)
 }
 
@@ -996,11 +1006,11 @@ filter_samples_core <- function(args_abundances_core, d){
     filter(X %in% d$query) %>% 
     mutate(tool = d$tool[1]) %>%
     mutate(new_level = d$new_level[match(X, d$query)]) %>%
-    select(X, new_level, sample, tool, habitat) %>% 
+    select(ARO, new_level, sample, tool, habitat) %>% 
     ungroup() %>% group_by(tool, habitat) %>% mutate(N = n_distinct(sample)) %>% # total number of samples per habitat
-    ungroup() %>% group_by(X, habitat) %>% mutate(n = n_distinct(sample)) %>% # number of samples where a unigene X appears per habitat
-    ungroup() %>% mutate( p = n / N) %>% filter(p >= 0.3) %>%
-    group_by(habitat, X) %>% 
+    ungroup() %>% group_by(ARO, habitat) %>% mutate(n = n_distinct(sample)) %>% # number of samples where a unigene X appears per habitat
+    ungroup() %>% mutate( p = n / N) %>% filter(p >= 0.2) %>%
+    group_by(habitat, ARO) %>% 
     slice_head(n = 1) %>% ungroup() %>% select(-sample)
     return(Y)
 }
