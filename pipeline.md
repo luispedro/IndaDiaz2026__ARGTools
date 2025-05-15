@@ -157,7 +157,7 @@ cat amrfinder/*.tsv | grep -v "^Protein id" >> amrfinder.tsv
 # Obs: this replacement is not needed in the new version of argAnnot
 #
 # Run argAnnot
-argnorm amrfinderplus -i amrfinder.hamronize.tsv -o amrfinder.hamronize.norm.tsv
+argnorm amrfinderplus -i amrfinder.tsv -o amrfinder.norm.tsv
 ```
 
 - deepARG

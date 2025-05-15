@@ -226,7 +226,7 @@ process_terms_fast <- function(term_list, parent_map, label_map) {
 
 
 # amrfinder 
-amrfinder.norm <- read.delim("dna/amrfinder.norm.tsv") %>% 
+amrfinder.norm <- read.delim("dna/amrfinder.norm.tsv",skip = 1) %>% 
   rename(query = Contig.id) %>% 
   rename(ARG.class = Class) %>% 
   rename(ARG.subclass = Subclass) %>%
@@ -237,7 +237,7 @@ amrfinder.norm <- read.delim("dna/amrfinder.norm.tsv") %>%
   slice_head(n=1) %>% ungroup()
 # 1 copy of 6 unigenes removed (repeated)
 
-amrfinder.norm.prot <- read.delim("protein/amrfinder.norm.tsv") %>% 
+amrfinder.norm.prot <- read.delim("protein/amrfinder.norm.tsv", skip = 1) %>% 
   rename(query = Protein.id) %>% 
   rename(ARG.class = Class) %>% 
   rename(ARG.subclass = Subclass) %>%
@@ -252,14 +252,14 @@ amrfinder.norm.prot <- read.delim("protein/amrfinder.norm.tsv") %>%
 
 
 # deeparg
-deeparg.norm <- read.delim("dna/deeparg.norm.tsv") %>% 
+deeparg.norm <- read.delim("dna/deeparg.norm.tsv", skip = 1) %>% 
   rename(query = read_id) %>% 
   rename(ARG.class = predicted_ARG.class) %>%
   mutate(tool = "DeepARG (nt)", id = identity)
 
 # no repeated unigenes 
 
-deeparg.norm.prot <- read.delim("protein/deeparg.norm.tsv") %>% 
+deeparg.norm.prot <- read.delim("protein/deeparg.norm.tsv", skip = 1) %>% 
   rename(query = read_id) %>% 
   rename(ARG.class = predicted_ARG.class) %>%
   mutate(tool = "DeepARG (aa)", id = identity)
@@ -354,17 +354,27 @@ fargene_with_rgi <- read.delim("check_missing_annot/fargene_predicted_fna.txt") 
   mutate(query = gsub('tmp_', '', query)) %>% 
   mutate(ARO = paste0("ARO:", ARO))
 
+
 fargene <- fargene %>% 
   mutate(id = fargene_with_rgi$Best_Identities[match(query, fargene_with_rgi$query)],
-         aro.rgi = fargene_with_rgi$ARO[match(query, fargene_with_rgi$query)])
+         aro.rgi = fargene_with_rgi$ARO[match(query, fargene_with_rgi$query)],
+         coverage.rgi = fargene_with_rgi$Percentage.Length.of.Reference.Sequence[match(query, fargene_with_rgi$query)],)
+
 rm(fargene_with_rgi)
 
-fargene <- fargene %>% mutate(ARO = as.vector(fargene2ARO[new_class]),
-                              aro.rgi = ifelse(is.na(aro.rgi), "", aro.rgi))
 
-fargene <- fargene %>% 
-  mutate(manual.ARO = ARO) %>% 
-  mutate(ARO = aro.rgi)
+fargene <- fargene %>% mutate(manual.ARO = as.vector(fargene2ARO[new_class]),
+                              ARO = ifelse(is.na(aro.rgi), "", aro.rgi))
+
+## this part is after assigning new_levels and giving the manual new_level to the observations missing it (it is in retrospective)
+# for fargene we took ARO:3002484 and made them all class D
+# "ARO:3002600"  AAC(3)-Ib/AAC(6')-Ib3, this is aac(6) no matter what, the coverage is below 45%, id 2 below 70% 
+# "ARO:3002599" this is aac(6) no matter what, the coverage is below 40%, id 2 are 100, 6 more below 70% 
+# "ARO:3002597"AAC(6')-Ie-APH(2'')-Ia, most coverage are below 40%, 9 below 60%, we give the fargene class instead
+# The  MPH that did not agree with fargene have id levels below 30%, they are aph, so very similar, we give the fargene class instead
+# The beta-lactam modulation all have id levels below 50%, we give the fargene class instead
+# The V/M all have id levels below 40%, we give the fargene class instead
+
 
 #
 
@@ -411,18 +421,48 @@ fargene_with_rgi <- read.delim("check_missing_annot/fargene_prot_predicted_faa.t
 
 fargene.prot <- fargene.prot %>% 
   mutate(id = fargene_with_rgi$Best_Identities[match(query, fargene_with_rgi$query)],
-         aro.rgi = fargene_with_rgi$ARO[match(query, fargene_with_rgi$query)])
+         aro.rgi = fargene_with_rgi$ARO[match(query, fargene_with_rgi$query)],
+         coverage.rgi = fargene_with_rgi$Percentage.Length.of.Reference.Sequence[match(query, fargene_with_rgi$query)],)
 
 rm(fargene_with_rgi)
 
-fargene.prot <- fargene.prot %>% mutate(ARO = as.vector(fargene2ARO[new_class]),
-                                        aro.rgi = ifelse(is.na(aro.rgi), "", aro.rgi))
+
+fargene.prot <- fargene.prot %>% mutate(manual.ARO = as.vector(fargene2ARO[new_class]),
+                                        ARO = ifelse(is.na(aro.rgi), "", aro.rgi))
+
+# use AROs from fargene.prot in fargene and vice versa
+fargene <- fargene %>% mutate(ARO = ifelse(ARO == "", fargene.prot$ARO[match(query, fargene.prot$query)], ARO)) %>%
+  mutate(ARO = ifelse(is.na(ARO), "", ARO))
+fargene.prot <- fargene.prot %>% mutate(ARO = ifelse(ARO == "", fargene$ARO[match(query, fargene$query)], ARO)) %>%
+  mutate(ARO = ifelse(is.na(ARO), "", ARO))
+
+# after tblastx in card website 
+# "GMGC10.029_357_382.STRB_1", "GMGC10.008_012_191.SPH_1", GMGC10.170_456_610.STRB_1 are given  "ARO:3002658"
+
+fargene <- fargene %>% 
+  mutate(ARO = ifelse(query %in% c("GMGC10.029_357_382.STRB", "GMGC10.008_012_191.SPH", "GMGC10.170_456_610.STRB"), "ARO:3002658", ARO))
+fargene.prot <- fargene.prot %>% 
+  mutate(ARO = ifelse(query %in% c("GMGC10.029_357_382.STRB", "GMGC10.008_012_191.SPH", "GMGC10.170_456_610.STRB"), "ARO:3002658", ARO))
+
+
+
+# manual blast search in card
+manual_blast_fg <- cbind(c("GMGC10.002_063_752.UNKNOWN", "GMGC10.014_038_935.UNKNOWN", "GMGC10.018_009_687.UNKNOWN", "GMGC10.039_734_695.UNKNOWN", "GMGC10.155_234_566.UNKNOWN",
+  "GMGC10.155_509_478.UNKNOWN","GMGC10.165_346_918.UNKNOWN", "GMGC10.172_669_160.UNKNOWN", "GMGC10.182_555_377.UNKNOWN", "GMGC10.207_886_721.UNKNOWN",
+  "GMGC10.210_614_745.UNKNOWN", "GMGC10.213_353_700.UNKNOWN", "GMGC10.218_878_822.UNKNOWN", "GMGC10.237_491_692.UNKNOWN", "GMGC10.279_981_496.UNKNOWN",
+  "GMGC10.282_839_022.UNKNOWN", "GMGC10.287_300_498.UNKNOWN"),
+  c("ARO:3002528", "ARO:3009063", "ARO:3003676", "ARO:3003199", "ARO:3002589",
+  "ARO:3002644","ARO:3002645","ARO:3002524", "ARO:3002999", "ARO:3002572",
+  "ARO:3004359", "ARO:3002571", "ARO:3003720", "ARO:3006942", "ARO:3004621",
+  "ARO:3002549", "ARO:3002644"))
+
+fargene <- fargene %>% 
+  mutate(ARO = ifelse(query %in% manual_blast_fg[,1], manual_blast_fg[match(query, manual_blast_fg[ , 1]), 2], ARO))
 
 fargene.prot <- fargene.prot %>% 
-  mutate(manual.ARO = ARO) %>% 
-  mutate(ARO = aro.rgi)
+  mutate(ARO = ifelse(query %in% manual_blast_fg[,1], manual_blast_fg[match(query, manual_blast_fg[ , 1]), 2], ARO))
 
-
+###
 # abricate
 
 abricate.argannot.norm <- read.delim("dna/abricate-argannot.norm.tsv", header=FALSE, comment.char="#") %>%
@@ -496,7 +536,7 @@ abricate.resfinder.norm <- read.delim("dna/abricate-resfinder.norm.tsv", header=
 
 
 # resfinder
-resfinder.norm <- read.delim("dna/resfinder_table.norm.tsv") %>% 
+resfinder.norm <- read.delim("dna/resfinder_table.norm.tsv", skip = 1) %>% 
   rename(query = Contig) %>% rename(gene = Resistance.gene) %>%
   mutate(tool = "ResFinder (nt)", id = Identity)  
 
@@ -526,6 +566,7 @@ resfinder.norm <- resfinder.norm %>%
 
 phenotypes_resfiner <- read.delim("check_missing_annot/phenotypes.txt")
 phenotypes_resfiner <- phenotypes_resfiner[!duplicated(phenotypes_resfiner$Gene_accession.no.),]
+
 v <- vector()
 for(j in 1:nrow(resfinder.norm)){
   sect <- intersect(grep(resfinder.norm$gene[j], phenotypes_resfiner$Gene_accession.no., fixed = TRUE),
@@ -593,7 +634,7 @@ card_gene_aro <- card_gene_aro %>% bind_rows(manually_curated)
 
 # add the ARO to abricate.card.norm
 abricate.card.norm <- abricate.card.norm %>% mutate(ARO = card_gene_aro$aro[match(V6, card_gene_aro$gene)])
-
+sum(abricate.card.norm$ARO == "")
 
 ################################################################################################################################################
 # ARO for abricate.argannot.norm
@@ -604,11 +645,12 @@ abricate.argannot.norm <- abricate.argannot.norm %>%
   mutate(ARO = ifelse(V6 %in% "(Ntmdz)nimj_Nitroimidazole_Gene", "ARO:3007112", 
                       ifelse(V6 %in% "(Bla)blaACT-16", "ARO:3001827", ARO)))
 
-
+sum(abricate.argannot.norm$ARO == "")
 
 ################################################################################################################################################
 # ARO for abricate.resfinder.norm
 resfinder_ARO_mapping <- read.delim("check_missing_annot/resfinder_ARO_mapping.tsv")
+resfinder_ARO_mapping$Gene.Name.in.CARD[1000:1100]
 
 # correct the capital letters in these two entries
 
@@ -628,6 +670,14 @@ abricate.resfinder.norm$ARO[j]  <- paste0("ARO:", resfinder_ARO_mapping$ARO[k])
 abricate.resfinder.norm <- abricate.resfinder.norm %>% 
   mutate(ARO = ifelse(ARO == "ARO:NA", "", ARO))
 
+
+others <- cbind(c("mdf(A)_1", "mcr-9_1", "blaCTX-M-63_1", "blaCARB-4_1", "dfrA19_1"), 
+                  c("ARO:3001328", "ARO:3004684", "ARO:3001924", "ARO:3002243", "ARO:3003015"))
+
+abricate.resfinder.norm <- abricate.resfinder.norm %>% mutate(ARO = ifelse(V6 %in% others[,1], others[match(V6, others[,1]),2], ARO))
+
+
+# 30 unigenes left - 5 genes "mdf(A)"      "mcr-9"       "blaCTX-M-63" "blaCARB-4"   "dfrA19"
 
 ################################################################################################################################################
 # ARO for resfinder.norm
@@ -650,9 +700,29 @@ resfinder_missing_aro_resfinder <- resfinder_missing_aro_resfinder[,c(3,1)]
 names(resfinder_missing_aro_resfinder) <- c("gene","accession")
 rm(resfinder_ARO_mapping, j, d, d2)
 
+colistin <- cbind(c("mcr-3.38", "mcr-3.36", "mcr-8.2", "mcr-3.33", "mcr-10.2"), 
+      c("ARO:3007251", "ARO:3007257", "ARO:3007229", "ARO:3007248", "ARO:3007277"))
+
+resfinder.norm <- resfinder.norm %>% mutate(ARO = ifelse(gene %in% colistin[,1], colistin[match(gene, colistin[,1]),2], ARO))
+
+
 
 ################################################################################################################################################
 # ARO for abricate megares
+
+megares_annotation <- read.delim("check_missing_annot/megares_ARO_mapping.tsv", header = T)
+megares_annotation <- megares_annotation %>% mutate(ref = sapply(strsplit(megares_annotation$Original.ID, split = "\\|"), function(x) x[1]))
+#megares_annotation <- megares_annotation %>% mutate(genename = sapply(strsplit(megares_annotation$Original.ID, split = "\\|"), function(x) x[5]))
+#megares_annotation <- megares_annotation %>% mutate(genename2 = sapply(strsplit(megares_annotation$Original.ID, split = "\\|"), function(x) x[6]))
+
+j <- which(abricate.megares.norm$ARO == "")
+d <- paste0("ARO:", megares_annotation$ARO[match(abricate.megares.norm$V13[j], megares_annotation$ref)])
+d[d=="ARO:NA"] <- ""
+abricate.megares.norm$ARO[j] <- d
+
+j <- which(abricate.megares.norm$ARO == "")
+unique(abricate.megares.norm[j,"V6"])
+unique(abricate.megares.norm[j,"V13"])
 
 abricate_annotation <- read.delim("check_missing_annot/abricate_annotation_megares.tsv")
 abricate_annotation <- abricate_annotation[,-c(19,20,21)]
@@ -662,17 +732,85 @@ j <- which(abricate.megares.norm$ARO == "")
 abricate.megares.norm$ARO[j] <- paste0("ARO:", abricate_annotation$ARO[match(abricate.megares.norm$V13[j], abricate_annotation$MEG)])
 abricate.megares.norm$ARO[abricate.megares.norm$ARO == "ARO:NA"] <- ""
 
-# to debug arg_norm
-abricate_megares_missing_aro <- tibble(gene = abricate.megares.norm$V6[j], accession = abricate.megares.norm$V13[j], aro = abricate.megares.norm$ARO[j])
-abricate_megares_missing_aro <- abricate_megares_missing_aro %>% filter(aro != "")
-abricate_megares_missing_aro <- abricate_megares_missing_aro[,c(1,2)]
-abricate_megares_missing_aro <- abricate_megares_missing_aro %>% distinct()
+j <- which(abricate.megares.norm$ARO == "")
+#unique(abricate.megares.norm[j,"V6"])
+#unique(abricate.megares.norm[j,"V13"])
+#unique(abricate.megares.norm[j,"V14"])$V14
 
-rm(j, abricate_annotation)
+abricate.megares.norm <- abricate.megares.norm %>% mutate(code_gene = sapply(strsplit(V14, split = ":"), function(x) x[length(x)]))
+missing <- unique(abricate.megares.norm$V14[j])
+new_code <- rep(NA, length(missing))
+
+# RND EFFLUX PUMPS
+new_code[grepl("RND", missing)] <- "ARO:0010004"
+# MATE EFFLUX PUMPS
+new_code[grepl("MATE", missing)] <- "ARO:3000112"
+# MFS EFFLUX PUMPS
+new_code[grepl("MFS", missing)] <- "ARO:0010002"
+# SMR EFFLUX PUMPS
+new_code[grepl("SMR", missing)] <- "ARO:0010003"
+abricate.megares.norm$ARO[j] <- new_code[match(abricate.megares.norm$V14[j], missing)]
+
+
+# to debug arg_norm
+#abricate_megares_missing_aro <- tibble(gene = abricate.megares.norm$V6[j], accession = abricate.megares.norm$V13[j], aro = abricate.megares.norm$ARO[j])
+#abricate_megares_missing_aro <- abricate_megares_missing_aro %>% filter(aro != "")
+#abricate_megares_missing_aro <- abricate_megares_missing_aro[,c(1,2)]
+#abricate_megares_missing_aro <- abricate_megares_missing_aro %>% distinct()
+
+rm(j, abricate_annotation, megares_annotation, new_code, missing)
 
 ################################################################################################################################################
 # ARO for abricate NCBI
 
+# from argnorm
+
+ncbi_annotation <- read.delim("check_missing_annot/ncbi_ARO_mapping.tsv")
+ncbi_annotation <- ncbi_annotation %>% mutate(ref = sapply(strsplit(ncbi_annotation$Original.ID, split = "\\|"), function(x) x[2]))
+ncbi_annotation <- ncbi_annotation %>% mutate(genename = sapply(strsplit(ncbi_annotation$Original.ID, split = "\\|"), function(x) x[5]))
+ncbi_annotation <- ncbi_annotation %>% mutate(genename2 = sapply(strsplit(ncbi_annotation$Original.ID, split = "\\|"), function(x) x[6]))
+
+# using gene name 
+j <- abricate.ncbi.norm$ARO ==""
+d <- paste0("ARO:", ncbi_annotation$ARO[match(abricate.ncbi.norm$V6[j], ncbi_annotation$genename)])
+d[d=="ARO:NA"] <- ""
+abricate.ncbi.norm$ARO[j] <- d
+
+# using 
+j <- abricate.ncbi.norm$ARO ==""
+d <- paste0("ARO:", ncbi_annotation$ARO[match(abricate.ncbi.norm$V6[j], ncbi_annotation$genename2)])
+d[d=="ARO:NA"] <- ""
+abricate.ncbi.norm$ARO[j] <- d
+
+# using reference number
+j <- abricate.ncbi.norm$ARO ==""
+d <- paste0("ARO:", ncbi_annotation$ARO[match(abricate.ncbi.norm$V13[j], ncbi_annotation$ref)])
+d[d=="ARO:NA"] <- ""
+abricate.ncbi.norm$ARO[j] <- d
+
+
+ncbi_annotation <- read.delim("check_missing_annot/ncbi_curation.tsv")
+ncbi_annotation <- ncbi_annotation %>% mutate(ref = sapply(strsplit(ncbi_annotation$Original.ID, split = "\\|"), function(x) x[2]))
+ncbi_annotation <- ncbi_annotation %>% mutate(genename = sapply(strsplit(ncbi_annotation$Original.ID, split = "\\|"), function(x) x[5]))
+ncbi_annotation <- ncbi_annotation %>% mutate(genename2 = sapply(strsplit(ncbi_annotation$Original.ID, split = "\\|"), function(x) x[6]))
+
+j <- abricate.ncbi.norm$ARO ==""
+d <- paste0("ARO:", ncbi_annotation$ARO[match(abricate.ncbi.norm$V6[j], ncbi_annotation$genename)])
+d[d=="ARO:NA"] <- ""
+abricate.ncbi.norm$ARO[j] <- d
+
+j <- abricate.ncbi.norm$ARO ==""
+d <- paste0("ARO:", ncbi_annotation$ARO[match(abricate.ncbi.norm$V6[j], ncbi_annotation$genename2)])
+d[d=="ARO:NA"] <- ""
+abricate.ncbi.norm$ARO[j] <- d
+
+j <- abricate.ncbi.norm$ARO ==""
+d <- paste0("ARO:", ncbi_annotation$ARO[match(abricate.ncbi.norm$V13[j], ncbi_annotation$ref)])
+d[d=="ARO:NA"] <- ""
+abricate.ncbi.norm$ARO[j] <- d
+
+
+# MANUALLY ASSIGNED THESE ONTOLOGIES
 abricate_annotation <- read.delim("check_missing_annot/abricate_annotation.tsv")
 abricate_annotation <- abricate_annotation[,-c(19,20,21)]
 x2 <- sapply(strsplit(abricate_annotation$ORF, split = "~~~"), function(x) x[2])
@@ -683,14 +821,49 @@ d <- paste0("ARO:", abricate_annotation$ARO[match(abricate.ncbi.norm$V6[j], x2)]
 d[d=="ARO:NA"] <- ""
 abricate.ncbi.norm$ARO[j] <- d
 
-# to debug arg_norm
-abricate_ncbi_missing_aro <- tibble(gene = abricate.ncbi.norm$V6[j], accession = abricate.ncbi.norm$V13[j], aro = abricate.ncbi.norm$ARO[j])
-abricate_ncbi_missing_aro <- abricate_ncbi_missing_aro %>% filter(aro != "")
-abricate_ncbi_missing_aro <- abricate_ncbi_missing_aro[,c(1,2)]
-abricate_ncbi_missing_aro <- abricate_ncbi_missing_aro %>% distinct()
+j <- abricate.ncbi.norm$ARO ==""
+unique(abricate.ncbi.norm[j,]$V6)
 
-rm(j, d, abricate_annotation, x2, x3)
-# I could not find anything extra for amrfinder 
+# MANUALLY ASSIGNED THESE ONTOLOGIES
+#"penI_Bp" from fargene 
+# ARO:3002956 from amrfinder 
+# the rest from card 
+
+others.ncbi <- cbind(c("penI_Bp", "aadE-Cc", "vanY-32487235", "dfr7"), 
+                c("ARO:3009015", "ARO:3002626", "ARO:3002956", "ARO:3002862"))
+
+abricate.ncbi.norm <- abricate.ncbi.norm %>% mutate(ARO = ifelse(V6 %in% others.ncbi[,1], others.ncbi[match(V6, others.ncbi[,1]),2], ARO))
+j <- abricate.ncbi.norm$ARO ==""
+unique(abricate.ncbi.norm[j,]$V6)
+rm(others.ncbi, others, abricate_annotation, x2, x3, j)
+
+# to debug arg_norm
+#abricate_ncbi_missing_aro <- tibble(gene = abricate.ncbi.norm$V6[j], accession = abricate.ncbi.norm$V6[j], aro = abricate.ncbi.norm$ARO[j])
+#abricate_ncbi_missing_aro <- abricate_ncbi_missing_aro %>% filter(aro != "")
+#abricate_ncbi_missing_aro <- abricate_ncbi_missing_aro[,c(1,2)]
+#abricate_ncbi_missing_aro <- abricate_ncbi_missing_aro %>% distinct()
+
+rm(j, d, ncbi_annotation, abricate_annotation, x2, x3)
+
+### AMRFINDER
+# 
+# 
+
+ncbi_annotation <- read.delim("check_missing_annot/ncbi_ARO_mapping.tsv")
+ncbi_annotation <- ncbi_annotation %>% mutate(ref = sapply(strsplit(ncbi_annotation$Original.ID, split = "\\|"), function(x) x[2]))
+
+j <- amrfinder.norm.prot$ARO ==""
+d <- paste0("ARO:", ncbi_annotation$ARO[match(amrfinder.norm.prot$Closest.reference.accession[j], ncbi_annotation$ref)])
+d[d=="ARO:NA"] <- ""
+amrfinder.norm.prot$ARO[j] <- d
+
+# to debug arg_norm
+#abricate_ncbi_missing_aro <- tibble(gene = abricate.ncbi.norm$V6[j], accession = abricate.ncbi.norm$V13[j], aro = abricate.ncbi.norm$ARO[j])
+#abricate_ncbi_missing_aro <- abricate_ncbi_missing_aro %>% filter(aro != "")
+#abricate_ncbi_missing_aro <- abricate_ncbi_missing_aro[,c(1,2)]
+#abricate_ncbi_missing_aro <- abricate_ncbi_missing_aro %>% distinct()
+
+rm(j, d, ncbi_annotation)
 
 # to debug arg_norm
 # write.csv(file = "retrieved_manual_rgi.csv", bind_rows(resfinder_missing_aro %>% mutate(tool = "abricate_resfinder"), 
@@ -699,8 +872,6 @@ rm(j, d, abricate_annotation, x2, x3)
 # abricate_ncbi_missing_aro %>% mutate(tool = "abricate_ncbi")), row.names = F)
 
 rm(abricate_ncbi_missing_aro, abricate_megares_missing_aro, resfinder_missing_aro, resfinder_missing_aro_resfinder)
-
-
 
 ################################################################################################################################################
 ################################################################################################################################################
@@ -738,6 +909,7 @@ aros %>% group_by(X1) %>% summarise(n = n(), e = sum(X3 == "")) %>% mutate(p=e/n
 # rm(no_aros_summary, df_no_ARO)
 
 # here we use the ontology information g, parent_map, label_map, rdfs_ns, aro_url, query_parents, parent_map
+
 df <- process_terms_fast(unique(aros$X3[aros$X3!=""]), parent_map, label_map)
 rm(g, rdfs_ns, aro_url, query_parents, parent_map, query_labels, label_map)
 
@@ -753,10 +925,11 @@ rm(g, rdfs_ns, aro_url, query_parents, parent_map, query_labels, label_map)
 # ARO:3000219 mutant efflux regulatory protein conferring antibiotic resistance ---> replaced by ARO:3000451
 # ARO:3000270 protein modulating permeability to antibiotic ---> ARO:3000451
 # ARO:3000492  gene involved in self-resistance to antibiotic ---> ARO:3004064
-# child ARO:3002484 gets ARO:3000076   || remove ARO:3000075 (classs D) for ARO:3000076 class C
+# child ARO:3002484 gets ARO:3000076   || remove ARO:3000076 (classs d) for ARO:3000075 class C
 # antibiotic resistant gene variant or mutant ARO:0000031 ---> ARO:3000451 and ARO:3003040
+# gene conferring resistance via absence 3003768 (16) protein modulating permeability to antibiotic (41) 3000270
 
-overrul <- c("ARO:3003040", "ARO:3003040", "ARO:3003580", "ARO:3000451", "ARO:3004064", "ARO:3000076", "ARO:3000451", "ARO:3003040", "ARO:3000004", "ARO:3000210")
+overrul <- c("ARO:3003040", "ARO:3003040", "ARO:3003580", "ARO:3000451", "ARO:3004064", "ARO:3000075", "ARO:3000451", "ARO:3003040", "ARO:3000004", "ARO:3000210", "ARO:3000270")
 
 # FIRST WE DEAL WITH THOSE AROS THAT ARE ALREADY IN THE LOWEST DESIRED ONTOLOGY
 df_lowest_term <- df %>% filter(Term_ID %in% lowest_ontology) %>% mutate(Parent_ID = Term_ID, Parent_Label = Term_Label) %>% distinct()
@@ -869,7 +1042,8 @@ new_level <- c("chloramphenicol phosphotransferase", "CHL ph.",
                "efflux pump complex or subunit conferring antibiotic resistance", "Efflux p.",
                "protein(s) conferring antibiotic resistance via molecular bypass", "Molecular bypass",
                "antibiotic target modifying enzyme", "Target-modifying enzyme",
-               "antibiotic inactivation enzyme", "Inactivation enzyme")
+               "antibiotic inactivation enzyme", "Inactivation enzyme",
+               "capreomycin phosphotransferase", "cph")
 odd_vals  <- new_level[seq(1, length(new_level), by = 2)]
 even_vals <- new_level[seq(2, length(new_level), by = 2)]
 new_level_df <- df <- data.frame(old = odd_vals, new = even_vals)
@@ -880,8 +1054,14 @@ df2 <- df2 %>% mutate(new_level = new_level_df$new[match(Parent_Label, new_level
 saveRDS(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.rds")
 write.csv(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.csv",  row.names = F)
 
-#saveRDS(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level_no_repeated_unigenes_in_each_tool.rds")
-#write.csv(df2, file = "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level_no_repeated_unigenes_in_each_tool.csv",  row.names = F)
+fargene <- fargene %>% mutate(manual.parent = df2$Parent_ID[match(manual.ARO, df2$Parent_ID)],
+                                      manual.parent_description = df2$Parent_Label[match(manual.ARO, df2$Parent_ID)],
+                                      manual.new_level = df2$new_level[match(manual.ARO, df2$Parent_ID)])
+
+fargene.prot <- fargene.prot %>% mutate(manual.parent = df2$Parent_ID[match(manual.ARO, df2$Parent_ID)],
+                                                manual.parent_description = df2$Parent_Label[match(manual.ARO, df2$Parent_ID)],
+                                                manual.new_level = df2$new_level[match(manual.ARO, df2$Parent_ID)])
+
 
 ################################################################################################################################################
 ################################################################################################################################################
@@ -898,19 +1078,50 @@ lst <- lapply(lst, function(x) x %>% mutate(parent = df2$Parent_ID[match(ARO, df
                                      parent_description = df2$Parent_Label[match(ARO, df2$Term_ID)],
                                      new_level = df2$new_level[match(ARO, df2$Term_ID)]))
 
-lst$fargene <- lst$fargene %>% mutate(manual.parent = df2$Parent_ID[match(manual.ARO, df2$Term_ID)],
-                                      manual.parent_description = df2$Parent_Label[match(manual.ARO, df2$Term_ID)],
-                                      manual.new_level = df2$new_level[match(manual.ARO, df2$Term_ID)])
 
-lst$fargene.prot <- lst$fargene.prot %>% mutate(manual.parent = df2$Parent_ID[match(manual.ARO, df2$Term_ID)],
-                                                manual.parent_description = df2$Parent_Label[match(manual.ARO, df2$Term_ID)],
-                                                manual.new_level = df2$new_level[match(manual.ARO, df2$Term_ID)])
+# assign new level from fargene when rgi did not report one 
+lst$fargene <- lst$fargene %>% 
+  mutate(new_level = ifelse(is.na(new_level), manual.new_level, new_level),
+         parent = ifelse(is.na(parent), manual.parent, parent),
+         parent_description = ifelse(is.na(parent_description), manual.parent_description, parent_description))
+
+lst$fargene.prot <- lst$fargene.prot %>% 
+  mutate(new_level = ifelse(is.na(new_level), manual.new_level, new_level),
+         parent = ifelse(is.na(parent), manual.parent, parent),
+         parent_description = ifelse(is.na(parent_description), manual.parent_description, parent_description))
+
+# change new level for those that are "wrong"
+## this part is after assigning new_levels and giving the manual new_level to the observations missing it (it is in retrospective)
+# for fargene we took ARO:3002484 and made them all class D
+# "ARO:3002600"  AAC(3)-Ib/AAC(6')-Ib3, this is aac(6) no matter what, the coverage is below 45%, id 2 below 70% 
+# "ARO:3002599" this is aac(6) no matter what, the coverage is below 40%, id 2 are 100, 6 more below 70% 
+# "ARO:3002597"AAC(6')-Ie-APH(2'')-Ia, most coverage are below 40%, 9 below 60%, we give the fargene class instead
+# The  MPH that did not agree with fargene have id levels below 30%, they are aph, so very similar, we give the fargene class instead
+# The beta-lactam modulation all have id levels below 50%, we give the fargene class instead
+# The V/M all have id levels below 40%, we give the fargene class instead
+# cph ARO:3007075 is actually a aph2b
+
+lst$fargene <- lst$fargene %>% 
+  mutate(ARO = ifelse(coalesce(as.character(new_level), "NA") != coalesce(as.character(manual.new_level), "NA"), manual.ARO, ARO),
+         parent = ifelse(coalesce(as.character(new_level), "NA") != coalesce(as.character(manual.new_level), "NA"), manual.parent, parent),
+         parent_description = ifelse(coalesce(as.character(new_level), "NA") != coalesce(as.character(manual.new_level), "NA"), manual.parent_description, parent_description)) %>% 
+  mutate(new_level = ifelse(coalesce(as.character(new_level), "NA") != coalesce(as.character(manual.new_level), "NA"), manual.new_level, new_level))
+
+lst$fargene.prot <- lst$fargene.prot %>% 
+  mutate(ARO = ifelse(coalesce(as.character(new_level), "NA") != coalesce(as.character(manual.new_level), "NA"), manual.ARO, ARO),
+         parent = ifelse(coalesce(as.character(new_level), "NA") != coalesce(as.character(manual.new_level), "NA"), manual.parent, parent),
+         parent_description = ifelse(coalesce(as.character(new_level), "NA") != coalesce(as.character(manual.new_level), "NA"), manual.parent_description, parent_description)) %>% 
+  mutate(new_level = ifelse(coalesce(as.character(new_level), "NA") != coalesce(as.character(manual.new_level), "NA"), manual.new_level, new_level))
 
 
-saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools.rds", compress = T)
+#fg <- lst$fargene %>%
+#  filter(coalesce(as.character(new_level), "NA") != coalesce(as.character(manual.new_level), "NA"))
+#fg$coverage.rgi <- fargene$coverage.rgi[match(fg$query, fargene$query)]
+#table(fg$new_level, fg$manual.new_level, useNA = "always")
 
-# saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools_not_repeated_unigenes.rds", compress = T)
 
+################################################################################################################################################
+################################################################################################################################################
 ################################################################################################################################################
 ################################################################################################################################################
 ################################################################################################################################################
@@ -922,7 +1133,7 @@ args_abundances <- read.delim("data/abundances/args_abundances.tsv")
 # any unigenes from abundance missing in the aro reference
 # sum(unique(args_abundances$X) %in% df2$Term_ID)
 
-# abundance parent 
+# abundance parent a
 abundance_parent <- function(abund_df, d){
   d <- d %>% filter(!is.na(parent)) 
   Y <- abund_df %>% mutate(aro = d$ARO[match(X, d$query)], 
@@ -982,12 +1193,10 @@ for(j in 1:length(lst)){
   write.csv(lst[[j]], file = paste0("code_R_analysis/output_abundance_diversity_resistome/processed_tool.",names(lst)[j],".csv"), row.names = F)
 }
 
-
-#lst_abundance_diversity %>% group_by(habitat) %>% summarise(n = n_distinct(sample)) 
-
+saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools.rds", compress = T)
 
 
-############## Pan and core resistome 
+#### CORE AND PAN 
 
 args_abundances <- args_abundances %>% 
   mutate(habitat = metadata$habitat[match(sample, metadata$sample_id)])
@@ -996,8 +1205,8 @@ args_abundances <- args_abundances %>%
 cut_size_core <- function(Y, cut) {
     Y_cnt <- Y %>% ungroup() %>% filter(p >= cut) %>%
       mutate(cut = cut, cnt = 1) %>% 
-      group_by(ARO, new_level, tool, habitat, cut) %>%
-      ungroup() %>% select(ARO, new_level, tool, habitat, cut, cnt)
+      group_by(X, new_level, tool, habitat, cut) %>%
+      ungroup() %>% select(X, new_level, tool, habitat, cut, cnt)
   return(Y_cnt)
 }
 
@@ -1008,11 +1217,11 @@ filter_samples_core <- function(args_abundances_core, d){
     mutate(tool = d$tool[1]) %>%
     mutate(new_level = d$new_level[match(X, d$query)]) %>%
     mutate(ARO = d$ARO[match(X, d$query)]) %>%
-    select(ARO, new_level, sample, tool, habitat) %>% 
+    select(X, new_level, sample, tool, habitat) %>% 
     ungroup() %>% group_by(tool, habitat) %>% mutate(N = n_distinct(sample)) %>% # total number of samples per habitat
-    ungroup() %>% group_by(ARO, habitat) %>% mutate(n = n_distinct(sample)) %>% # number of samples where a unigene X appears per habitat
+    ungroup() %>% group_by(X, habitat) %>% mutate(n = n_distinct(sample)) %>% # number of samples where a unigene X appears per habitat
     ungroup() %>% mutate( p = n / N) %>% filter(p >= 0.2) %>%
-    group_by(habitat, ARO) %>% 
+    group_by(habitat, X) %>% 
     slice_head(n = 1) %>% ungroup() %>% select(-sample)
     return(Y)
 }
@@ -1029,18 +1238,14 @@ core_resistome <- function(args_abundances, samples_to_collect, sed, lst, mx_sam
   args_abundances_core_cut <- do.call(rbind, lapply(seq_along(cuts), function(k) {cut_size_core(args_abundances_core, cuts[k])}))
 
   df <- df %>% bind_rows(args_abundances_core_cut)
-  df <- df %>% ungroup() %>% group_by(ARO, new_level, tool, habitat, cut) %>%
+  df <- df %>% ungroup() %>% group_by(X, new_level, tool, habitat, cut) %>%
     summarise(cnt = sum(cnt))
   return(df)
 }
 
 
-#future_lapply
-#seeds <- seq(2001, 2002, 1)
 seeds <- seq(2001, 3000, 1)
 cuts <- c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
-
-df <- data.frame(ARO = NULL, new_level = NULL, tool = NULL, habitat = NULL, cut = NULL, cnt = NULL)
 
 samples_to_collect <- args_abundances %>%
   group_by(habitat) %>%
@@ -1048,6 +1253,8 @@ samples_to_collect <- args_abundances %>%
   mutate(n_unique = n()) %>%  # Calculate the number of unique values in each group
   ungroup() %>%
   group_by(habitat)
+
+df <- data.frame(X = NULL, new_level = NULL, tool = NULL, habitat = NULL, cut = NULL, cnt = NULL)
 
 
 for(j in 1:length(seeds)){
