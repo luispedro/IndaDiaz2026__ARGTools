@@ -7,7 +7,7 @@ library(RColorBrewer)
 library(ggpattern)
 library(grid)
 library(eulerr)
-
+library(Cairo)
 # 130mm 1 col 185 2 col
 # 180mm 1 col 210 2 col
 # 220mm 1 col 225 2 col
@@ -83,12 +83,18 @@ tool_2 <- c("DeepARG (nt)", "RGI (DIAMOND - nt)", "fARGene (nt)", "AMRFinderPlus
             "ABRicate (ARG-ANNOT - nt)", "ABRicate (CARD - nt)", "ABRicate (MEGARES - nt)", "ABRicate (NCBI - nt)",
             "ABRicate (ResFinder - nt)")
 
-tool_label <- c(expression({DeepARG~""^"a"}), expression({fARGene~""^"a"}), 
-                expression({RGI~""^"a,b"}),  expression({CARD~""^"a,d"}), 
-                expression({AMRFinderPlus~""^"c"}), expression({NCBI~""^"a,d"}),
-                expression(ResFinder~{""^"a"}), expression({ResFinder~""^"a,d"}),
-                expression({ARG-ANNOT~""^"a,d"}), 
-                expression({MEGARES~""^"a,d"}))
+tool_label <- c("DeepARG", "fARGene",
+                    "RGI-DIAMOND", "ABRicate-CARD",
+                    "AMRFinderPlus", "ABRicate-NCBI",
+                    "ResFinder", "ABRicate-ResFinder", 
+                    "ABRicate-ARGANNOT", "ABRicate-MEGARES")
+
+# tool_label <- c(expression({DeepARG~""^"a"}), expression({fARGene~""^"a"}), 
+#                 expression({RGI~""^"a,b"}),  expression({CARD~""^"a,d"}), 
+#                 expression({AMRFinderPlus~""^"c"}), expression({NCBI~""^"a,d"}),
+#                 expression(ResFinder~{""^"a"}), expression({ResFinder~""^"a,d"}),
+#                 expression({ARG-ANNOT~""^"a,d"}), 
+#                 expression({MEGARES~""^"a,d"}))
 
 
 abundance <- abundance %>% mutate( tool = 
@@ -169,7 +175,7 @@ plot_count_genes_tool <- unigenes  %>% filter(tool %in% tool_2) %>%
 plot_count_genes_tool
 
 dev.off()
-ggsave("~/Documents/plots_project2/count_genes_per_tool_2.svg", plot_count_genes_tool  , width = 90, height = 70, unit = "mm")
+ggsave("~/Documents/plots_project3/count_genes_per_tool_2.svg", plot_count_genes_tool, device = svglite::svglite , width = 90, height = 70, unit = "mm")
 dev.off()  
 
 plot_count_genes_tool
@@ -274,6 +280,39 @@ dev.off()
 ggsave("~/Documents/plots_project2/top10classes.svg", top10class_plot, width = 110, height = 70, unit = "mm")
 dev.off()  
 
+abundance_medians_env_new <- abundance %>% 
+  ungroup() %>% filter(tool %in% tools_levels, !habitat %in% not_env, aggregation %in% "new_level") %>% 
+  mutate(gene = factor(gene)) %>%
+  mutate(sample = factor(sample)) %>%
+  mutate(tool = factor(tool, levels = tools_levels)) %>%
+  select(!c(raw, raw_unique, scaled)) %>% 
+  complete( sample, gene, tool, 
+            fill = list(normed10m = 0,  unigenes = 0)) %>%
+  mutate(aggregation = "new_level") %>%
+  mutate(gene = as.character(gene))
+
+abundance_medians_env_new <- abundance_medians_env_new %>% mutate(habitat = metadata$habitat[match(sample, metadata$sample_id)])
+abundance_medians_env_new <- abundance_medians_env_new %>% mutate(habitat2 = metadata$habitat2[match(sample, metadata$sample_id)])
+abundance_medians_env_new <- abundance_medians_env_new %>% mutate(location = metadata$location[match(sample, metadata$sample_id)])
+abundance_medians_env_new <- abundance_medians_env_new %>% mutate(aggregation = "new_level")
+
+
+top <- abundance_medians_env_new %>% 
+  ungroup() %>%
+  group_by(tool, habitat, gene) %>%
+  summarise(q75 = quantile(normed10m, 0.75)) %>%
+  ungroup() %>%
+  filter(q75 > 4) %>%
+  mutate(id = paste(tool, habitat, gene))
+
+top %>% filter(habitat %in% "human gut") %>% ungroup() %>% select(gene) %>% distinct() %>% pull()
+
+
+
+top20 <- c("GPA", "Efflux p.", "Cell wall charge", "rpoB", "TET - RPG", "Class A", "Class B", "Class C", "Class D", "AAC", "APH", 
+           "MFS - efflux p.",  "ERM", "Target-modifying enzyme")
+                   
+
 
 unigenes_class_plot <- proportion_new_level_tool %>% mutate(gene = ifelse(new_level %in% top20, new_level, "Other")) %>% 
   mutate(gene = factor(gene, levels = top20)) %>% 
@@ -311,7 +350,7 @@ unigenes_class_plot <- proportion_new_level_tool %>% mutate(gene = ifelse(new_le
 unigenes_class_plot
 
 
-ggsave("~/Documents/plots_project2/unigenes_class.svg", unigenes_class_plot, width = 180, height = 70, unit = "mm")
+ggsave("~/Documents/plots_project3/unigenes_class.svg", unigenes_class_plot, width = 180, height = 70, unit = "mm")
 
 ##############################################################
 
@@ -411,12 +450,7 @@ ggsave("~/Documents/plots_project2/abundance_legend.svg", g_legend(abundance_plo
 dev.off()  
 
 
-abundance_class <- abundance %>% 
-  ungroup() %>% filter(tool %in% tool_2, !habitat %in% not_env, aggregation %in% "new_level") %>% 
-  mutate(tool = as.character(tool), gene = as.character(gene), sample = as.character(sample)) %>%
-  complete(sample, gene, tool, 
-           fill = list(normed10m = 0, scaled = 0, raw = 0, raw_unique = 0, unigenes = 0)) %>%
-  mutate(tool = factor(tool, levels = tools_levels))
+
 
 abundance_class <- abundance_class %>% mutate(habitat = metadata$habitat[match(sample, metadata$sample_id)])
 abundance_class <- abundance_class %>% mutate(habitat2 = metadata$habitat2[match(sample, metadata$sample_id)])
@@ -497,6 +531,11 @@ abundance_class %>% ungroup() %>%
 
 abundance_class %>% ungroup() %>% 
   group_by(tool, gene) %>% filter(gene %in% "ERM") %>%
+  summarise(md = median(normed10m), q75 = quantile(normed10m, 0.75), q25 = quantile(normed10m, 0.25),
+            md_genes = median(unigenes)) 
+
+abundance_class %>% ungroup() %>% 
+  group_by(tool, gene) %>% filter(gene %in% "Class C") %>%
   summarise(md = median(normed10m), q75 = quantile(normed10m, 0.75), q25 = quantile(normed10m, 0.25),
             md_genes = median(unigenes)) 
 
@@ -1057,6 +1096,9 @@ fnr_plot
 
 ggsave("~/Documents/plots_project2/recall.svg", recall_plot , width = 85, height = 70, unit = "mm")
 ggsave("~/Documents/plots_project2/fdr.svg", fnr_plot   , width = 85, height = 70, unit = "mm")
+
+
+ggsave("~/Documents/plots_project2/recall_correct_text.svg", recall_plot , width = 85, height = 70, unit = "mm", device = cairo_svg)
 
 ##
 
