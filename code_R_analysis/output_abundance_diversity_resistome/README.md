@@ -4,21 +4,34 @@
 ## conversion_ARO_parent_new_level.csv 
 Alternatively, `conversion_ARO_parent_new_level.rds`.
 
-| Term_ID    | Term_Label | Parent_ID | Parent_Label | new_label  |
-| -------- | ------- | -------- | ------- | -------- |
-| ARO assigned by RGI or argNorm  | ARO's description    | Higher onthology | Description | Manual class assignment |
+- Term_ID: ARO assigned by RGI or argNorm  
+- Term_Label: ARO's description 
+- Parent_ID: Higher onthology
+- Parent_Label: Description 
+- new_label: Gene class assigned
 
 
 ## abundance_diversity.csv 
 Alternatively, `abundance_diversity.rds`.
 
 The abundance scaled, raw, raw_unique, normed10m, are retrieved form GMGC.
-The table reports the sums of the four abundance metrics and counts of the unique unigenes identifiers (alpha diversity) grouping the data by sample and "gene", at the aggregation level (ARO, parent description or new_level). 
+The table reports the sums of the four abundance metrics and counts of the unique unigenes identifiers (alpha diversity) grouping the data by sample and "gene", at the aggregation level (ARO or new_level, new level is the gene class used in the paper). 
 
 
-| sample    | gene | aggregation | scaled | raw  | raw_unique  | normed10m  | unigenes  | habitat  | habitat2 
-| -------- | ------- | -------- | :-------: | :--------: | :--------: | :--------: | -------- | -------- | -------- 
-| metagenomic sample ID  | AR0, parent description, or new_label   | By ARO, or parent, or new_level | scaled  | raw | raw_unique | normed10m | aplpha diversity (number of unigenes) | 15 different habitats | source of habitats (human, mammals, etc.)
+- sample: metagenomic sample ID
+- gene: AR0 or "new level class"
+- aggregation: ARO or gene class (new level)                 
+- tool                         
+- scaled: sum of scaled column from GMGC at the indicated aggregation level
+- raw: sum of raw column from GMGC at the indicated aggregation level
+- "raw unique": sum of "raw unique" column from GMGC at the indicated aggregation level
+- normed10m: sum of normed10m column from GMGC at the indicated aggregation level, ABUNDANCE! 
+- distinct_unigenes_rarefied: number of distinct genes (queries) at the aggregation level after rarefaction, DIVERSITY!   
+- distinct_unigenes_raw: number of distinct genes (queries) at the aggregation level 
+- distinct_unigenes_raw_unique: number of distinct genes (queries) with value "raw_unique > 0" in the GMGC file at the aggregation level
+- habitat
+- habitat2: humans samples aggregated into one, mammal samples aggregated into one
+
 
 
 ## core_resistome.csv and pan_resistome.csv

@@ -31,8 +31,13 @@ unigene-environment-no-abundance.tsv
 args_without_abundance.txt
 unigenes_with_abundance.txt
 
+# large outputs 
+code_R_analysis/output_abundance_diversity_resistome/abundance_diversity.csv
+code_R_analysis/output_abundance_diversity_resistome/abundance_diversity.rds
+code_R_analysis/output_abundance_diversity_resistome/pan_resistome.csv 
+
 # Metadata for metagenomic samples
-metadata_GMGC10.sample.meta.tsv
+!data/metadata_GMGC10.sample.meta.tsv
 
 # Results from 
 # retrieve_unigenes_and_aros.R
@@ -40,8 +45,7 @@ code_R_analysis/.Rapp.history
 .Rapp.history
 code_R_analysis/.R*
 .R*
-code_R_analysis/output_abundance_diversity_resistome/*
-!code_R_analysis/output_abundance_diversity_resistome/README.md
+.Rhistory
 code_R_analysis/.DS_Store
 *.DS_Store
 .DS_Store
