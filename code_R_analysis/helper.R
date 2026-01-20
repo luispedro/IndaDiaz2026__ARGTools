@@ -274,7 +274,8 @@ plot_count_genes_tool <- function(unigenes, tools_for_figure, general_size, pal_
     xlab("") +
     ggtitle("") +
     labs(fill = "") +
-    scale_y_continuous(expand = c(0, 0)) + 
+    scale_y_continuous(expand = c(0, 0), breaks = seq(0, 120000, length.out = 5),
+                       labels = scales::label_number()) + 
     theme(
       legend.position = "bottom",
       legend.text = element_text(size = general_size),
@@ -1408,7 +1409,7 @@ plot_total_abundance_diversity_new_version <- function(
     environments_plot, general_size,  pal_10_q, 
     metric = "abundance", sd = 2025, obs = 300, texture){
   set.seed(sd)
-  dataset2 <- dataset %>% filter(tool %in% tools_to_plot, habitat2 %in% environments_plot) %>%
+  dataset2 <- dataset %>% filter(tool %in% tools_to_plot, habitat %in% environments_plot) %>%
     mutate(texture = ifelse(tool %in% texture, "yes", "no"))
   
   labels_plot  = tools_labels[tools_to_plot %in% dataset2$tool]
@@ -1418,10 +1419,10 @@ plot_total_abundance_diversity_new_version <- function(
     
     dataset_abundance <- dataset2 %>% filter(normed10m > 0) %>%
       ungroup() %>%
-      select(sample, habitat2) %>%
+      select(sample, habitat) %>%
       distinct() %>%
-      arrange(habitat2, sample) %>% 
-      group_by(habitat2) %>% 
+      arrange(habitat, sample) %>% 
+      group_by(habitat) %>% 
       group_modify(~ {
         n_rows <- nrow(.x)
         .x[sample(n_rows, min(n_rows, obs)), ]
@@ -1429,21 +1430,27 @@ plot_total_abundance_diversity_new_version <- function(
       ungroup()
     
     dataset2 <- dataset2 %>% mutate(p = NA)
-    dataset2 <- dataset2 %>% mutate(p = ifelse(paste(habitat2, sample) %in% paste(dataset_abundance$habitat2, dataset_abundance$sample), normed10m, NA))
+    dataset2 <- dataset2 %>% mutate(p = ifelse(paste(habitat, sample) %in% paste(dataset_abundance$habitat, dataset_abundance$sample), normed10m, NA))
+    
+    pattern_density <- 0.005 
+    pattern_spacing <- 0.025
+    pattern_fill <- "white"
+    pattern_size <- 0.3
     
     p <- dataset2 %>%
       ggplot(aes(x = tool, fill = tool)) +
       geom_boxplot_pattern(aes(y = normed10m + 1e-20, pattern = texture), position = position_dodge2(preserve = "single"),  
                            linewidth = 0.2, outlier.shape = NA, color = "black",
         pattern_color = "white",
-        pattern_density = 0.1, 
-        pattern_spacing = 0.025, 
-        pattern_fill = "white",
+        pattern_density = pattern_density, 
+        pattern_spacing = pattern_spacing, 
+        pattern_fill = pattern_fill,
+        pattern_size = pattern_size,
         pattern_key_scale_factor = 0.6) +
       scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
       geom_jitter(aes(y = p+1e-20), alpha =0.15, size = 0.3, width = 0.25, height = 0, color = "black") +
       scale_fill_manual(values = values_plot, labels = labels_plot) +
-      facet_wrap(~ habitat2, scales = "free_x") +
+      facet_wrap(~ habitat, scales = "free_x", nrow = 2) +
       scale_y_log10(labels = scales::math_format(10^.x)(0:5), expand = c(0, 0),
                     breaks = 10^(0:5)) +
       coord_cartesian(ylim = c(9e-1, 5e4)) +
@@ -1472,10 +1479,10 @@ plot_total_abundance_diversity_new_version <- function(
     if( metric == "diversity"){
       dataset_abundance <- dataset2 %>% filter(unigenes > 0) %>%
         ungroup() %>%
-        select(sample, habitat2) %>%
+        select(sample, habitat) %>%
         distinct() %>%
-        arrange(habitat2, sample) %>% 
-        group_by(habitat2) %>% 
+        arrange(habitat, sample) %>% 
+        group_by(habitat) %>% 
         group_modify(~ {
           n_rows <- nrow(.x)
           .x[sample(n_rows, min(n_rows, obs)), ]
@@ -1483,21 +1490,22 @@ plot_total_abundance_diversity_new_version <- function(
         ungroup()
       
       dataset2 <- dataset2 %>% mutate(p = NA)
-      dataset2 <- dataset2 %>% mutate(p = ifelse(paste(habitat2, sample) %in% paste(dataset_abundance$habitat2, dataset_abundance$sample), unigenes, NA))
+      dataset2 <- dataset2 %>% mutate(p = ifelse(paste(habitat, sample) %in% paste(dataset_abundance$habitat, dataset_abundance$sample), unigenes, NA))
       
       p <- dataset2 %>%
         ggplot(aes(x = tool, fill = tool)) +
         geom_boxplot_pattern(aes(y = unigenes + 1e-20, pattern = texture), position = position_dodge2(preserve = "single"),  
                      linewidth = 0.2, outlier.shape = NA, color = "black", 
                      pattern_color = "white",
-                     pattern_density = 0.1, 
-                     pattern_spacing = 0.025, 
-                     pattern_fill = "white",
+                     pattern_density = pattern_density, 
+                     pattern_spacing = pattern_spacing, 
+                     pattern_fill = pattern_fill,
+                     pattern_size = pattern_size,
                      pattern_key_scale_factor = 0.6) +
         scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
         geom_jitter(aes(y = p+1e-20), alpha =0.15, size = 0.3, width = 0.25, height = 0, color = "black") +
         scale_fill_manual(values = values_plot, labels = labels_plot) +
-        facet_wrap(~ habitat2, scales = "free_x") +
+        facet_wrap(~ habitat, scales = "free_x", nrow = 2) +
         scale_y_log10(labels = scales::math_format(10^.x)(0:4), expand = c(0, 0),
                       breaks = 10^(0:4)) +
         coord_cartesian(ylim = c(9e-1, 5e3)) +
@@ -1799,7 +1807,7 @@ plot_alluvial_classes <- function(unigenes = unigenes,
              fill = list(n = 0,  proportion = 0.000, cum_p = 0.000))  %>%  
     mutate(gene_name = gene_classes_list[as.character(new_level)]) %>%  
     mutate(gene_name = factor(gene_name, 
-                              levels = gene_classes_list[levels(unigenes_class_2$new_level)]))
+                              levels = gene_classes_list[levels(unigenes_class$new_level)]))
   
   labels_plot  <- tools_labels[tools_to_plot %in% tools_levels]
   
