@@ -1663,9 +1663,9 @@ plot_megares <- plot_grid(
 )
 
 
-ggsave("output_plots/overlaps.svg", plot_overlaps, width = 180, height = 210, unit = "mm")
-ggsave("output_plots/overlaps_db.svg", plot_db, width = 180, height = 210, unit = "mm")
-ggsave("output_plots/overlaps_megares.svg", plot_megares, width = 180, height = 210, unit = "mm")
+ggsave("output_plots/overlaps.svg", plot_overlaps, width = 180, height = 160, unit = "mm")
+ggsave("output_plots/overlaps_db.svg", plot_db, width = 180, height = 160, unit = "mm")
+ggsave("output_plots/overlaps_megares.svg", plot_megares, width = 160, height = 210, unit = "mm")
 
 ################################################################################################
 # Fig S2
