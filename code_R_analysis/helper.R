@@ -274,7 +274,8 @@ plot_count_genes_tool <- function(unigenes, tools_for_figure, general_size, pal_
     xlab("") +
     ggtitle("") +
     labs(fill = "") +
-    scale_y_continuous(expand = c(0, 0)) + 
+    scale_y_continuous(expand = c(0.01, 0.01), breaks = pretty_breaks(n = 5),
+                       labels = scales::label_number()) + 
     theme(
       legend.position = "bottom",
       legend.text = element_text(size = general_size),
@@ -1406,9 +1407,13 @@ return_heatmap_overalp  <- function(JI_all, tools_selected, general_size, tool_l
 plot_total_abundance_diversity_new_version <- function(
     dataset, tools_labels, tools_to_plot, 
     environments_plot, general_size,  pal_10_q, 
-    metric = "abundance", sd = 2025, obs = 300, texture){
+    metric = "abundance", sd = 2025, obs = 300, texture,
+    pattern_density = 0.005,
+    pattern_spacing = 0.025,
+    pattern_fill = "white",
+    pattern_size = 0.3){
   set.seed(sd)
-  dataset2 <- dataset %>% filter(tool %in% tools_to_plot, habitat2 %in% environments_plot) %>%
+  dataset2 <- dataset %>% filter(tool %in% tools_to_plot, habitat %in% environments_plot) %>%
     mutate(texture = ifelse(tool %in% texture, "yes", "no"))
   
   labels_plot  = tools_labels[tools_to_plot %in% dataset2$tool]
@@ -1418,10 +1423,10 @@ plot_total_abundance_diversity_new_version <- function(
     
     dataset_abundance <- dataset2 %>% filter(normed10m > 0) %>%
       ungroup() %>%
-      select(sample, habitat2) %>%
+      select(sample, habitat) %>%
       distinct() %>%
-      arrange(habitat2, sample) %>% 
-      group_by(habitat2) %>% 
+      arrange(habitat, sample) %>% 
+      group_by(habitat) %>% 
       group_modify(~ {
         n_rows <- nrow(.x)
         .x[sample(n_rows, min(n_rows, obs)), ]
@@ -1429,21 +1434,24 @@ plot_total_abundance_diversity_new_version <- function(
       ungroup()
     
     dataset2 <- dataset2 %>% mutate(p = NA)
-    dataset2 <- dataset2 %>% mutate(p = ifelse(paste(habitat2, sample) %in% paste(dataset_abundance$habitat2, dataset_abundance$sample), normed10m, NA))
+    dataset2 <- dataset2 %>% mutate(p = ifelse(paste(habitat, sample) %in% paste(dataset_abundance$habitat, dataset_abundance$sample), normed10m, NA))
+    
+    
     
     p <- dataset2 %>%
       ggplot(aes(x = tool, fill = tool)) +
       geom_boxplot_pattern(aes(y = normed10m + 1e-20, pattern = texture), position = position_dodge2(preserve = "single"),  
                            linewidth = 0.2, outlier.shape = NA, color = "black",
         pattern_color = "white",
-        pattern_density = 0.1, 
-        pattern_spacing = 0.025, 
-        pattern_fill = "white",
+        pattern_density = pattern_density, 
+        pattern_spacing = pattern_spacing, 
+        pattern_fill = pattern_fill,
+        pattern_size = pattern_size,
         pattern_key_scale_factor = 0.6) +
       scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
       geom_jitter(aes(y = p+1e-20), alpha =0.15, size = 0.3, width = 0.25, height = 0, color = "black") +
       scale_fill_manual(values = values_plot, labels = labels_plot) +
-      facet_wrap(~ habitat2, scales = "free_x") +
+      facet_wrap(~ habitat, scales = "free_x", nrow = 2) +
       scale_y_log10(labels = scales::math_format(10^.x)(0:5), expand = c(0, 0),
                     breaks = 10^(0:5)) +
       coord_cartesian(ylim = c(9e-1, 5e4)) +
@@ -1472,10 +1480,10 @@ plot_total_abundance_diversity_new_version <- function(
     if( metric == "diversity"){
       dataset_abundance <- dataset2 %>% filter(unigenes > 0) %>%
         ungroup() %>%
-        select(sample, habitat2) %>%
+        select(sample, habitat) %>%
         distinct() %>%
-        arrange(habitat2, sample) %>% 
-        group_by(habitat2) %>% 
+        arrange(habitat, sample) %>% 
+        group_by(habitat) %>% 
         group_modify(~ {
           n_rows <- nrow(.x)
           .x[sample(n_rows, min(n_rows, obs)), ]
@@ -1483,21 +1491,23 @@ plot_total_abundance_diversity_new_version <- function(
         ungroup()
       
       dataset2 <- dataset2 %>% mutate(p = NA)
-      dataset2 <- dataset2 %>% mutate(p = ifelse(paste(habitat2, sample) %in% paste(dataset_abundance$habitat2, dataset_abundance$sample), unigenes, NA))
+      dataset2 <- dataset2 %>% mutate(p = ifelse(paste(habitat, sample) %in% paste(dataset_abundance$habitat, dataset_abundance$sample), unigenes, NA))
       
+
       p <- dataset2 %>%
         ggplot(aes(x = tool, fill = tool)) +
         geom_boxplot_pattern(aes(y = unigenes + 1e-20, pattern = texture), position = position_dodge2(preserve = "single"),  
                      linewidth = 0.2, outlier.shape = NA, color = "black", 
                      pattern_color = "white",
-                     pattern_density = 0.1, 
-                     pattern_spacing = 0.025, 
-                     pattern_fill = "white",
+                     pattern_density = pattern_density, 
+                     pattern_spacing = pattern_spacing, 
+                     pattern_fill = pattern_fill,
+                     pattern_size = pattern_size,
                      pattern_key_scale_factor = 0.6) +
         scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
         geom_jitter(aes(y = p+1e-20), alpha =0.15, size = 0.3, width = 0.25, height = 0, color = "black") +
         scale_fill_manual(values = values_plot, labels = labels_plot) +
-        facet_wrap(~ habitat2, scales = "free_x") +
+        facet_wrap(~ habitat, scales = "free_x", nrow = 2) +
         scale_y_log10(labels = scales::math_format(10^.x)(0:4), expand = c(0, 0),
                       breaks = 10^(0:4)) +
         coord_cartesian(ylim = c(9e-1, 5e3)) +
@@ -1799,7 +1809,7 @@ plot_alluvial_classes <- function(unigenes = unigenes,
              fill = list(n = 0,  proportion = 0.000, cum_p = 0.000))  %>%  
     mutate(gene_name = gene_classes_list[as.character(new_level)]) %>%  
     mutate(gene_name = factor(gene_name, 
-                              levels = gene_classes_list[levels(unigenes_class_2$new_level)]))
+                              levels = gene_classes_list[levels(unigenes_class$new_level)]))
   
   labels_plot  <- tools_labels[tools_to_plot %in% tools_levels]
   
@@ -1820,7 +1830,7 @@ plot_alluvial_classes <- function(unigenes = unigenes,
     scale_y_continuous(expand = c(.01, .01), 
                        name = "Proportion", 
                        limits = c(0, 1), 
-                       breaks = seq(from = 0, to = 1, by = 0.1)) +
+                       breaks = pretty_breaks(n = 5)) +
     scale_fill_manual(values = c(rep(pal_10_complete,10)))+
     scale_x_discrete( labels =  labels_plot) +
     theme_minimal() +
@@ -1844,3 +1854,192 @@ plot_alluvial_classes <- function(unigenes = unigenes,
 }
 
 
+alluvial_pan_core_env <- function(sumcore, pan, h, tools_included, pal_10_complete, general_size){
+  pan_core_env <- bind_rows(
+    sumcore %>% filter(habitat %in% h) %>% ungroup() %>% mutate(dt = "core"),
+    pan %>% 
+      filter(habitat %in% h, aggregation %in% "new_level_centroid") %>% 
+      ungroup() %>% 
+      group_by(tool, habitat, epoch, gene_class) %>% 
+      summarise(s = sum(unigenes)) %>%
+      ungroup() %>% 
+      group_by(tool, habitat, gene_class) %>% 
+      summarise(unigenes = ceiling(mean(s))) %>% 
+      rename(new_level  = gene_class) %>% mutate(dt = "pan")) %>%
+    mutate(dt = factor(dt, levels = c("pan", "core")))
+  
+  pan_core_env <- pan_core_env %>% ungroup() %>%  mutate(new_level = as.character(new_level)) %>% 
+    group_by(tool, new_level, dt) %>% summarise( n = sum(unigenes)) %>% 
+    arrange(tool, desc(n))
+  
+  pan_core_env <- pan_core_env %>% 
+    ungroup() %>%
+    group_by(tool, dt) %>% 
+    mutate(proportion = n / sum(n)) %>% 
+    arrange(tool, desc(proportion)) %>% 
+    mutate(cum_p = cumsum(proportion)) %>% 
+    ungroup() %>%
+    mutate( new_level = factor(as.character(new_level), 
+                               levels = c("Other", rev(levels_unigenes))))
+  
+  
+  pan_core_env <- pan_core_env %>%
+    group_by(tool, dt) %>%
+    arrange(proportion) %>% 
+    { 
+      if (any(.$cum_p == 0.95)) {
+        filter(., cum_p <= 0.95)
+      } else {
+        lower_part <- filter(., cum_p < 0.99999)
+        upper_part <- filter(., cum_p > 0.99999) %>% slice_tail(n = 1)
+        bind_rows(lower_part, upper_part)
+      }
+    } %>% 
+    ungroup() %>% 
+    arrange(tool, cum_p)
+  
+  
+  pan_core_env <- pan_core_env %>% 
+    filter(proportion > 0.01) %>% 
+    ungroup() %>% 
+    complete(new_level, tool, dt,
+             fill = list(n = 0,  proportion = 0.000, cum_p = 0.000))  %>%  
+    mutate(gene_name = gene_classes_list[as.character(new_level)]) %>%  
+    mutate(gene_name = ifelse(new_level %in% "Other", "Other", gene_name)) %>% 
+    mutate(gene_name = factor(gene_name, 
+                              levels = c("Other",gene_classes_list[levels(pan_core_env$new_level)])))
+  
+  
+  pan_core_env <- pan_core_env %>%  
+    filter(tool %in% tools_included) %>%  
+    mutate(tool = factor(as.character(tool), levels = tools_included)) 
+  
+  p_alluvial_pan_core_env <- pan_core_env %>% 
+    ggplot(
+      aes(x = dt,
+          stratum = gene_name,
+          alluvium = gene_name,
+          y = proportion,
+          fill = gene_name,
+          label = gene_name)) +
+    geom_flow(alpha = 0.5) +
+    xlab("") + 
+    geom_stratum(color = "black") +
+    geom_text(data = pan_core_env[pan_core_env$proportion > 0.01 , ],  
+              stat = "stratum",
+              size = 2,color = "black",hjust = 0.5,
+              position = position_jitter(width = 0, height = 0)) +
+    scale_y_continuous(expand = c(.01, .01), 
+                       name = "Proportion", 
+                       limits = c(0, 1), 
+                       breaks = seq(from = 0, to = 1, by = 0.2)) +
+    facet_wrap(tool ~ ., nrow = 2) +
+    scale_fill_manual(values = c(rep(pal_10_complete,10))) +
+    xlab("Pan- vs core-resistome") + 
+    #scale_x_discrete( labels =  labels_plot) +
+    theme_minimal() +
+    theme(
+      legend.position = "none",
+      legend.text = element_text(size = general_size),
+      panel.border = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+      legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
+      legend.margin = margin(0, 0, 0, 0, unit = "pt"),
+      panel.spacing = unit(0, "pt"),
+      title = element_text(size = general_size + 2, face = "bold"),
+      axis.title = element_text(size = general_size + 1, face = "bold"),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(size = general_size),
+      strip.text = element_text(size = general_size, face = "bold"),
+      panel.background = element_rect(colour = "black", fill = NA)) +
+    ggtitle(h)
+  
+  return(p_alluvial_pan_core_env)
+}
+
+
+plot_overlaps <- function(x, y, nxy, nx, ny){
+  db_query <- data.frame(gene = unique(c(x, y)))
+  db_query <- db_query %>% mutate(dataset = ifelse(gene %in% intersect(x, y), nxy,
+                                                   ifelse(gene %in% x, nx, ny))) %>% 
+    mutate(dataset = factor(dataset, levels = c(nxy, nx, ny)))
+  
+  
+  db_query_plot <- db_query %>% 
+    group_by(dataset) %>% summarise(n = n()) %>% mutate(p = n/sum(n)) %>%
+    ggplot(aes(x = dataset, y = n, fill = dataset)) + 
+    geom_col() + 
+    scale_fill_manual(values = pal_10_q[3:10])  +
+    geom_text(aes(label = scales::percent(p, accuracy = 0.1)), vjust = -0.3, size = general_size / .pt) +
+    ylab("ARGs") + 
+    xlab("") +
+    scale_x_discrete(labels = function(x) {
+      x <- gsub("-", "-\n", x)
+      x <- gsub(" ", "\n", x)
+      x}) +
+    theme_overlap
+  
+  return(db_query_plot)
+}
+
+
+plot_abundance_class_environment <- function(abundance_class, e, general_size, pal_10_q){
+  
+  df_abundance_class_env <- abundance_class %>% 
+    filter(habitat %in% e) %>% 
+    mutate(total = normed10m) %>%
+    mutate(gene = ifelse(gene %in% top20, gene, "Other")) %>% 
+    mutate(texture = ifelse(tool %in% tools_texture, "yes", "no")) %>%
+    mutate(gene = factor(gene, levels = c(top20, "Other"))) %>%
+    ungroup() %>% 
+    group_by(sample, tool, gene) %>%
+    summarise(total = sum(total), texture = texture[1])
+  
+  max_abun_class_en <- df_abundance_class_env %>% group_by(tool, gene) %>% summarise(q75 = quantile(total, .75)) %>% ungroup() %>% summarise(m = max(q75)) %>% pull()
+  
+  p <- df_abundance_class_env %>%
+    ggplot(aes(x = gene, y = total, fill = tool, pattern = texture)) + 
+    stat_summary(fun.data = calc_boxplot_stat, geom="boxplot_pattern", 
+                 position = position_dodge2(preserve = "single"), 
+                 color = "black", linewidth = 0.2, 
+                 pattern_color = "white",
+                 pattern_density = pattern_density, 
+                 pattern_spacing = pattern_spacing, 
+                 pattern_fill = pattern_fill,
+                 pattern_size = pattern_size,
+                 pattern_key_scale_factor = 1.2, outlier.shape = NA, outlier.size = 0) +
+    scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+    scale_fill_manual(values = pal_10_q, 
+                      labels = lab_fn(tools_levels)) +
+    scale_y_continuous(expand = c(0, 0), breaks = seq(0, floor(max_abun_class_en/1000) * 1000, length.out = 4),
+                       labels = scales::label_number()) + 
+    theme_minimal() +
+    facet_grid(. ~ gene, scales = "free_x", space = "free_x") + 
+    scale_x_discrete(labels = function(x) {
+      x <- gsub("-", "-\n", x)
+      x <- gsub(" ", "\n", x)
+      x})  + 
+    ylab("Relative abundance") +
+    xlab("") +
+    labs(fill = "") +
+    ggtitle(e) +
+    theme(
+      legend.position = "bottom",
+      legend.text = element_text(size = general_size ),
+      panel.border = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+      legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
+      legend.margin = margin(0, 0, 0, 0, unit = "pt"),
+      panel.spacing = unit(0, "pt"),
+      title = element_text(size = general_size + 2, face = "bold"),
+      axis.title = element_text(size = general_size + 1, face = "bold"),
+      axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
+      axis.text.y = element_text(size = general_size),
+      panel.background = element_rect(colour = "black", fill = NA),
+      strip.text = element_blank())
+  return(p)
+} 
