@@ -1,11 +1,11 @@
 library(shiny)
 
 # Detect the working directory
-setwd("C:/Users/Faith Adegoke/OneDrive - Queensland University of Technology/Downloads/arg_compare-main (1)/arg_compare-main/code_R_analysis/arg_compare") 
+setwd("r_shiny") 
 
 # Set the paths to data
-DATA_DIR <- "C:/Users/Faith Adegoke/OneDrive - Queensland University of Technology/Downloads/arg_compare-main (1)/arg_compare-main/code_R_analysis/output_abundance_diversity_resistome"
-METADATA_PATH <- "C:/Users/Faith Adegoke/OneDrive - Queensland University of Technology/Downloads/arg_compare-main (1)/arg_compare-main/data/metadata_GMGC10.sample.meta.tsv"
+DATA_DIR <- "code_R_analysis/output_abundance_diversity_resistome"
+METADATA_PATH <- "data/metadata_GMGC10.sample.meta.tsv"
 
 # Defining constants
 general_size <- 10
@@ -591,3 +591,4 @@ function(input, output, session) {
     )
   })
 }
+
