@@ -245,7 +245,7 @@ dashboardPage(
         ),
         fluidRow(
           box(
-            title = "Core Resistome Prevalence",
+            title = "Core Resistome",
             width = 6,
             status = "info",
             solidHeader = TRUE,
@@ -253,7 +253,7 @@ dashboardPage(
             plotOutput("plot_core_prevalence", height = "400px")
           ),
           box(
-            title = "Pan Resistome Growth",
+            title = "Pan Resistome",
             width = 6,
             status = "info",
             solidHeader = TRUE,
@@ -368,6 +368,7 @@ dashboardPage(
     )
   )
 )
+
 
 
 
