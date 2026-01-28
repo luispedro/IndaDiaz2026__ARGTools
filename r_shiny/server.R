@@ -194,10 +194,8 @@ function(input, output, session) {
   # Rendering the overview tab as valueboxes
   
   output$total_samples_box <- renderValueBox({
-    req(data())
-    n_samples <- n_distinct(data()$metadata$sample_id)
     valueBox(
-      value = formatC(n_samples, format = "d", big.mark = ","),
+      value = "11,519",
       subtitle = "Total Samples",
       icon = icon("vial"),
       color = "blue"
@@ -205,19 +203,17 @@ function(input, output, session) {
   })
   
   output$total_tools_box <- renderValueBox({
-    req(input$select_tools)
     valueBox(
-      value = length(input$select_tools),
-      subtitle = "Selected Tools",
+      value = "15",
+      subtitle = "Selected Tools & Databases",
       icon = icon("wrench"),
       color = "green"
     )
   })
   
   output$total_habitats_box <- renderValueBox({
-    req(input$select_habitats)
     valueBox(
-      value = length(input$select_habitats),
+      value = "13",
       subtitle = "Selected Habitats",
       icon = icon("earth-americas"),
       color = "yellow"
@@ -586,5 +582,6 @@ function(input, output, session) {
     )
   })
 }
+
 
 
