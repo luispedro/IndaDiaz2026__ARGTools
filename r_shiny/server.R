@@ -225,13 +225,8 @@ function(input, output, session) {
   })
   
   output$total_genes_box <- renderValueBox({
-    req(filtered_abundance())
-    n_genes <- filtered_abundance() %>%
-      filter(unigenes > 0) %>%
-      pull(unigenes) %>%
-      sum()
     valueBox(
-      value = formatC(n_genes, format = "d", big.mark = ","),
+      value = "302,655,267",
       subtitle = "Total Unique Genes",
       icon = icon("dna"),
       color = "red"
@@ -591,4 +586,5 @@ function(input, output, session) {
     )
   })
 }
+
 
