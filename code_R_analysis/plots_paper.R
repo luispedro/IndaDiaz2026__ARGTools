@@ -525,11 +525,11 @@ fig5a2 <- recall_fnr %>%
   filter(tool_ref %in% c("DeepARG", "fARGene", "ABRicate-MEGARes", "RGI-DIAMOND")) %>%
   mutate(texture = ifelse(tool_ref %in% tools_texture, "yes", "no")) %>%
   ungroup() %>% 
-  group_by(tool_ref, new_level, texture) %>% 
+  group_by(tool_ref, new_level) %>% 
   summarise(recall = median(recall)) %>%
   ggplot(aes(x = "All classes medians", fill = tool_ref, y = recall)) +
   geom_violin() +
-  geom_jitter(aes(shape = texture), size = 1.5, width = 0.4, height = 0) + 
+  geom_jitter(size = 1.5, width = 0.4, height = 0) + 
   scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
   scale_fill_manual(values = pal_10_q[tools_levels %in% c("DeepARG", "fARGene", "ABRicate-MEGARes", "RGI-DIAMOND","AMRFinderPlus", "ResFinder")], 
                     labels = tools_levels[tools_levels %in% c("DeepARG", "fARGene", "ABRicate-MEGARes", "RGI-DIAMOND","AMRFinderPlus", "ResFinder")]) +
@@ -617,12 +617,12 @@ fig5b2 <- recall_fnr %>%
   filter(tool_ref %in% c("DeepARG", "fARGene", "ABRicate-MEGARes", "RGI-DIAMOND")) %>%
   mutate(texture = ifelse(tool_ref %in% tools_texture, "yes", "no")) %>%
   ungroup() %>% 
-  group_by(tool_ref, new_level, texture) %>% 
+  group_by(tool_ref, new_level) %>% 
   summarise(fnr = median(fnr)) %>%
   ggplot(aes(x = "Class medians", fill = tool_ref, y = fnr)) +
   geom_violin() +
   #geom_boxplot(outlier.shape = NA, position = position_dodge2(preserve = "single")) + 
-  geom_jitter(aes(shape = texture), size = 1.5, width = 0.4, height = 0) + 
+  geom_jitter( size = 1.5, width = 0.4, height = 0) + 
   scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
   scale_fill_manual(values = pal_10_q[tools_levels %in% c("DeepARG", "fARGene", "ABRicate-MEGARes", "RGI-DIAMOND","AMRFinderPlus", "ResFinder")], 
                     labels = tools_levels[tools_levels %in% c("DeepARG", "fARGene", "ABRicate-MEGARes", "RGI-DIAMOND","AMRFinderPlus", "ResFinder")]) +

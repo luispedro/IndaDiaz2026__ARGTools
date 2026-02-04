@@ -479,12 +479,12 @@ server <- function(input, output, session) {
     recall_reactive() %>%
       filter(!is.na(recall)) %>% 
       ungroup() %>% 
-      group_by(tool_ref, new_level, texture) %>% 
+      group_by(tool_ref, new_level) %>% 
       summarise(recall = median(recall)) %>%
       ggplot(aes(x = "Class medians", fill = tool_ref, y = recall)) +
         geom_violin() +
         #geom_boxplot(outlier.shape = NA, position = position_dodge2(preserve = "single")) + 
-        geom_jitter(aes(shape = texture), size = 1.5, width = 0.4, height = 0) + 
+        geom_jitter(size = 1.5, width = 0.4, height = 0) + 
         scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
         scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
                           labels = tools_levels[tools_levels %in% input$tool_overlap]) +
@@ -572,17 +572,14 @@ server <- function(input, output, session) {
     recall_reactive() %>%
       filter(!is.na(recall)) %>% 
       ungroup() %>% 
-      group_by(tool_ref, new_level, texture) %>% 
+      group_by(tool_ref, new_level) %>% 
       summarise(fnr = median(fnr)) %>%
       ggplot(aes(x = "Class medians", fill = tool_ref, y = fnr)) +
         geom_violin() +
-        #geom_boxplot(outlier.shape = NA, position = position_dodge2(preserve = "single")) + 
-        geom_jitter(aes(shape = texture), size = 1.5, width = 0.4, height = 0) + 
+        geom_jitter(size = 1.5, width = 0.4, height = 0) + 
         scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
         scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
                           labels = tools_levels[tools_levels %in% input$tool_overlap]) +
-        #scale_color_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
-        #                   labels = tools_levels[tools_levels %in% input$tool_overlap_calc]) +
         facet_grid(tool_ref ~ ., scales = "free_x") +
         scale_y_continuous(limits = c(-0.2,1.2), 
                            breaks = seq(0, 1, length.out = 3),
