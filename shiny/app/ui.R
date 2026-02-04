@@ -88,14 +88,21 @@ ps_pan_core <- page_sidebar(
     ),
     selectInput(
       "tool_pan_core",
-      "Choose the tools you want to compare:",
+      "Choose the tools you want to show the number of genes for:",
       tool_choices,
       as.vector(tools_levels),
       multiple = TRUE
     ),
+    radioButtons(
+      "single_environment_pan_core",
+      "Choose the environment you want to show the proportion of genes for:",
+      as.list(EN2),
+      #choices = unique(data_list$sumpan2$habitat),
+      selected = "human gut"
+    ),
     selectInput(
       "environment_pan_core",
-      "Choose the tools you want to compare:",
+      "Choose the environments you want to show:",
       as.list(EN2),
       selected = EN2[c(1,9,10,13)],
       multiple = TRUE
@@ -118,13 +125,6 @@ ps_pan_core <- page_sidebar(
       "Identity threshold DeepARG/RGI (amino acid)",
       choices = list("Default" = 0.0, ">= 60%" = 60.0, ">= 70%" = 70.0, ">= 80%" = 80.0),
       selected = 0.0
-    ),
-    radioButtons(
-      "single_environment_pan_core",
-      "Environment",
-      as.list(EN2),
-      #choices = unique(data_list$sumpan2$habitat),
-      selected = "human gut"
     )
   ),
   
@@ -151,7 +151,7 @@ ps_abundance_diversity <- page_sidebar(
     ),
     selectInput(
       "tool_abundance",
-      "Choose the tools you want to compare:",
+      "Choose the tools you want to show:",
       tool_choices,
       as.vector(tools_levels),
       multiple = TRUE
@@ -228,7 +228,7 @@ ps_overlap <- page_sidebar(
       "tool_overlap",
       "Choose the tools you want to show:",
       tool_choices,
-      as.vector(tools_levels[c(1,2,4,5)]),
+      as.vector(tools_levels[c(1,2,5)]),
       multiple = TRUE
     ),
     selectInput(
@@ -256,7 +256,7 @@ ps_overlap <- page_sidebar(
     page_fillable(
       layout_columns(
         col_widths = c(10, 2, 10, 2, 10), 
-        row_heights = c("1fr", "1fr", "0.3fr"),
+        row_heights = c("1fr", "1fr", "0.35fr"),
         card(
           card_header("CSTC"),
           plotOutput("overlap_cstc", height = "100%") 

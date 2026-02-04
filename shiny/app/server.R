@@ -721,8 +721,8 @@ server <- function(input, output, session) {
       h       = input$single_environment_pan_core,
       tools   = input$tool_pan_core,
       pal     = pal_10_complete,
-      general_size = general_size
-    ) 
+      general_size = general_size,
+      data_list$levels_unigenes) 
     
       
   })
