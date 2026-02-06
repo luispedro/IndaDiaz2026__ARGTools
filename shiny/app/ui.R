@@ -6,7 +6,7 @@ ps_intro <- fluidPage(
     width = 1/2,
       card(
         card_header("Introduction"),
-        tags$p("This shiny app shows the main and supplementary figures form the manuscript ", 
+        tags$p("This shiny app shows the main and supplementary figures for the manuscript ", 
                tags$b(tags$i("How ARG Detection Tools Shape Our View of the Resistome")), 
                "and allows to control different parameters."),
         tags$p(tags$b("302,655,267 unigenes")),
@@ -144,11 +144,11 @@ ps_pan_core <- page_sidebar(
     )
 )
 
+## Tab for abundance and diversity
+
 ps_abundance_diversity <- page_sidebar(
   sidebar = sidebar(
-    helpText(
-      ""
-    ),
+    helpText(""),
     selectInput(
       "tool_abundance",
       "Choose the tools you want to show:",
@@ -158,7 +158,7 @@ ps_abundance_diversity <- page_sidebar(
     ),
     selectInput(
       "environment_abundance",
-      "Choose the tools you want to show:",
+      "Choose the environments you want to show:",
       as.list(EN2),
       selected = EN2[c(1)],
       multiple = TRUE
@@ -166,7 +166,12 @@ ps_abundance_diversity <- page_sidebar(
     radioButtons(
       "threshold_abundance_id",
       "Identity threshold DeepARG/RGI (amino acid)",
-      choices = list("Default" = 0.0, ">= 60%" = 60.0, ">= 70%" = 70.0, ">= 80%" = 80.0),
+      choices = list(
+        "Default" = 0.0,
+        ">= 60%" = 60.0,
+        ">= 70%" = 70.0,
+        ">= 80%" = 80.0
+      ),
       selected = 0.0
     ),
     selectInput(
@@ -179,46 +184,90 @@ ps_abundance_diversity <- page_sidebar(
     radioButtons(
       "plot_other",
       "Plot other gene classes together:",
-      as.list(c("Yes","No")),
+      c("Yes", "No"),
       "Yes"
     )
   ),
   
-
-    page_fillable(
-      #title = "Abundance and diversity",
+  navset_card_underline(
+    
+    ## Overview panel
+    nav_panel(
+      "Overview of abundance and diversity",
+      
       layout_columns(
         col_widths = c(6, 6, 6, 6, 12),
-        row_heights = c("1fr", "1fr", "0.3fr"),
+        
         card(
           card_header("Abundance per sample"),
-          #"This is outcome",
-          plotOutput("plot_abundance", height = "100%") 
+          plotOutput("plot_abundance_overview", height = "450px")
         ),
         card(
           card_header("Diversity per sample"),
-          #"This is outcome 2",
-          plotOutput("plot_diversity", height = "100%") 
+          plotOutput("plot_diversity_overview", height = "450px")
         ),
         card(
           card_header("Median abundance per class"),
-          #"This is outcome",
-          plotOutput("plot_abundance_class", height = "100%") 
+          plotOutput("plot_abundance_class_overview", height = "450px")
         ),
         card(
           card_header("Median diversity per class"),
-          plotOutput("plot_diversity_class", height = "100%") 
+          plotOutput("plot_diversity_class_overview", height = "450px")
         ),
         card(
-        #  card_header("Median diversity per class"),
-          plotOutput("plot_diversity_class_legend", height = "100%") 
+          plotOutput("plot_diversity_class_legend_overview", height = "100%")
+        )
+      )
+    ),
+    
+    ## Abundance menu
+    nav_panel(
+      "Abundance",
+      page_fillable(
+        layout_columns(
+          col_widths = c(6, 6),
+          
+          card(
+            card_header("Abundance per sample"),
+            plotOutput("plot_abundance", height = "100%")
+          ),
+          card(
+            card_header("Median abundance per class"),
+            plotOutput("plot_abundance_class", height = "100%")
+          ),
+          card(
+            plotOutput("plot_abundance_class_legend", height = "100%")
+          )
+        )
+      )
+    ),
+    
+    ## Diversity menu
+    nav_panel(
+      "Diversity",
+      page_fillable(
+        layout_columns(
+          col_widths = c(6, 6, 12),
+          row_heights = c("1fr", "0.3fr"),
+          
+          card(
+            card_header("Diversity per sample"),
+            plotOutput("plot_diversity", height = "100%")
+          ),
+          card(
+            card_header("Median diversity per class"),
+            plotOutput("plot_diversity_class", height = "100%")
+          ),
+          card(
+            plotOutput("plot_diversity_class_legend", height = "100%")
+          )
         )
       )
     )
+  )
 )
 
-
-
+## Tab for overlaps
 ps_overlap <- page_sidebar(
   sidebar = sidebar(
     helpText(
@@ -253,35 +302,76 @@ ps_overlap <- page_sidebar(
     )
   ),
   
-    page_fillable(
+  navset_card_underline(
+    
+    # Overview panel
+    nav_panel(
+      "Overview",
       layout_columns(
-        col_widths = c(10, 2, 10, 2, 10), 
-        row_heights = c("1fr", "1fr", "0.35fr"),
+        col_widths = c(6, 6, 6, 6, 12),
+        
         card(
           card_header("CSTC"),
-          plotOutput("overlap_cstc", height = "100%") 
-        ),
-        card(
-          card_header("Medians per class"),
-          plotOutput("overlap_cstc_summary", height = "100%") 
+          plotOutput("overlap_cstc_overview", height = "450px")
         ),
         card(
           card_header("CSNO"),
-          plotOutput("overlap_csno", height = "100%") 
+          plotOutput("overlap_csno_overview", height = "450px")
         ),
         card(
-          card_header("Medians per class"),
-          plotOutput("overlap_csno_summary", height = "100%") 
+          card_header("CSTC – Medians per class"),
+          plotOutput("overlap_cstc_summary_overview", height = "450px")
         ),
         card(
-          card_header(""),
-          plotOutput("overlap_legend", height = "100%") 
+          card_header("CSNO – Medians per class"),
+          plotOutput("overlap_csno_summary_overview", height = "450px")
+        ),
+        card(
+          plotOutput("overlap_legend", height = "100%")
         )
       )
-    )#,
+    ),
     
-    #card_footer("Note:")
-  
+    # CSTC only
+    nav_panel(
+      "CSTC",
+      layout_columns(
+        col_widths = c(6, 6, 12),
+        
+        card(
+          card_header("CSTC"),
+          plotOutput("overlap_cstc", height = "100%")
+        ),
+        card(
+          card_header("CSTC – Medians per class"),
+          plotOutput("overlap_cstc_summary", height = "100%")
+        ),
+        card(
+          plotOutput("plot_cstc_legend", height = "100%")
+        )
+      )
+    ),
+    
+    # CSNO only
+    nav_panel(
+      "CSNO",
+      layout_columns(
+        col_widths = c(6, 6, 12),
+        
+        card(
+          card_header("CSNO"),
+          plotOutput("overlap_csno", height = "100%")
+        ),
+        card(
+          card_header("CSNO – Medians per class"),
+          plotOutput("overlap_csno_summary", height = "100%")
+        ),
+        card(
+          plotOutput("plot_csno_legend", height = "100%")
+        )
+      )
+    )
+  )
 )
 
 

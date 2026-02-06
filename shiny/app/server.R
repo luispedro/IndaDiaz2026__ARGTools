@@ -1,7 +1,7 @@
 server <- function(input, output, session) {
   
   input_data_unigenes <- reactive({data_list$unigenes %>% 
-    filter(!(tool %in% c("DeepARG", "RGI-DIAMOND") &  id < input$threshold_unigenes_id))})
+      filter(!(tool %in% c("DeepARG", "RGI-DIAMOND") &  id < input$threshold_unigenes_id))})
   
   output$plot_count_genes_tool <- renderPlot({
     
@@ -21,7 +21,7 @@ server <- function(input, output, session) {
   })
   
   output$plot_alluvial_classes <- renderPlot({
-
+    
     plot_alluvial_classes(unigenes = input_data_unigenes(), 
                           levels_unigenes = data_list$levels_unigenes, 
                           threshold_plot = 0.99, remove_class_threshold = 0.005, 
@@ -35,107 +35,107 @@ server <- function(input, output, session) {
     
   })
   
-
+  
   # Core Resistome plot
   pan_core <- reactive({ 
-      
-      if(input$threshold_pan_core_id == 60.0) {
-        data_list$sumpan2 %>% 
-          filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
-          bind_rows(data_list$sumpan2_60) %>%  
-          left_join(
-            (
-              sum_core_adjust(
-                (data_list$core %>% 
-                  filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
-                  bind_rows(data_list$core60)), 
-                input$threshold_samples, input$threshold_proportion) %>% 
-                       ungroup() %>% 
-                       group_by(tool, habitat) %>% 
-                       summarise(core = sum(unigenes))), 
-            by = c("tool", "habitat")) %>%
-          mutate(core = ifelse(is.na(core), 0, core)) %>% 
-          mutate(prop = core / md) %>%
-          ungroup() %>% group_by(tool, habitat) %>% 
-          mutate(texture = ifelse(tool %in% tools_texture, "yes", "no")) %>%
-          filter(tool %in% input$tool_pan_core,
-                 habitat %in% input$environment_pan_core) %>%
-          mutate(tool = factor(as.character(tool),
-                               levels = tools_levels[tools_levels %in% input$tool_pan_core]))
-        
-      } else if(input$threshold_pan_core_id == 70.0) {
-        data_list$sumpan2 %>% 
-          filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
-          bind_rows(data_list$sumpan2_70) %>%  
-          left_join(
-            (
-              sum_core_adjust(
-                (data_list$core %>% 
-                  filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
-                  bind_rows(data_list$core70)), 
-                input$threshold_samples, input$threshold_proportion) %>% 
-                ungroup() %>% 
-                group_by(tool, habitat) %>% 
-                summarise(core = sum(unigenes))), 
-            by = c("tool", "habitat")) %>%
-          mutate(core = ifelse(is.na(core), 0, core)) %>% 
-          mutate(prop = core / md) %>%
-          ungroup() %>% group_by(tool, habitat) %>% 
-          mutate(texture = ifelse(tool %in% tools_texture, "yes", "no")) %>%
-          filter(tool %in% input$tool_pan_core,
-                 habitat %in% input$environment_pan_core) %>%
-          mutate(tool = factor(as.character(tool),
-                               levels = tools_levels[tools_levels %in% input$tool_pan_core]))
-        
-      } else if(input$threshold_pan_core_id == 80.0) {
-        data_list$sumpan2 %>% 
-          filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
-          bind_rows(data_list$sumpan2_80) %>%  
-          left_join(
-            (
-              sum_core_adjust(
-                (data_list$core %>% 
-                  filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
-                  bind_rows(data_list$core80)), 
-                input$threshold_samples, input$threshold_proportion) %>% 
-                ungroup() %>% 
-                group_by(tool, habitat) %>% 
-                summarise(core = sum(unigenes))), 
-            by = c("tool", "habitat")) %>%
-          mutate(core = ifelse(is.na(core), 0, core)) %>% 
-          mutate(prop = core / md) %>%
-          ungroup() %>% group_by(tool, habitat) %>% 
-          mutate(texture = ifelse(tool %in% tools_texture, "yes", "no")) %>%
-          filter(tool %in% input$tool_pan_core,
-                 habitat %in% input$environment_pan_core) %>%
-          mutate(tool = factor(as.character(tool),
-                               levels = tools_levels[tools_levels %in% input$tool_pan_core]))
-        
-        
-      } else {
-        data_list$sumpan2  %>%  
-          left_join(
-            (
-              sum_core_adjust(
-                data_list$core,
-                input$threshold_samples, 
-                input$threshold_proportion) %>% 
+    
+    if(input$threshold_pan_core_id == 60.0) {
+      data_list$sumpan2 %>% 
+        filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
+        bind_rows(data_list$sumpan2_60) %>%  
+        left_join(
+          (
+            sum_core_adjust(
+              (data_list$core %>% 
+                 filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
+                 bind_rows(data_list$core60)), 
+              input$threshold_samples, input$threshold_proportion) %>% 
               ungroup() %>% 
               group_by(tool, habitat) %>% 
               summarise(core = sum(unigenes))), 
-            by = c("tool", "habitat")) %>%
-          mutate(core = ifelse(is.na(core), 0, core)) %>% 
-          mutate(prop = core / md) %>%
-          ungroup() %>% group_by(tool, habitat) %>% 
-          mutate(texture = ifelse(tool %in% tools_texture, "yes", "no")) %>%
-          filter(tool %in% input$tool_pan_core,
-                 habitat %in% input$environment_pan_core) %>%
-          mutate(tool = factor(as.character(tool),
-                               levels = tools_levels[tools_levels %in% input$tool_pan_core]))
-      }
-})
-
-    
+          by = c("tool", "habitat")) %>%
+        mutate(core = ifelse(is.na(core), 0, core)) %>% 
+        mutate(prop = core / md) %>%
+        ungroup() %>% group_by(tool, habitat) %>% 
+        mutate(texture = ifelse(tool %in% tools_texture, "yes", "no")) %>%
+        filter(tool %in% input$tool_pan_core,
+               habitat %in% input$environment_pan_core) %>%
+        mutate(tool = factor(as.character(tool),
+                             levels = tools_levels[tools_levels %in% input$tool_pan_core]))
+      
+    } else if(input$threshold_pan_core_id == 70.0) {
+      data_list$sumpan2 %>% 
+        filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
+        bind_rows(data_list$sumpan2_70) %>%  
+        left_join(
+          (
+            sum_core_adjust(
+              (data_list$core %>% 
+                 filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
+                 bind_rows(data_list$core70)), 
+              input$threshold_samples, input$threshold_proportion) %>% 
+              ungroup() %>% 
+              group_by(tool, habitat) %>% 
+              summarise(core = sum(unigenes))), 
+          by = c("tool", "habitat")) %>%
+        mutate(core = ifelse(is.na(core), 0, core)) %>% 
+        mutate(prop = core / md) %>%
+        ungroup() %>% group_by(tool, habitat) %>% 
+        mutate(texture = ifelse(tool %in% tools_texture, "yes", "no")) %>%
+        filter(tool %in% input$tool_pan_core,
+               habitat %in% input$environment_pan_core) %>%
+        mutate(tool = factor(as.character(tool),
+                             levels = tools_levels[tools_levels %in% input$tool_pan_core]))
+      
+    } else if(input$threshold_pan_core_id == 80.0) {
+      data_list$sumpan2 %>% 
+        filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
+        bind_rows(data_list$sumpan2_80) %>%  
+        left_join(
+          (
+            sum_core_adjust(
+              (data_list$core %>% 
+                 filter(!tool %in% c("DeepARG","RGI-DIAMOND")) %>% 
+                 bind_rows(data_list$core80)), 
+              input$threshold_samples, input$threshold_proportion) %>% 
+              ungroup() %>% 
+              group_by(tool, habitat) %>% 
+              summarise(core = sum(unigenes))), 
+          by = c("tool", "habitat")) %>%
+        mutate(core = ifelse(is.na(core), 0, core)) %>% 
+        mutate(prop = core / md) %>%
+        ungroup() %>% group_by(tool, habitat) %>% 
+        mutate(texture = ifelse(tool %in% tools_texture, "yes", "no")) %>%
+        filter(tool %in% input$tool_pan_core,
+               habitat %in% input$environment_pan_core) %>%
+        mutate(tool = factor(as.character(tool),
+                             levels = tools_levels[tools_levels %in% input$tool_pan_core]))
+      
+      
+    } else {
+      data_list$sumpan2  %>%  
+        left_join(
+          (
+            sum_core_adjust(
+              data_list$core,
+              input$threshold_samples, 
+              input$threshold_proportion) %>% 
+              ungroup() %>% 
+              group_by(tool, habitat) %>% 
+              summarise(core = sum(unigenes))), 
+          by = c("tool", "habitat")) %>%
+        mutate(core = ifelse(is.na(core), 0, core)) %>% 
+        mutate(prop = core / md) %>%
+        ungroup() %>% group_by(tool, habitat) %>% 
+        mutate(texture = ifelse(tool %in% tools_texture, "yes", "no")) %>%
+        filter(tool %in% input$tool_pan_core,
+               habitat %in% input$environment_pan_core) %>%
+        mutate(tool = factor(as.character(tool),
+                             levels = tools_levels[tools_levels %in% input$tool_pan_core]))
+    }
+  })
+  
+  
   output$plot_pan_core_resistome <- renderPlot({
     tools_order <- match(input$tool_pan_core, tools_levels)
     shape_tools <- rep(21, length(tools_levels))
@@ -149,34 +149,34 @@ server <- function(input, output, session) {
       mutate(metric = ifelse(metric %in% "core", "Core-resistome", metric)) %>%
       mutate(metric = factor(metric, levels = c("Pan-resistome", "Core-resistome"))) %>% 
       ggplot(aes(x = habitat, y =  value)) +
-        geom_jitter(aes(fill = tool, shape = texture),  color = "black", stroke = 0.3, size = 2.5, width = 0.5, height = 0) + 
-        facet_grid(metric ~ habitat, scales = "free") +
-        scale_fill_manual(values = pal_figure, labels = lab_fn(tools_labels_figure), name = NULL) +
-        scale_shape_manual(values = c(21, 24)) +
-        guides(
-          fill = guide_legend(
-            override.aes = list(
-              shape = shape_tools,
-              fill  = pal_figure)), shape = "none") +
-        theme_minimal() +
-        xlab("") +
-        ylab("ARGs") + 
-        theme(
-          legend.position = "bottom",
-          strip.text.x   = element_text(size = general_size),
-          legend.text = element_text(size = general_size),
-          panel.grid.major.x = element_blank(),
-          panel.grid.minor.x = element_blank(),
-          plot.margin = margin(0, 0, 0, 0, unit = "pt"),
-          legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
-          legend.margin = margin(0, 0, 0, 0, unit = "pt"),
-          panel.spacing = unit(0, "pt"),
-          title = element_text(size = general_size + 2, face = "bold"),
-          axis.title = element_text(size = general_size + 1, face = "bold"),
-          axis.text.x = element_blank(),
-          axis.text.y = element_text(size = general_size),
-          panel.border = element_blank(),   
-          panel.background = element_rect(colour = "black", fill = NA))  
+      geom_jitter(aes(fill = tool, shape = texture),  color = "black", stroke = 0.3, size = 2.5, width = 0.5, height = 0) + 
+      facet_grid(metric ~ habitat, scales = "free") +
+      scale_fill_manual(values = pal_figure, labels = lab_fn(tools_labels_figure), name = NULL) +
+      scale_shape_manual(values = c(21, 24)) +
+      guides(
+        fill = guide_legend(
+          override.aes = list(
+            shape = shape_tools,
+            fill  = pal_figure)), shape = "none") +
+      theme_minimal() +
+      xlab("") +
+      ylab("ARGs") + 
+      theme(
+        legend.position = "bottom",
+        strip.text.x   = element_text(size = general_size),
+        legend.text = element_text(size = general_size),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+        legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
+        legend.margin = margin(0, 0, 0, 0, unit = "pt"),
+        panel.spacing = unit(0, "pt"),
+        title = element_text(size = general_size + 2, face = "bold"),
+        axis.title = element_text(size = general_size + 1, face = "bold"),
+        axis.text.x = element_blank(),
+        axis.text.y = element_text(size = general_size),
+        panel.border = element_blank(),   
+        panel.background = element_rect(colour = "black", fill = NA))  
   })
   
   
@@ -261,9 +261,8 @@ server <- function(input, output, session) {
         arrange(tool, sample)
     }
   })
-      
-  output$plot_abundance <- renderPlot({
-
+  
+  plot_abundance_reactive <- reactive({
     plot_total_abundance_diversity_new_version(
       dataset = abundance_tool_sample_reactive(), # 
       tools_labels = tools_labels,  #
@@ -280,8 +279,12 @@ server <- function(input, output, session) {
     
   })
   
-  output$plot_diversity <- renderPlot({
+  ## Adding this so it can be rendered separately well in the submenus
+  output$plot_abundance <- renderPlot({plot_abundance_reactive ()})
+  output$plot_abundance_overview <- renderPlot({plot_abundance_reactive ()})
     
+  
+  plot_diversity_reactive <- reactive({
     plot_total_abundance_diversity_new_version(
       dataset = abundance_tool_sample_reactive(), # 
       tools_labels = tools_labels,  #
@@ -295,9 +298,12 @@ server <- function(input, output, session) {
       texture = tools_texture, # texture for repeated color 
       tools_levels = tools_levels) + 
       theme(legend.position = "none")
-    
   })
-
+    
+  ## Adding this so it can be rendered seperately well in the submenus
+  output$plot_diversity <- renderPlot({plot_diversity_reactive()})
+  output$plot_diversity_overview <- renderPlot({plot_diversity_reactive()})
+  
   
   abundance_class_reactice <- reactive({ 
     if(input$threshold_abundance_id == 60.0) {
@@ -323,60 +329,103 @@ server <- function(input, output, session) {
     
   })
   
-  output$plot_abundance_class  <- renderPlot({
+  plot_abundance_class_reactive <- reactive({
     plot_abundance_class_more_environments(abundance_class_reactice(), 
-          input$environment_abundance, general_size , 
-          pal_10_q, 
-          input$abundance_genes, 
-          data_type = "abundance", 
-          other = input$plot_other,
-          tools_levels, 
-          input$tool_abundance, 
-          tools_texture,
-          pattern_density = pattern_density,
-          pattern_spacing = pattern_spacing,
-          pattern_fill = pattern_fill,
-          pattern_size = pattern_size) +
+                                           input$environment_abundance, general_size , 
+                                           pal_10_q, 
+                                           input$abundance_genes, 
+                                           data_type = "abundance", 
+                                           other = input$plot_other,
+                                           tools_levels, 
+                                           input$tool_abundance, 
+                                           tools_texture,
+                                           pattern_density = pattern_density,
+                                           pattern_spacing = pattern_spacing,
+                                           pattern_fill = pattern_fill,
+                                           pattern_size = pattern_size) +
       theme(legend.position = "none")
   })
   
-  output$plot_diversity_class  <- renderPlot({
+  ## Adding this so it can be rendered seperately well in the submenus
+  output$plot_abundance_class <- renderPlot({plot_abundance_class_reactive()})
+  output$plot_abundance_class_overview <- renderPlot({plot_abundance_class_reactive()})
+
+  
+  
+  plot_diversity_class_reactive <- reactive({
     plot_abundance_class_more_environments(abundance_class_reactice(), 
-      input$environment_abundance, general_size , 
-      pal_10_q, 
-      input$abundance_genes, 
-      data_type = "diversity", 
-      other = input$plot_other,
-      tools_levels, 
-      input$tool_abundance, 
-      tools_texture,
-      pattern_density = pattern_density,
-      pattern_spacing = pattern_spacing,
-      pattern_fill = pattern_fill,
-      pattern_size = pattern_size) +
+                                           input$environment_abundance, general_size , 
+                                           pal_10_q, 
+                                           input$abundance_genes, 
+                                           data_type = "diversity", 
+                                           other = input$plot_other,
+                                           tools_levels, 
+                                           input$tool_abundance, 
+                                           tools_texture,
+                                           pattern_density = pattern_density,
+                                           pattern_spacing = pattern_spacing,
+                                           pattern_fill = pattern_fill,
+                                           pattern_size = pattern_size) +
       theme(legend.position = "none")
   })
   
-  output$plot_diversity_class_legend  <- renderPlot({
+  ## Adding this so it can be rendered seperately well in the submenus
+  output$plot_diversity_class <- renderPlot({plot_diversity_class_reactive()})
+  output$plot_diversity_class_overview <- renderPlot({plot_diversity_class_reactive()})
+  
+  
+  plot_diversity_class_legend <- reactive ({
     grid.draw(g_legend(plot_abundance_class_more_environments(abundance_class_reactice(), 
-        input$environment_abundance, general_size , 
-        pal_10_q, 
-        input$abundance_genes, 
-        data_type = "diversity", 
-        other = input$plot_other,
-        tools_levels, 
-        input$tool_abundance, 
-        tools_texture,
-        pattern_density = 0.01,
-        pattern_spacing = 0.005,
-        pattern_fill = "white",
-        pattern_size = 0.4) +
-      theme(legend.position = "bottom")))
+                                                              input$environment_abundance, general_size , 
+                                                              pal_10_q, 
+                                                              input$abundance_genes, 
+                                                              data_type = "diversity", 
+                                                              other = input$plot_other,
+                                                              tools_levels, 
+                                                              input$tool_abundance, 
+                                                              tools_texture,
+                                                              pattern_density = 0.01,
+                                                              pattern_spacing = 0.005,
+                                                              pattern_fill = "white",
+                                                              pattern_size = 0.4) +
+                         theme(legend.position = "bottom")))
   })
   
+  ## Adding this so the legend can be rendered in the plot
+  output$plot_diversity_class_legend <- renderPlot({plot_diversity_class_legend()})
+  
+  output$plot_diversity_class_legend_overview <- renderPlot({plot_diversity_class_legend()})
+  
+  
+  plot_abundance_class_legend <- reactive ({
+    grid.draw(
+      g_legend(
+        plot_abundance_class_more_environments(
+          abundance_class_reactice(),
+          input$environment_abundance,
+          general_size,
+          pal_10_q,
+          input$abundance_genes,
+          data_type = "abundance",   
+          other = input$plot_other,
+          tools_levels,
+          input$tool_abundance,
+          tools_texture,
+          pattern_density = 0.01,
+          pattern_spacing = 0.005,
+          pattern_fill = "white",
+          pattern_size = 0.4
+        ) +
+          theme(legend.position = "bottom")
+      )
+    )
+  })
+  
+  ## Adding this so the legend can be rendered in the plot
+  output$plot_abundance_class_legend <- renderPlot({plot_abundance_class_legend()})
   
   ### OVERLAPS 
-
+  
   recall_reactive <- reactive({
     if(input$threshold_overlap_id == 60.0){
       data_list$recall_fnr60  %>% 
@@ -413,7 +462,7 @@ server <- function(input, output, session) {
                                                          input$tool_overlap])) %>% 
         mutate(texture = ifelse(tool_comp %in% tools_texture, "yes", "no")) %>%
         mutate(new_level = factor(new_level, levels = input$overlap_genes))
-
+      
     } else {
       data_list$recall_fnr  %>% 
         mutate(new_level = as.character(new_level)) %>% 
@@ -427,214 +476,33 @@ server <- function(input, output, session) {
         mutate(new_level = factor(new_level, levels = input$overlap_genes))
     }
   })
-    
-  output$overlap_cstc  <- renderPlot({
-
+  
+  
+  
+  plot_overlap_cstc  <- reactive({
     recall_reactive() %>%
       ggplot(aes(x = new_level, fill = tool_ref, y = recall)) +
-        geom_violin() +
-        geom_jitter(aes(color = tool_comp, shape = texture), #color = "black", 
-                    stroke = 1, size = 2.5, width = 0.1,  height = 0) + 
-        scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
-        scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
-                          labels = tools_levels[tools_levels %in% input$tool_overlap]) +
-        scale_color_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
-                           labels = tools_levels[tools_levels %in% input$tool_overlap_calc]) +
-        scale_x_discrete(labels = function(x) {
-          x <- gsub("-", "-\n", x)
-          x <- gsub(" ", "\n", x)
-          x}) + 
-        scale_shape_manual(values = c("no" = 16, "yes" = 17)) +
-        facet_grid(tool_ref ~ new_level, scales = "free_x") +
-        scale_y_continuous(limits = c(-0.1,1.1), 
-                           breaks = seq(0, 1, length.out = 3),
-                           labels = scales::label_number()) + 
-        ylab("CSTC") + 
-        xlab("") + 
-        theme(
-          legend.position = "none",
-          legend.text = element_text(size = general_size ),
-          panel.border = element_blank(),
-          panel.grid.major.x = element_blank(),
-          panel.grid.minor.x = element_blank(),
-          plot.margin = margin(0, 0, 0, 0, unit = "pt"),
-          legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
-          legend.margin = margin(0, 0, 0, 0, unit = "pt"),
-          #panel.spacing = unit(0, "pt"),
-          title = element_text(size = general_size + 2, face = "bold"),
-          axis.title = element_text(size = general_size + 1, face = "bold"),
-          axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
-          axis.text.y = element_text(size = general_size),
-          panel.background = element_rect(colour = "black", fill = NA),
-          strip.text = element_blank(),
-          strip.background = element_blank())
-
-  })
-  
-  
-  output$overlap_cstc_summary  <- renderPlot({
-    #pal2 <- pal_10_q[]
-    #pal3 <- pal_10_q[input$tool_overlap_calc %in% tool_levels]
-    
-    recall_reactive() %>%
-      filter(!is.na(recall)) %>% 
-      ungroup() %>% 
-      group_by(tool_ref, new_level) %>% 
-      summarise(recall = median(recall)) %>%
-      ggplot(aes(x = "Class medians", fill = tool_ref, y = recall)) +
-        geom_violin() +
-        #geom_boxplot(outlier.shape = NA, position = position_dodge2(preserve = "single")) + 
-        geom_jitter(size = 1.5, width = 0.4, height = 0) + 
-        scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
-        scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
-                          labels = tools_levels[tools_levels %in% input$tool_overlap]) +
-        #scale_color_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
-        #                   labels = tools_levels[tools_levels %in% input$tool_overlap_calc]) +
-        facet_grid(tool_ref ~ ., scales = "free_x") +
-        scale_y_continuous(limits = c(-0.2,1.2), 
-                           breaks = seq(0, 1, length.out = 3),
-                           labels = scales::label_number()) +
-        scale_x_discrete(labels = function(x) {
-          x <- gsub("-", "-\n", x)
-          x <- gsub(" ", "\n", x)
-          x}) + 
-        ylab("") + 
-        xlab("") + 
-        theme(
-          legend.position = "none",
-          legend.text = element_text(size = general_size ),
-          panel.border = element_blank(),
-          panel.grid.major.x = element_blank(),
-          panel.grid.minor.x = element_blank(),
-          plot.margin = margin(0, 0, 0, 0, unit = "pt"),
-          legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
-          legend.margin = margin(0, 0, 0, 0, unit = "pt"),
-          panel.spacing = unit(0, "pt"),
-          title = element_text(size = general_size + 2, face = "bold"),
-          axis.title = element_text(size = general_size + 1, face = "bold"),
-          axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
-          axis.text.y = element_blank(),
-          panel.background = element_rect(colour = "black", fill = NA),
-          strip.text = element_text(size = general_size, face = "bold"),
-          strip.background = element_blank())
-    
-  })
-  
-  
-  output$overlap_csno  <- renderPlot({
-    
-    recall_reactive() %>%
-      ggplot(aes(x = new_level, fill = tool_ref, y = fnr)) +
-        geom_violin() +
-        geom_jitter(aes(color = tool_comp, shape = texture), #color = "black", 
-                    stroke = 1, size = 2.5, width = 0.1,  height = 0) + 
-        scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
-        scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
-                          labels = tools_levels[tools_levels %in% input$tool_overlap]) +
-        scale_color_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
-                           labels = tools_levels[tools_levels %in% input$tool_overlap_calc]) +
-        scale_x_discrete(labels = function(x) {
-          x <- gsub("-", "-\n", x)
-          x <- gsub(" ", "\n", x)
-          x}) + 
-        scale_shape_manual(values = c("no" = 16, "yes" = 17)) +
-        facet_grid(tool_ref ~ new_level, scales = "free_x") +
-        scale_y_continuous(limits = c(-0.1,1.1), 
-                           breaks = seq(0, 1, length.out = 3),
-                           labels = scales::label_number()) + 
-        ylab("CSNO") + 
-        xlab("") + 
-        theme(
-          legend.position = "none",
-          legend.text = element_text(size = general_size ),
-          panel.border = element_blank(),
-          panel.grid.major.x = element_blank(),
-          panel.grid.minor.x = element_blank(),
-          plot.margin = margin(0, 0, 0, 0, unit = "pt"),
-          legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
-          legend.margin = margin(0, 0, 0, 0, unit = "pt"),
-          #panel.spacing = unit(0, "pt"),
-          title = element_text(size = general_size + 2, face = "bold"),
-          axis.title = element_text(size = general_size + 1, face = "bold"),
-          axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
-          axis.text.y = element_text(size = general_size),
-          panel.background = element_rect(colour = "black", fill = NA),
-          strip.text = element_blank(),
-          strip.background = element_blank())
-      
-  })
-  
-  
-  output$overlap_csno_summary  <- renderPlot({
-    #pal2 <- pal_10_q[]
-    #pal3 <- pal_10_q[input$tool_overlap_calc %in% tool_levels]
-    
-    recall_reactive() %>%
-      filter(!is.na(recall)) %>% 
-      ungroup() %>% 
-      group_by(tool_ref, new_level) %>% 
-      summarise(fnr = median(fnr)) %>%
-      ggplot(aes(x = "Class medians", fill = tool_ref, y = fnr)) +
-        geom_violin() +
-        geom_jitter(size = 1.5, width = 0.4, height = 0) + 
-        scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
-        scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
-                          labels = tools_levels[tools_levels %in% input$tool_overlap]) +
-        facet_grid(tool_ref ~ ., scales = "free_x") +
-        scale_y_continuous(limits = c(-0.2,1.2), 
-                           breaks = seq(0, 1, length.out = 3),
-                           labels = scales::label_number()) +
-        scale_x_discrete(labels = function(x) {
-          x <- gsub("-", "-\n", x)
-          x <- gsub(" ", "\n", x)
-          x}) + 
-        ylab("") + 
-        xlab("") + 
-        theme(
-          legend.position = "none",
-          legend.text = element_text(size = general_size ),
-          panel.border = element_blank(),
-          panel.grid.major.x = element_blank(),
-          panel.grid.minor.x = element_blank(),
-          plot.margin = margin(0, 0, 0, 0, unit = "pt"),
-          legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
-          legend.margin = margin(0, 0, 0, 0, unit = "pt"),
-          panel.spacing = unit(0, "pt"),
-          title = element_text(size = general_size + 2, face = "bold"),
-          axis.title = element_text(size = general_size + 1, face = "bold"),
-          axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
-          axis.text.y = element_blank(),
-          panel.background = element_rect(colour = "black", fill = NA),
-          strip.text = element_text(size = general_size, face = "bold"),
-          strip.background = element_blank())
-      
-  })
-  
-  
-  output$overlap_legend <- renderPlot({
-    
-    tools_order <- match(input$tool_overlap_calc, tools_levels)
-    shape_tools <- rep(21, length(tools_levels))
-    shape_tools[tools_levels %in% tools_texture] <- 24
-    shape_tools <- shape_tools[tools_order]
-
-    grid.draw(g_legend(recall_reactive() %>%
-      ggplot(aes(x = recall + fnr, y = recall + fnr)) +
-      geom_jitter(aes(shape = texture, fill = tool_comp), #color = "black", 
-                  size = 2.5) + 
-      scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
+      geom_violin() +
+      geom_jitter(aes(color = tool_comp, shape = texture), #color = "black", 
+                  stroke = 1, size = 2.5, width = 0.1,  height = 0) + 
+      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+      scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
+                        labels = tools_levels[tools_levels %in% input$tool_overlap]) +
+      scale_color_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
                          labels = tools_levels[tools_levels %in% input$tool_overlap_calc]) +
-      scale_shape_manual(values = c("no" = 21, "yes" = 24)) +
-      guides(
-        fill = guide_legend(
-          override.aes = list(
-            shape = shape_tools,
-            #color = NA,   
-            #stroke = 0,
-            fill  = pal_10_q[tools_levels %in% input$tool_overlap_calc])), shape = "none") +
-      labs(fill = "") +
+      scale_x_discrete(labels = function(x) {
+        x <- gsub("-", "-\n", x)
+        x <- gsub(" ", "\n", x)
+        x}) + 
+      scale_shape_manual(values = c("no" = 16, "yes" = 17)) +
+      facet_grid(tool_ref ~ new_level, scales = "free_x") +
+      scale_y_continuous(limits = c(-0.1,1.1), 
+                         breaks = seq(0, 1, length.out = 3),
+                         labels = scales::label_number()) + 
+      ylab("CSTC") + 
+      xlab("") + 
       theme(
-        legend.position = "bottom",
+        legend.position = "none",
         legend.text = element_text(size = general_size ),
         panel.border = element_blank(),
         panel.grid.major.x = element_blank(),
@@ -649,11 +517,307 @@ server <- function(input, output, session) {
         axis.text.y = element_text(size = general_size),
         panel.background = element_rect(colour = "black", fill = NA),
         strip.text = element_blank(),
-        strip.background = element_blank(),
-        legend.key = element_blank(), 
-        legend.background = element_blank())))
+        strip.background = element_blank())
+    
   })
+  
+  ## Adding this so it can be rendered seperately well in the submenus
+  output$overlap_cstc <- renderPlot({plot_overlap_cstc ()})
+  output$overlap_cstc_overview <- renderPlot({plot_overlap_cstc ()})
+  
+  
+  
+  plot_overlap_cstc_summary  <- reactive({
+    
+    recall_reactive() %>%
+      filter(!is.na(recall)) %>% 
+      ungroup() %>% 
+      group_by(tool_ref, new_level) %>% 
+      summarise(recall = median(recall)) %>%
+      ggplot(aes(x = "Class medians", fill = tool_ref, y = recall)) +
+      geom_violin() +
+      #geom_boxplot(outlier.shape = NA, position = position_dodge2(preserve = "single")) + 
+      geom_jitter(size = 1.5, width = 0.4, height = 0) + 
+      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+      scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
+                        labels = tools_levels[tools_levels %in% input$tool_overlap]) +
+      #scale_color_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
+      #                   labels = tools_levels[tools_levels %in% input$tool_overlap_calc]) +
+      facet_grid(tool_ref ~ ., scales = "free_x") +
+      scale_y_continuous(limits = c(-0.2,1.2), 
+                         breaks = seq(0, 1, length.out = 3),
+                         labels = scales::label_number()) +
+      scale_x_discrete(labels = function(x) {
+        x <- gsub("-", "-\n", x)
+        x <- gsub(" ", "\n", x)
+        x}) + 
+      ylab("") + 
+      xlab("") + 
+      theme(
+        legend.position = "none",
+        legend.text = element_text(size = general_size ),
+        panel.border = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+        legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
+        legend.margin = margin(0, 0, 0, 0, unit = "pt"),
+        panel.spacing = unit(0, "pt"),
+        title = element_text(size = general_size + 2, face = "bold"),
+        axis.title = element_text(size = general_size + 1, face = "bold"),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
+        axis.text.y = element_blank(),
+        panel.background = element_rect(colour = "black", fill = NA),
+        strip.text = element_text(size = general_size, face = "bold"),
+        strip.background = element_blank())
+    
+  })
+  
+  ## Adding this so it can be rendered seperately well in the submenus
+  output$overlap_cstc_summary <- renderPlot({plot_overlap_cstc_summary ()})
+  output$overlap_cstc_summary_overview <- renderPlot({plot_overlap_cstc_summary ()})
+  
+  
+  
+  plot_overlap_csno  <- reactive({
+    
+    recall_reactive() %>%
+      ggplot(aes(x = new_level, fill = tool_ref, y = fnr)) +
+      geom_violin() +
+      geom_jitter(aes(color = tool_comp, shape = texture), #color = "black", 
+                  stroke = 1, size = 2.5, width = 0.1,  height = 0) + 
+      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+      scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
+                        labels = tools_levels[tools_levels %in% input$tool_overlap]) +
+      scale_color_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
+                         labels = tools_levels[tools_levels %in% input$tool_overlap_calc]) +
+      scale_x_discrete(labels = function(x) {
+        x <- gsub("-", "-\n", x)
+        x <- gsub(" ", "\n", x)
+        x}) + 
+      scale_shape_manual(values = c("no" = 16, "yes" = 17)) +
+      facet_grid(tool_ref ~ new_level, scales = "free_x") +
+      scale_y_continuous(limits = c(-0.1,1.1), 
+                         breaks = seq(0, 1, length.out = 3),
+                         labels = scales::label_number()) + 
+      ylab("CSNO") + 
+      xlab("") + 
+      theme(
+        legend.position = "none",
+        legend.text = element_text(size = general_size ),
+        panel.border = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+        legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
+        legend.margin = margin(0, 0, 0, 0, unit = "pt"),
+        #panel.spacing = unit(0, "pt"),
+        title = element_text(size = general_size + 2, face = "bold"),
+        axis.title = element_text(size = general_size + 1, face = "bold"),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
+        axis.text.y = element_text(size = general_size),
+        panel.background = element_rect(colour = "black", fill = NA),
+        strip.text = element_blank(),
+        strip.background = element_blank())
+    
+  })
+  
+  ## Adding this so it can be rendered seperately well in the submenus
+  output$overlap_csno <- renderPlot({plot_overlap_csno ()})
+  output$overlap_csno_overview <- renderPlot({plot_overlap_csno ()})
+  
+  
+  
+  plot_overlap_csno_summary  <- reactive({
+    
+    recall_reactive() %>%
+      filter(!is.na(recall)) %>% 
+      ungroup() %>% 
+      group_by(tool_ref, new_level) %>% 
+      summarise(fnr = median(fnr)) %>%
+      ggplot(aes(x = "Class medians", fill = tool_ref, y = fnr)) +
+      geom_violin() +
+      geom_jitter(size = 1.5, width = 0.4, height = 0) + 
+      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+      scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
+                        labels = tools_levels[tools_levels %in% input$tool_overlap]) +
+      facet_grid(tool_ref ~ ., scales = "free_x") +
+      scale_y_continuous(limits = c(-0.2,1.2), 
+                         breaks = seq(0, 1, length.out = 3),
+                         labels = scales::label_number()) +
+      scale_x_discrete(labels = function(x) {
+        x <- gsub("-", "-\n", x)
+        x <- gsub(" ", "\n", x)
+        x}) + 
+      ylab("") + 
+      xlab("") + 
+      theme(
+        legend.position = "none",
+        legend.text = element_text(size = general_size ),
+        panel.border = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+        legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
+        legend.margin = margin(0, 0, 0, 0, unit = "pt"),
+        panel.spacing = unit(0, "pt"),
+        title = element_text(size = general_size + 2, face = "bold"),
+        axis.title = element_text(size = general_size + 1, face = "bold"),
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
+        axis.text.y = element_blank(),
+        panel.background = element_rect(colour = "black", fill = NA),
+        strip.text = element_text(size = general_size, face = "bold"),
+        strip.background = element_blank())
+    
+  })
+  
+  ## Adding this so it can be rendered seperately well in the submenus
+  output$overlap_csno_summary <- renderPlot({plot_overlap_csno_summary ()})
+  output$overlap_csno_summary_overview <- renderPlot({plot_overlap_csno_summary ()})
+  
 
+  
+  plot_overlap_legend <- reactive({
+    
+    tools_order <- match(input$tool_overlap_calc, tools_levels)
+    shape_tools <- rep(21, length(tools_levels))
+    shape_tools[tools_levels %in% tools_texture] <- 24
+    shape_tools <- shape_tools[tools_order]
+    
+    grid.draw(g_legend(recall_reactive() %>%
+                         ggplot(aes(x = recall + fnr, y = recall + fnr)) +
+                         geom_jitter(aes(shape = texture, fill = tool_comp), #color = "black", 
+                                     size = 2.5) + 
+                         scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
+                                           labels = tools_levels[tools_levels %in% input$tool_overlap_calc]) +
+                         scale_shape_manual(values = c("no" = 21, "yes" = 24)) +
+                         guides(
+                           fill = guide_legend(
+                             override.aes = list(
+                               shape = shape_tools,
+                               #color = NA,   
+                               #stroke = 0,
+                               fill  = pal_10_q[tools_levels %in% input$tool_overlap_calc])), shape = "none") +
+                         labs(fill = "") +
+                         theme(
+                           legend.position = "bottom",
+                           legend.text = element_text(size = general_size ),
+                           panel.border = element_blank(),
+                           panel.grid.major.x = element_blank(),
+                           panel.grid.minor.x = element_blank(),
+                           plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+                           legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
+                           legend.margin = margin(0, 0, 0, 0, unit = "pt"),
+                           #panel.spacing = unit(0, "pt"),
+                           title = element_text(size = general_size + 2, face = "bold"),
+                           axis.title = element_text(size = general_size + 1, face = "bold"),
+                           axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
+                           axis.text.y = element_text(size = general_size),
+                           panel.background = element_rect(colour = "black", fill = NA),
+                           strip.text = element_blank(),
+                           strip.background = element_blank(),
+                           legend.key = element_blank(), 
+                           legend.background = element_blank())))
+  })
+  
+  ## Adding this so it can be rendered seperately well in the submenus
+  output$overlap_legend <- renderPlot({plot_overlap_legend ()})
+  
+  plot_cstc_legend <- reactive({
+    
+    tools_order <- match(input$tool_overlap_calc, tools_levels)
+    shape_tools <- rep(21, length(tools_levels))
+    shape_tools[tools_levels %in% tools_texture] <- 24
+    shape_tools <- shape_tools[tools_order]
+    
+    grid.draw(g_legend(recall_reactive() %>%
+                         ggplot(aes(x = recall + fnr, y = recall + fnr)) +
+                         geom_jitter(aes(shape = texture, fill = tool_comp), #color = "black", 
+                                     size = 2.5) + 
+                         scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
+                                           labels = tools_levels[tools_levels %in% input$tool_overlap_calc]) +
+                         scale_shape_manual(values = c("no" = 21, "yes" = 24)) +
+                         guides(
+                           fill = guide_legend(
+                             override.aes = list(
+                               shape = shape_tools,
+                               #color = NA,   
+                               #stroke = 0,
+                               fill  = pal_10_q[tools_levels %in% input$tool_overlap_calc])), shape = "none") +
+                         labs(fill = "") +
+                         theme(
+                           legend.position = "bottom",
+                           legend.text = element_text(size = general_size ),
+                           panel.border = element_blank(),
+                           panel.grid.major.x = element_blank(),
+                           panel.grid.minor.x = element_blank(),
+                           plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+                           legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
+                           legend.margin = margin(0, 0, 0, 0, unit = "pt"),
+                           #panel.spacing = unit(0, "pt"),
+                           title = element_text(size = general_size + 2, face = "bold"),
+                           axis.title = element_text(size = general_size + 1, face = "bold"),
+                           axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
+                           axis.text.y = element_text(size = general_size),
+                           panel.background = element_rect(colour = "black", fill = NA),
+                           strip.text = element_blank(),
+                           strip.background = element_blank(),
+                           legend.key = element_blank(), 
+                           legend.background = element_blank())))
+  })
+  
+  ## Adding this so it can be rendered seperately well in the submenus
+  output$plot_cstc_legend <- renderPlot({plot_cstc_legend ()})
+  
+  
+  ## Legend for CSNO
+  plot_csno_legend <- reactive({
+    
+    tools_order <- match(input$tool_overlap_calc, tools_levels)
+    shape_tools <- rep(21, length(tools_levels))
+    shape_tools[tools_levels %in% tools_texture] <- 24
+    shape_tools <- shape_tools[tools_order]
+    
+    grid.draw(g_legend(recall_reactive() %>%
+                         ggplot(aes(x = recall + fnr, y = recall + fnr)) +
+                         geom_jitter(aes(shape = texture, fill = tool_comp), #color = "black", 
+                                     size = 2.5) + 
+                         scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
+                                           labels = tools_levels[tools_levels %in% input$tool_overlap_calc]) +
+                         scale_shape_manual(values = c("no" = 21, "yes" = 24)) +
+                         guides(
+                           fill = guide_legend(
+                             override.aes = list(
+                               shape = shape_tools,
+                               #color = NA,   
+                               #stroke = 0,
+                               fill  = pal_10_q[tools_levels %in% input$tool_overlap_calc])), shape = "none") +
+                         labs(fill = "") +
+                         theme(
+                           legend.position = "bottom",
+                           legend.text = element_text(size = general_size ),
+                           panel.border = element_blank(),
+                           panel.grid.major.x = element_blank(),
+                           panel.grid.minor.x = element_blank(),
+                           plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+                           legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
+                           legend.margin = margin(0, 0, 0, 0, unit = "pt"),
+                           #panel.spacing = unit(0, "pt"),
+                           title = element_text(size = general_size + 2, face = "bold"),
+                           axis.title = element_text(size = general_size + 1, face = "bold"),
+                           axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
+                           axis.text.y = element_text(size = general_size),
+                           panel.background = element_rect(colour = "black", fill = NA),
+                           strip.text = element_blank(),
+                           strip.background = element_blank(),
+                           legend.key = element_blank(), 
+                           legend.background = element_blank())))
+  })
+  
+  ## Adding this so it can be rendered seperately well in the submenus
+  output$plot_csno_legend <- renderPlot({plot_csno_legend ()})
+  
+  
   ### Pan-/Core-resistome proportion
   pan_reactive <- reactive({
     
@@ -701,30 +865,28 @@ server <- function(input, output, session) {
   
   output$plot_pan_core_proportion <- renderPlot({
     
-
+    
     alluvial_pan_core_env(
       sumcore = sumcore_reactive() %>%
         filter(tool %in% input$tool_pan_core,
                habitat %in% input$single_environment_pan_core) %>%
         mutate(
           tool = factor(as.character(tool), 
-                 levels = tools_levels[tools_levels %in% input$tool_pan_core])),
+                        levels = tools_levels[tools_levels %in% input$tool_pan_core])),
       pan     = pan_reactive() %>%
         filter(tool %in% input$tool_pan_core,
                habitat %in% input$single_environment_pan_core) %>%
         mutate(
           tool = factor(as.character(tool), 
-                 levels = tools_levels[tools_levels %in% input$tool_pan_core])),
+                        levels = tools_levels[tools_levels %in% input$tool_pan_core])),
       h       = input$single_environment_pan_core,
       tools   = input$tool_pan_core,
       pal     = pal_10_complete,
       general_size = general_size,
       data_list$levels_unigenes) 
     
-      
-  })
-
     
+  })
+  
+  
 }
-
-
