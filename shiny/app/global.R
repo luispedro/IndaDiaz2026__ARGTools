@@ -153,13 +153,12 @@ data_list <- c(data_list,
 
 abundance_tools_excl <- c("DeepARG", "RGI-DIAMOND")
 
-# --- Ensure factor levels are consistent across all abundance tables ---
+# Ensure factor levels are consistent across all abundance tables
 # Sample as factor once (master)
 data_list$abundance <- data_list$abundance %>%
   dplyr::mutate(sample = factor(sample))
 
-# Make sure tool is a factor too (and keep the full tool universe from the master table)
-# If it's already a factor, this is harmless.
+# Make sure tool is a factor.
 data_list$abundance <- data_list$abundance %>%
   dplyr::mutate(tool = factor(tool))
 
@@ -185,16 +184,16 @@ data_list$abundance80 <- data_list$abundance80 %>%
     tool   = factor(tool,   levels = all_tools)
   )
 
-# --- Build a fixed sample x tool grid (forces all tools to exist, even if absent in data) ---
+# Build a fixed sample x tool grid (forces all tools to exist)
 sample_tool_grid <- tidyr::expand_grid(
   sample = all_samples,
   tool   = all_tools
 )
 
-# --- Precompute summaries (matches original behavior, but faster + stable tool counts) ---
+# Precompute summaries 
 prep_abundance <- function(df) {
   
-  # Map habitat/habitat2 from sample (like your original left_join distinct(sample, habitat...))
+  # Map habitat/habitat2 from sample 
   habitat_map <- df %>%
     dplyr::group_by(sample) %>%
     dplyr::summarise(
@@ -222,11 +221,9 @@ prep_abundance <- function(df) {
     dplyr::arrange(tool, sample)
 }
 
-# --- Build prepped datasets ---
-# Default branch in your original code did NOT exclude DeepARG/RGI-DIAMOND
+# Build prepped datasets
 abundance_base_all <- data_list$abundance
 
-# Threshold branches in your original code excluded DeepARG/RGI-DIAMOND before binding extras
 abundance_base_excl <- data_list$abundance %>%
   dplyr::filter(!tool %in% abundance_tools_excl)
 
