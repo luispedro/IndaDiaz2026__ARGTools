@@ -1,4 +1,7 @@
-
+library(shiny)
+library(bslib)
+library(shinyWidgets)
+library(shinycssloaders)
 
 
 ps_intro <- fluidPage(
@@ -45,176 +48,248 @@ ps_intro <- fluidPage(
   )
   
 
-
+# ARGs Tab
 ps_args <- page_sidebar(
   sidebar = sidebar(
-    helpText(
-      ""
+    
+    pickerInput(
+      inputId = "tools_unigenes",
+      label = "Choose the tools you want to compare:",
+      choices = tool_choices,
+      selected = as.vector(tools_levels),
+      multiple = TRUE,
+      options = list(
+        `actions-box` = TRUE,
+        `selected-text-format` = "count > 2",
+        `count-selected-text` = "{0} tools selected"
+      )
     ),
-    selectInput(
-      "tools_unigenes",
-      "Choose the tools you want to compare:",
-      tool_choices,
-      as.vector(tools_levels),
-      multiple = TRUE
-    ),
-    radioButtons(
-      "threshold_unigenes_id",
-      "Identity threshold DeepARG/RGI (amino acid)",
+    
+    pickerInput(
+      inputId = "threshold_unigenes_id",
+      label = "Identity threshold DeepARG/RGI (amino acid)",
       choices = list("Default" = 0.0, ">= 60%" = 60.0, ">= 70%" = 70.0, ">= 80%" = 80.0),
       selected = 0.0
-    )
-  ),
+     )
+    ),
+  
   layout_column_wrap( 
     width = 1/2,
         card(
           card_header("A: Number of putative ARGs"),
-          plotOutput("plot_count_genes_tool", height = "100%") 
+          withSpinner(plotOutput("plot_count_genes_tool", height = "450px"), type = 8, color = "#1b9e77") # Spinner + Stable height 
         ),
         
         card(
           card_header("B: Proportion of ARGs per class"),
-          plotOutput("plot_alluvial_classes", height = "100%"), 
+          withSpinner(plotOutput("plot_alluvial_classes", height = "450px"), type = 8, color = "#1b9e77"), 
           card_footer("Genes forming at least 99% and with 0.5% proportion are shown.")
         )
       )
 )
 
-
+# Pan- and Core-resistome Tab
 ps_pan_core <- page_sidebar(
   sidebar = sidebar(
-    helpText(
-      ""
+
+    pickerInput(
+      inputId = "tool_pan_core",
+      label = "Choose the tools you want to show the number of genes for:",
+      choices = tool_choices,
+      selected = as.vector(tools_levels),
+      multiple = TRUE,
+      options = list(
+        `actions-box` = TRUE,
+        `selected-text-format` = "count > 2",
+        `count-selected-text` = "{0} tools selected"
+      )
     ),
-    selectInput(
-      "tool_pan_core",
-      "Choose the tools you want to show the number of genes for:",
-      tool_choices,
-      as.vector(tools_levels),
-      multiple = TRUE
-    ),
-    radioButtons(
-      "single_environment_pan_core",
-      "Choose the environment you want to show the proportion of genes for:",
-      as.list(EN2),
-      #choices = unique(data_list$sumpan2$habitat),
-      selected = "human gut"
-    ),
-    selectInput(
-      "environment_pan_core",
-      "Choose the environments you want to show:",
-      as.list(EN2),
+    
+    pickerInput(
+      inputId = "environment_pan_core",
+      label = "Choose the environments you want to show:",
+      choices = as.list(EN2),
       selected = EN2[c(1,9,10,13)],
-      multiple = TRUE
+      multiple = TRUE,
+      options = list(
+        `actions-box` = TRUE,
+        `live-search` = TRUE,
+        `selected-text-format` = "count > 2",
+        `count-selected-text` = "{0} environments selected"
+      )
     ),
-    radioButtons(
-      "threshold_proportion",
-      "Proportion of metagenomic samples where the gene appears in each subsampling event",
+    
+    pickerInput(
+      inputId = "single_environment_pan_core",
+      label = "Choose the environment you want to show the proportion of genes for:",
+      choices = as.list(EN2),
+      selected = "human gut",
+      multiple = FALSE,
+      options = list(
+        `live-search` = TRUE # Adds a search bar for convenience
+      )
+    ),
+    
+    pickerInput(
+      inputId = "threshold_proportion",
+      label = "Proportion of metagenomic samples where the gene appears in each subsampling event:",
       choices = list(">= 30%" = 0.3, ">= 40%" = 0.4, ">= 50%" = 0.5, ">= 60%" = 0.6, ">= 70%" = 0.7, ">= 80%" = 0.8, ">= 90%" = 0.9),
-      selected = 0.5
+      selected = 0.5,
+      multiple = FALSE
     ),
-    sliderInput(
-      "threshold_samples",
-      "Minimum number of subsets the gene has to be part of the subsample core-resistome",
-      min = 200,
-      max = 499,
-      value = 450
+    
+    pickerInput(
+      inputId = "threshold_samples",
+      label = "Minimum number of subsets the gene has to be part of the subsample core-resistome:",
+      choices = list(
+        ">= 200" = 200,
+        ">= 250" = 250,
+        ">= 300" = 300,
+        ">= 350" = 350,
+        ">= 400" = 400,
+        ">= 450" = 450,
+        "500" = 500
+      ),
+      selected = 450,
+      multiple = FALSE
     ),
-    radioButtons(
-      "threshold_pan_core_id",
-      "Identity threshold DeepARG/RGI (amino acid)",
-      choices = list("Default" = 0.0, ">= 60%" = 60.0, ">= 70%" = 70.0, ">= 80%" = 80.0),
-      selected = 0.0
+    
+    radioGroupButtons(
+      inputId = "threshold_pan_core_id",
+      label = "Identity threshold DeepARG/RGI (amino acid):",
+      choices = c(
+        "Default" = "0.0",
+        ">= 60%" = "60.0",
+        ">= 70%" = "70.0",
+        ">= 80%" = "80.0"
+      ),
+      selected = "0.0",
+      status = "primary",
+      size = "sm",
+      justified = TRUE
     )
-  ),
+),
+  
   
   layout_column_wrap( 
     width = 1/2,
       #Sub-card for Plot A
       card(
+        # full_screen = TRUE,
         card_header("Number of genes"),
-        plotOutput("plot_pan_core_resistome", width = "100%") 
+        withSpinner(plotOutput("plot_pan_core_resistome", height = "450px"), type = 8, color = "#1b9e77") 
       ),
       #Sub-card for Plot B
       card(
+        # full_screen = TRUE,
         card_header("Proportion of genes"),
-        plotOutput("plot_pan_core_proportion", height = "100%")
-        
+        withSpinner(plotOutput("plot_pan_core_proportion", height = "450px"), type = 8, color = "#1b9e77")
       )
+  )
     )
-)
 
-## Tab for abundance and diversity
+
+## Abundance and Diversity Tab
 
 ps_abundance_diversity <- page_sidebar(
   sidebar = sidebar(
-    helpText(""),
-    selectInput(
-      "tool_abundance",
-      "Choose the tools you want to show:",
-      tool_choices,
-      as.vector(tools_levels),
-      multiple = TRUE
+
+    pickerInput(
+      inputId = "tool_abundance",
+      label = "Choose the tools you want to show:",
+      choices = tool_choices,
+      selected = as.vector(tools_levels),
+      multiple = TRUE,
+      options = list(
+        `actions-box` = TRUE,            # Adds "Select All / Deselect All" buttons
+        `selected-text-format` = "count > 2", # Shows "X items selected" if >2 are chosen
+        `count-selected-text` = "{0} tools selected"
+      )
     ),
-    selectInput(
-      "environment_abundance",
-      "Choose the environments you want to show:",
-      as.list(EN2),
-      selected = EN2[c(1)],
-      multiple = TRUE
+    
+    pickerInput(
+      inputId = "environment_abundance",
+      label = "Choose the environments you want to show:",
+      choices = as.list(EN2),
+      selected = EN2[1],
+      multiple = TRUE,
+      options = list(
+        `actions-box` = TRUE,
+        `selected-text-format` = "count > 2",
+        `count-selected-text` = "{0} environments selected"
+      )
     ),
-    radioButtons(
-      "threshold_abundance_id",
-      "Identity threshold DeepARG/RGI (amino acid)",
-      choices = list(
-        "Default" = 0.0,
-        ">= 60%" = 60.0,
-        ">= 70%" = 70.0,
-        ">= 80%" = 80.0
+    
+    radioGroupButtons(
+      inputId = "threshold_abundance_id",
+      label = "Identity threshold DeepARG/RGI (amino acid):",
+      choices = c(
+        "Default" = "0.0",
+        ">= 60%" = "60.0",
+        ">= 70%" = "70.0",
+        ">= 80%" = "80.0"
       ),
-      selected = 0.0
+      selected = "0.0",
+      status = "primary",  # Matches the Yeti theme's blue
+      size = "sm",
+      justified = TRUE     # Stretches buttons to fill the width evenly
     ),
-    selectInput(
-      "abundance_genes",
-      "Choose the genes you want to show:",
-      as.list(as.character(gene_classes)),
-      top20,
-      multiple = TRUE
+    
+    pickerInput(
+      inputId = "abundance_genes",
+      label = "Choose the genes you want to show:",
+      choices = as.list(as.character(gene_classes)),
+      selected = top20,
+      multiple = TRUE,
+      options = list(
+        `actions-box` = TRUE,
+        `live-search` = TRUE,             # Adds a search bar to quickly find genes!
+        `selected-text-format` = "count > 3",
+        `count-selected-text` = "{0} genes selected"
+      )
     ),
-    radioButtons(
-      "plot_other",
-      "Plot other gene classes together:",
-      c("Yes", "No"),
-      "Yes"
-    )
+  
+  radioGroupButtons(
+    inputId = "plot_other",
+    label = "Plot other gene classes together:",
+    choices = c("Yes", "No"),
+    selected = "Yes",
+    status = "primary",
+    size = "sm",
+    justified = TRUE
+  )
   ),
   
   navset_card_underline(
     
     ## Overview panel
-    nav_panel(
-      "Overview of abundance and diversity",
+    nav_panel("Overview of abundance and diversity",
       
       layout_columns(
         col_widths = c(6, 6, 6, 6, 12),
         
         card(
+          full_screen = TRUE,
           card_header("Abundance per sample"),
-          plotOutput("plot_abundance_overview", height = "450px")
+          withSpinner(plotOutput("plot_abundance_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
+          full_screen = TRUE,
           card_header("Diversity per sample"),
-          plotOutput("plot_diversity_overview", height = "450px")
+          withSpinner(plotOutput("plot_diversity_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
+          full_screen = TRUE,
           card_header("Median abundance per class"),
-          plotOutput("plot_abundance_class_overview", height = "450px")
+          withSpinner(plotOutput("plot_abundance_class_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
+          full_screen = TRUE,
           card_header("Median diversity per class"),
-          plotOutput("plot_diversity_class_overview", height = "450px")
+          withSpinner(plotOutput("plot_diversity_class_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
+          class = "border-0",
           plotOutput("plot_diversity_class_legend_overview", height = "50px")
         )
       )
@@ -230,11 +305,11 @@ ps_abundance_diversity <- page_sidebar(
           
           card(
             card_header("Abundance per sample"),
-            plotOutput("plot_abundance", height = "100%")
+            withSpinner(plotOutput("plot_abundance", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
           ),
           card(
             card_header("Median abundance per class"),
-            plotOutput("plot_abundance_class", height = "100%")
+            withSpinner(plotOutput("plot_abundance_class", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
           ),
           card(
             plotOutput("plot_abundance_class_legend", height = "160px")
@@ -253,11 +328,11 @@ ps_abundance_diversity <- page_sidebar(
           
           card(
             card_header("Diversity per sample"),
-            plotOutput("plot_diversity", height = "100%")
+            withSpinner(plotOutput("plot_diversity", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
           ),
           card(
             card_header("Median diversity per class"),
-            plotOutput("plot_diversity_class", height = "100%")
+            withSpinner(plotOutput("plot_diversity_class", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
           ),
           card(
             plotOutput("plot_diversity_class_legend", height = "160px")
@@ -268,40 +343,64 @@ ps_abundance_diversity <- page_sidebar(
   )
 )
 
-## Tab for overlaps
+## Overlaps Tab
 ps_overlap <- page_sidebar(
   sidebar = sidebar(
-    helpText(
-      ""
+    pickerInput(
+      inputId = "tool_overlap",
+      label = "Choose the tools you want to show:",
+      choices = tool_choices,
+      selected = as.vector(tools_levels[c(1,2,5)]),
+      multiple = TRUE,
+      options = list(
+        `actions-box` = TRUE,           
+        `selected-text-format` = "count > 2",
+        `count-selected-text` = "{0} tools selected"
+      )
     ),
-    selectInput(
-      "tool_overlap",
-      "Choose the tools you want to show:",
-      tool_choices,
-      as.vector(tools_levels[c(1,2,5)]),
-      multiple = TRUE
+    
+    pickerInput(
+      inputId = "tool_overlap_calc",
+      label = "Choose the tools you want to include in the calculation:",
+      choices = tool_choices,
+      selected = as.vector(tools_levels),
+      multiple = TRUE,
+      options = list(
+        `actions-box` = TRUE,
+        `selected-text-format` = "count > 2",
+        `count-selected-text` = "{0} tools selected"
+      )
     ),
-    selectInput(
-      "tool_overlap_calc",
-      "Choose the tools you want to include in the calculation:",
-      tool_choices,
-      as.vector(tools_levels),
-      multiple = TRUE
+    
+    pickerInput(
+      inputId = "overlap_genes",
+      label = "Choose the genes you want to show:",
+      choices = as.list(as.character(gene_classes)),
+      selected = top20,
+      multiple = TRUE,
+      options = list(
+        `actions-box` = TRUE,
+        `live-search` = TRUE,             
+        `selected-text-format` = "count > 3",
+        `count-selected-text` = "{0} genes selected"
+      )
     ),
-    selectInput(
-      "overlap_genes",
-      "Choose the genes you want to show:",
-      as.list(as.character(gene_classes)),
-      top20,
-      multiple = TRUE
-    ),
-    radioButtons(
-      "threshold_overlap_id",
-      "Identity threshold DeepARG/RGI (amino acid)",
-      choices = list("Default" = 0.0, ">= 60%" = 60.0, ">= 70%" = 70.0, ">= 80%" = 80.0),
-      selected = 0.0
+    
+    radioGroupButtons(
+      inputId = "threshold_overlap_id",
+      label = "Identity threshold DeepARG/RGI (amino acid):",
+      choices = c(
+        "Default" = "0.0",
+        ">= 60%" = "60.0",
+        ">= 70%" = "70.0",
+        ">= 80%" = "80.0"
+      ),
+      selected = "0.0",
+      status = "primary",
+      size = "sm",
+      justified = TRUE
     )
-  ),
+  ), 
   
   navset_card_underline(
     
@@ -312,20 +411,24 @@ ps_overlap <- page_sidebar(
         col_widths = c(6, 6, 6, 6, 12),
         
         card(
+          full_screen = TRUE,
           card_header("CSTC"),
-          plotOutput("overlap_cstc_overview", height = "450px")
+          withSpinner(plotOutput("overlap_cstc_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
+          full_screen = TRUE,
           card_header("CSNO"),
-          plotOutput("overlap_csno_overview", height = "450px")
+          withSpinner(plotOutput("overlap_csno_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
+          full_screen = TRUE,
           card_header("CSTC – Medians per class"),
-          plotOutput("overlap_cstc_summary_overview", height = "450px")
+          withSpinner(plotOutput("overlap_cstc_summary_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
+          full_screen = TRUE,
           card_header("CSNO – Medians per class"),
-          plotOutput("overlap_csno_summary_overview", height = "450px")
+          withSpinner(plotOutput("overlap_csno_summary_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
           plotOutput("overlap_legend", height = "50px")
@@ -336,19 +439,22 @@ ps_overlap <- page_sidebar(
     # CSTC only
     nav_panel(
       "CSTC",
-      layout_columns(
-        col_widths = c(6, 6, 12),
-        
-        card(
-          card_header("CSTC"),
-          plotOutput("overlap_cstc", height = "100%")
-        ),
-        card(
-          card_header("CSTC – Medians per class"),
-          plotOutput("overlap_cstc_summary", height = "100%")
-        ),
-        card(
-          plotOutput("plot_cstc_legend", height = "160px")
+      page_fillable( 
+        layout_columns(
+          col_widths = c(6, 6, 12),
+          card(
+            full_screen = TRUE,
+            card_header("CSTC"),
+            withSpinner(plotOutput("overlap_cstc", height = "600px"), type = 8, color = "#1b9e77")
+          ),
+          card(
+            full_screen = TRUE,
+            card_header("CSTC – Medians per class"),
+            withSpinner(plotOutput("overlap_cstc_summary", height = "600px"), type = 8, color = "#1b9e77")
+          ),
+          card(
+            plotOutput("plot_cstc_legend", height = "160px")
+          )
         )
       )
     ),
@@ -356,40 +462,40 @@ ps_overlap <- page_sidebar(
     # CSNO only
     nav_panel(
       "CSNO",
-      layout_columns(
-        col_widths = c(6, 6, 12),
-        
-        card(
-          card_header("CSNO"),
-          plotOutput("overlap_csno", height = "100%")
-        ),
-        card(
-          card_header("CSNO – Medians per class"),
-          plotOutput("overlap_csno_summary", height = "100%")
-        ),
-        card(
-          plotOutput("plot_csno_legend", height = "160px")
+      page_fillable( 
+        layout_columns(
+          col_widths = c(6, 6, 12),
+          
+          card(
+            full_screen = TRUE,
+            card_header("CSNO"),
+            withSpinner(plotOutput("overlap_csno", height = "600px"), type = 8, color = "#1b9e77")
+          ),
+          card(
+            full_screen = TRUE,
+            card_header("CSNO – Medians per class"),
+            withSpinner(plotOutput("overlap_csno_summary", height = "600px"), type = 8, color = "#1b9e77")
+          ),
+          card(
+            plotOutput("plot_csno_legend", height = "160px")
+          )
         )
       )
     )
   )
 )
 
-
+  
 # Define UI for the argCompare application
 page_navbar(
   theme = "yeti",
-  #title = "How ARG Detection Tools Shape Our View of the Resistome",
-  #bg = "#2D89C8",
+  # theme = bs_theme(bootswatch = "yeti", primary = "#1b9e77"),
   inverse = TRUE,
   nav_panel(title = "Introduction", p(ps_intro)),
   nav_panel(title = "ARGs", p(ps_args)),
   nav_panel(title = "Abundance and diversity", p(ps_abundance_diversity)),
   nav_panel(title = "Pan- and core-resistome", p(ps_pan_core)),
   nav_panel(title = "Overlap", p(ps_overlap)),
-  # nav_panel(title = "Table S1", p(tab1)),
-  # nav_panel(title = "Table S2", p(tab2)),
-  # nav_panel(title = "Table S3", p(tab3)),
   nav_spacer(),
   nav_menu(
     title = "Links",
@@ -398,6 +504,3 @@ page_navbar(
     nav_item(tags$a("CMR", href = "https://research.qut.edu.au/cmr/"))
   )
 )
-
-
-
