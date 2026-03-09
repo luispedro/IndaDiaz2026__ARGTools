@@ -51,8 +51,11 @@ install.packages(c(
   "ggalluvial",
   "cowplot",
   "scales",
-  "eulerr",
-  "ggVennDiagram"
+  "magrittr",
+  "shinycssloaders",
+  "ragg",
+  "qs",
+  "ggrastr"
 ))
 ```
 ### 3. Run the app
