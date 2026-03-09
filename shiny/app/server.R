@@ -563,11 +563,8 @@ server <- function(input, output, session) {
       summarise(recall = median(recall), .groups = "drop") %>%
       ggplot(aes(x = "Class medians", fill = tool_ref, y = recall)) +
       geom_violin() +
-      ggrastr::rasterise(
-        geom_jitter(size = 1.5, width = 0.4, height = 0),
-        dpi = 150
-      ) + 
-      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+      geom_jitter(color = "black",
+                  stroke = 1, size = 2.5, width = 0.1, height = 0) +
       scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
                         labels = tools_levels[tools_levels %in% input$tool_overlap]) +
       facet_grid(tool_ref ~ ., scales = "free_x") +
@@ -661,11 +658,8 @@ server <- function(input, output, session) {
       summarise(fnr = median(fnr), .groups = "drop") %>%
       ggplot(aes(x = "Class medians", fill = tool_ref, y = fnr)) +
       geom_violin() +
-      ggrastr::rasterise(
-        geom_jitter(size = 1.5, width = 0.4, height = 0),
-        dpi = 150
-      ) + 
-      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+      geom_jitter(color = "black",
+                  stroke = 1, size = 2.5, width = 0.1, height = 0) +
       scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap], 
                         labels = tools_levels[tools_levels %in% input$tool_overlap]) +
       facet_grid(tool_ref ~ ., scales = "free_x") +
@@ -701,50 +695,58 @@ server <- function(input, output, session) {
   output$overlap_csno_summary_overview <- renderPlot({plot_overlap_csno_summary()})
   
   plot_overlap_legend <- reactive({
-    tools_order <- match(input$tool_overlap_calc, tools_levels)
-    shape_tools <- rep(21, length(tools_levels))
-    shape_tools[tools_levels %in% tools_texture] <- 24
-    shape_tools <- shape_tools[tools_order]
+    tools_in_calc <- tools_levels[tools_levels %in% input$tool_overlap_calc]
+    pal_calc      <- pal_10_q[tools_levels %in% input$tool_overlap_calc]
+    
+    tools_order  <- match(tools_in_calc, tools_levels)
+    shape_tools  <- rep(16, length(tools_levels))
+    shape_tools[tools_levels %in% tools_texture] <- 17
+    shape_tools  <- shape_tools[tools_order]
     
     df <- recall_base()
     req(nrow(df) > 0)
     
-    grid.draw(g_legend(df %>%
-                         ggplot(aes(x = recall + fnr, y = recall + fnr)) +
-                         ggrastr::rasterise(
-                           geom_jitter(aes(color = tool_comp, shape = texture), size = 2.5),
-                           dpi = 150
-                           ) + 
-                         scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap_calc], 
-                                           labels = tools_levels[tools_levels %in% input$tool_overlap_calc]) +
-                         scale_shape_manual(values = c("no" = 21, "yes" = 24)) +
-                         guides(
-                           fill = guide_legend(
-                             override.aes = list(shape = shape_tools, fill = pal_10_q[tools_levels %in% input$tool_overlap_calc])), shape = "none") +
-                         labs(fill = "") +
-                         theme(
-                           legend.position = "bottom",
-                           legend.text = element_text(size = general_size ),
-                           panel.border = element_blank(),
-                           panel.grid.major.x = element_blank(),
-                           panel.grid.minor.x = element_blank(),
-                           plot.margin = margin(0, 0, 0, 0, unit = "pt"),
-                           legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
-                           legend.margin = margin(0, 0, 0, 0, unit = "pt"),
-                           title = element_text(size = general_size + 2, face = "bold"),
-                           axis.title = element_text(size = general_size + 1, face = "bold"),
-                           axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5, size = general_size),
-                           axis.text.y = element_text(size = general_size),
-                           panel.background = element_rect(colour = "black", fill = NA),
-                           strip.text = element_blank(),
-                           strip.background = element_blank(),
-                           legend.key = element_blank(), 
-                           legend.background = element_blank())))
+    p <- df %>%
+      ggplot(aes(x = recall + fnr, y = recall + fnr)) +
+      geom_jitter(aes(color = tool_comp, shape = texture),
+                  stroke = 1, size = 2.5, width = 0.1, height = 0) +
+      scale_color_manual(
+        values = pal_calc,
+        labels = tools_in_calc,
+        name   = ""
+      ) +
+      scale_shape_manual(values = c("no" = 16, "yes" = 17)) +
+      guides(
+        color = guide_legend(
+          override.aes = list(shape = shape_tools, color = pal_calc)
+        ),
+        shape = "none"
+      ) +
+      theme(
+        legend.position    = "bottom",
+        legend.text        = element_text(size = general_size),
+        plot.margin        = margin(0, 0, 0, 0, unit = "pt"),
+        legend.box.margin  = margin(0, 0, 0, 0, unit = "pt"),
+        legend.margin      = margin(0, 0, 0, 0, unit = "pt"),
+        legend.key         = element_blank(),
+        legend.background  = element_blank()
+      )
+    
+    g_legend(p)
   })
   
-  output$overlap_legend <- renderPlot({plot_overlap_legend()})
-  output$plot_cstc_legend <- renderPlot({plot_overlap_legend()}) # Reuses the logic
-  output$plot_csno_legend <- renderPlot({plot_overlap_legend()}) # Reuses the logic
+  output$overlap_legend <- renderPlot({
+    grid::grid.newpage()
+    grid::grid.draw(plot_overlap_legend())
+  })
+  output$plot_cstc_legend <- renderPlot({
+    grid::grid.newpage()
+    grid::grid.draw(plot_overlap_legend())
+  })
+  output$plot_csno_legend <- renderPlot({
+    grid::grid.newpage()
+    grid::grid.draw(plot_overlap_legend())
+  })
   
   
   # Pan-/Core-resistome proportion 
