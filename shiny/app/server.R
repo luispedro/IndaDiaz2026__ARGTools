@@ -15,19 +15,12 @@ server <- function(input, output, session) {
     return(thr_str)
   }
   
-  ## Caching Unigenes for a fast loading
+  ## Use precomputed thresholds
   unigenes_filtered <- reactive({
     req(input$threshold_unigenes_id)
-    thr_str <- gsub("\\.0$", "", as.character(input$threshold_unigenes_id))
-    thr <- as.numeric(thr_str)
-    
-    if (thr > 0) {
-      data_list$unigenes_base %>% 
-        dplyr::filter(!(tool %in% c("DeepARG", "RGI-DIAMOND") & id < thr))
-    } else {
-      data_list$unigenes_base
-    }
-  })
+    thr_name <- get_thr_name(input$threshold_unigenes_id)
+    data_list$unigenes_prepped[[thr_name]]
+  }) %>% bindCache(input$threshold_unigenes_id)
   
   output$plot_count_genes_tool <- renderPlot({
     plot_count_genes_tool(
@@ -58,33 +51,57 @@ server <- function(input, output, session) {
   
   # Pan- & Core- Resistome Plot
   
+  # pan_core <- reactive({
+  #   req(input$threshold_pan_core_id, input$threshold_samples, input$threshold_proportion,
+  #       input$tool_pan_core, input$environment_pan_core)
+  #   
+  #   thr_name <- get_thr_name(input$threshold_pan_core_id)
+  #   
+  #   sumpan2_df <- sumpan2_prepped[[thr_name]]
+  #   req(!is.null(sumpan2_df))
+  #   
+  #   # Use precomputed core_sum — no runtime sum_core_adjust call needed
+  #   key      <- core_sum_key(thr_name, input$threshold_proportion, input$threshold_samples)
+  #   core_sum <- core_sum_prepped[[key]]
+  #   req(!is.null(core_sum))
+  #   
+  #   
+  #   sumpan2_df %>%
+  #     dplyr::left_join(core_sum, by = c("tool", "habitat")) %>%
+  #     dplyr::mutate(
+  #       core = tidyr::replace_na(core, 0),
+  #       prop = core / md,
+  #       texture = ifelse(tool %in% tools_texture, "yes", "no")
+  #     ) %>%
+  #     dplyr::filter(
+  #       tool %in% input$tool_pan_core,
+  #       habitat %in% input$environment_pan_core
+  #     ) %>%
+  #     dplyr::mutate(
+  #       tool = factor(as.character(tool),
+  #                     levels = tools_levels[tools_levels %in% input$tool_pan_core])
+  #     )
+  # }) %>% bindCache(
+  #   input$threshold_pan_core_id,
+  #   input$threshold_samples,
+  #   input$threshold_proportion,
+  #   sort(input$tool_pan_core),
+  #   sort(input$environment_pan_core)
+  # )
+  # In server.R
   pan_core <- reactive({
     req(input$threshold_pan_core_id, input$threshold_samples, input$threshold_proportion,
         input$tool_pan_core, input$environment_pan_core)
     
     thr_name <- get_thr_name(input$threshold_pan_core_id)
+    key      <- core_sum_key(thr_name, input$threshold_proportion, input$threshold_samples)
     
-    sumpan2_df <- sumpan2_prepped[[thr_name]]
-    core_df    <- core_prepped[[thr_name]]
+    # Fetch the completely pre-joined dataframe in O(1) time
+    df <- pan_core_joined_prepped[[key]]
+    req(!is.null(df))
     
-    req(!is.null(sumpan2_df), !is.null(core_df))
-    
-    core_sum <- sum_core_adjust(
-      core_df,
-      as.numeric(input$threshold_samples),
-      input$threshold_proportion
-    ) %>%
-      dplyr::ungroup() %>%
-      dplyr::group_by(tool, habitat) %>%
-      dplyr::summarise(core = sum(unigenes, na.rm = TRUE), .groups = "drop")
-    
-    sumpan2_df %>%
-      dplyr::left_join(core_sum, by = c("tool", "habitat")) %>%
-      dplyr::mutate(
-        core = tidyr::replace_na(core, 0),
-        prop = core / md,
-        texture = ifelse(tool %in% tools_texture, "yes", "no")
-      ) %>%
+    # Apply only the dynamic user filters for tools and habitats
+    df %>%
       dplyr::filter(
         tool %in% input$tool_pan_core,
         habitat %in% input$environment_pan_core
@@ -556,11 +573,16 @@ server <- function(input, output, session) {
     df <- recall_base()
     req(nrow(df) > 0)
     
-    df %>%
-      filter(!is.na(recall)) %>% 
-      ungroup() %>% 
-      group_by(tool_ref, new_level) %>% 
-      summarise(recall = median(recall), .groups = "drop") %>%
+    thr_name <- get_thr_name(input$threshold_overlap_id)
+    
+    # Use precomputed medians — no runtime group_by/summarise needed
+    sum_df <- data_list$cstc_summary_prepped[[thr_name]] %>%
+      filter(tool_ref %in% input$tool_overlap,
+             new_level %in% input$overlap_genes) %>%
+      mutate(tool_ref = factor(tool_ref, levels = tools_levels))
+    req(nrow(sum_df) > 0)
+   
+    sum_df %>%
       ggplot(aes(x = "Class medians", fill = tool_ref, y = recall)) +
       geom_violin() +
       geom_jitter(color = "black",
@@ -651,11 +673,16 @@ server <- function(input, output, session) {
     df <- recall_base()
     req(nrow(df) > 0)
     
-    df %>%
-      filter(!is.na(recall)) %>% 
-      ungroup() %>% 
-      group_by(tool_ref, new_level) %>% 
-      summarise(fnr = median(fnr), .groups = "drop") %>%
+    thr_name <- get_thr_name(input$threshold_overlap_id)
+    
+    # Use precomputed medians — no runtime group_by/summarise needed
+    sum_df <- data_list$csno_summary_prepped[[thr_name]] %>%
+      filter(tool_ref %in% input$tool_overlap,
+             new_level %in% input$overlap_genes) %>%
+      mutate(tool_ref = factor(tool_ref, levels = tools_levels))
+    req(nrow(sum_df) > 0)
+    
+    sum_df %>%
       ggplot(aes(x = "Class medians", fill = tool_ref, y = fnr)) +
       geom_violin() +
       geom_jitter(color = "black",

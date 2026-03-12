@@ -20,7 +20,6 @@ library(ggrastr)
 library(ragg)
 
 options(dplyr.summarise.inform = FALSE)
-# options(shiny.usecairo = TRUE)
 options(shiny.useragg = TRUE)
 
 # Defining the root and app directory 
@@ -40,7 +39,7 @@ if (!exists("plot_total_abundance_diversity_new_version_shiny", mode = "function
 }
 
 
-# Constants & pLotting config
+# Constants & Plotting config
 general_size <- 10
 pal_7 <- brewer.pal(8, "BrBG")[c(4, 5, 3, 6, 2, 7, 1)]
 pal_10_q <- pal_7[c(1, 2, 3, 4, 5, 5, 6, 6, 7, 7)]
@@ -97,28 +96,54 @@ top20 <- c("van", "efflux pump", "cell wall charge", "rpoB", "tet RPG", "class A
 
 
 # Load all pre-calculated data
-# data_list <- readRDS(file.path(ROOT_DIR, "data", "precomputed_data.rds"))
-data_list <- qs::qread(file.path(ROOT_DIR, "data", "precomputed_data.qs"))
+
+data_args      <- qs::qread(file.path(ROOT_DIR, "data", "data_args.qs"))
+data_abundance <- qs::qread(file.path(ROOT_DIR, "data", "data_abundance.qs"))
+data_pan_core  <- qs::qread(file.path(ROOT_DIR, "data", "data_pan_core.qs"))
+data_overlap   <- qs::qread(file.path(ROOT_DIR, "data", "data_overlap.qs"))
 
 
-# Map the precomputed levels to the variable the UI expects
-gene_classes <- data_list$levels_unigenes
+# Ensure same variable names as before where possible
 
-# Extract standard structures expected by server.R for convenience
-abundance_prepped       <- data_list$abundance_prepped
-abundance_class_prepped <- data_list$abundance_class_prepped
+# Shared variable
+gene_classes    <- data_args$levels_unigenes
+
+# ARGs tab — now pre-filtered per threshold
+data_list <- list(
+  unigenes_prepped = data_args$unigenes_prepped,   # named list: default/60/70/80
+  levels_unigenes  = data_args$levels_unigenes
+)
+
+# Abundance tab
+abundance_prepped       <- data_abundance$abundance_prepped
+abundance_class_prepped <- data_abundance$abundance_class_prepped
+
+# Pan & Core tab
+pan_prepped      <- data_pan_core$pan_prepped
+core_prepped     <- data_pan_core$core_prepped
+sumpan2_prepped  <- data_pan_core$sumpan2_prepped
+core_sum_prepped <- data_pan_core$core_sum_prepped  # all 196 combos
+pan_core_joined_prepped <- data_pan_core$pan_core_joined_prepped #The precomputed join for sumpan2_prepped and core_sum_prepped
+
+# Overlap tab
+data_list$recall_fnr         <- data_overlap$recall_fnr
+data_list$recall_fnr60       <- data_overlap$recall_fnr60
+data_list$recall_fnr70       <- data_overlap$recall_fnr70
+data_list$recall_fnr80       <- data_overlap$recall_fnr80
+data_list$cstc_summary_prepped <- data_overlap$cstc_summary_prepped  
+data_list$csno_summary_prepped <- data_overlap$csno_summary_prepped 
+
+rm(data_args, data_abundance, data_pan_core, data_overlap)
 
 
-# If you included pan/core in data_prep.R:
-pan_prepped             <- data_list$pan_prepped
-core_prepped            <- data_list$core_prepped
-sumpan2_prepped         <- data_list$sumpan2_prepped
-
-
-#For median abundance and diversity plot
+# Helpers
 pal_for_tools <- function(selected_tools, tools_levels, pal_10_q) {
-  sel <- intersect(tools_levels, selected_tools)
+  sel  <- intersect(tools_levels, selected_tools)
   cols <- pal_10_q[match(sel, tools_levels)]
-  stats::setNames(cols, sel)   # named vector is key
+  stats::setNames(cols, sel)
 }
 
+# Lookup key for core_sum_prepped: "<threshold>|<proportion>|<sample_thr>"
+core_sum_key <- function(thr, prop, samp) {
+  paste(thr, prop, samp, sep = "|")
+}
