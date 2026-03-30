@@ -648,6 +648,16 @@ p4b <- alluvial_pan_core_env(sumcore, pan, "human gut",
                              brewer.pal(8, "YlOrBr"), general_size, levels_unigenes) 
 
 
+p4b2 <- alluvial_pan_core_env(sumcore, pan, "human gut", 
+                             c("DeepARG", "fARGene", "ABRicate-MEGARes", 
+                               "RGI-DIAMOND","AMRFinderPlus", "ResFinder"),
+                             brewer.pal(8, "Dark2"), general_size, levels_unigenes) 
+
+p4b3 <- alluvial_pan_core_env(sumcore, pan, "human gut", 
+                              c("DeepARG", "fARGene", "ABRicate-MEGARes", 
+                                "RGI-DIAMOND","AMRFinderPlus", "ResFinder"),
+                              pal_10_complete , general_size, levels_unigenes) 
+
 
 #########
 #########
@@ -712,13 +722,10 @@ theme5 <- theme(
 
 
 d1 <- recall_fnr %>% 
-  filter(new_level %in% c(top_cso,"rpoB")) %>% 
-  filter(tool_ref %in% c("DeepARG", "fARGene", "RGI-DIAMOND", "ResFinder")) %>%
   mutate(tool_ref = factor(as.character(tool_ref), 
-                           levels = tools_levels[tools_levels %in% 
-                                                   c("DeepARG", "fARGene",  "RGI-DIAMOND", "ResFinder")])) %>% 
+                           levels = tools_levels)) %>% 
   mutate(texture = ifelse(tool_comp %in% tools_texture, "yes", "no")) %>%
-  mutate(new_level = factor(new_level, levels = c(top_cso,"rpoB"))) %>%
+  mutate(texture2 = ifelse(tool_ref %in% tools_texture, "yes", "no")) %>%
   mutate(facet_var = gsub("-", "-\n", tool_ref)) %>%
   mutate(facet_var = gsub(" ", "\n", facet_var)) %>%
   mutate(facet_var = gsub("Plus", "\n Plus", facet_var)) %>%
@@ -726,121 +733,137 @@ d1 <- recall_fnr %>%
   mutate(val = recall, d = "csc")
 
 
-d2 <- unigenes %>% 
-  filter(tool %in% c("DeepARG",  "RGI-DIAMOND", "ResFinder"), new_level %in% c(top_cso,"rpoB")) %>%
-  mutate(new_level = factor(new_level, levels = c(top_cso,"rpoB"))) %>% 
-  mutate(facet_var = gsub("-", "-\n", tool)) %>%
-  mutate(facet_var = gsub(" ", "\n", facet_var)) %>%
-  mutate(facet_var = gsub("Plus", "\n Plus", facet_var)) %>%
-  mutate(facet_var = fct_reorder(facet_var, as.numeric(tool))) %>%
-  mutate(tool_ref = tool)
+# d2 <- unigenes %>% 
+#   filter(tool %in% c("DeepARG",  "RGI-DIAMOND", "ResFinder"), new_level %in% c(top_cso,"rpoB")) %>%
+#   mutate(new_level = factor(new_level, levels = c(top_cso,"rpoB"))) %>% 
+#   mutate(facet_var = gsub("-", "-\n", tool)) %>%
+#   mutate(facet_var = gsub(" ", "\n", facet_var)) %>%
+#   mutate(facet_var = gsub("Plus", "\n Plus", facet_var)) %>%
+#   mutate(facet_var = fct_reorder(facet_var, as.numeric(tool))) %>%
+#   mutate(tool_ref = tool)
 
 
-D <- bind_rows(d1 %>% select(tool_ref, recall, new_level) %>% mutate(d = "csc", recall = recall*100) %>% rename(val = recall),
-               d2  %>% select(tool_ref, id, new_level) %>% mutate(id = id, d = "id") %>% rename(val = id))
+# D <- bind_rows(d1 %>% select(tool_ref, recall, new_level) %>% mutate(d = "csc", recall = recall*100) %>% rename(val = recall),
+#                d2  %>% select(tool_ref, id, new_level) %>% mutate(id = id, d = "id") %>% rename(val = id))
+# 
+# pdat <- D %>%
+#   group_by(tool_ref, new_level, d) %>%
+#   do(data.frame(loc = density(.$val,  n = 15, from = min(.$val, na.rm = TRUE), to = max(.$val, na.rm = TRUE))$x,
+#                 dens = density(.$val, n = 15, from = min(.$val, na.rm = TRUE), to = max(.$val, na.rm = TRUE))$y)) %>%
+#   ungroup() %>%
+#   group_by(tool_ref, new_level, d) %>% arrange(loc) %>%
+#   do({
+#     df <- .
+#     rbind(data.frame(dens = 0, loc = min(df$loc)),  
+#       df[, c("dens", "loc")],                
+#       data.frame(dens = 0, loc = max(df$loc))) %>%
+#       cbind(df[1, c("tool_ref", "new_level", "d")]) }) %>% 
+#   ungroup() %>% group_by(tool_ref, new_level, d) %>% mutate(p = dens / sum(dens)) %>%  mutate(P = sum(p)) 
+# 
+# pdat$facet_var <- gsub(" ", "\n", pdat$new_level)
+# d1$facet_var <- gsub(" ", "\n", d1$new_level)
 
-pdat <- D %>%
-  group_by(tool_ref, new_level, d) %>%
-  do(data.frame(loc = density(.$val,  n = 15, from = min(.$val, na.rm = TRUE), to = max(.$val, na.rm = TRUE))$x,
-                dens = density(.$val, n = 15, from = min(.$val, na.rm = TRUE), to = max(.$val, na.rm = TRUE))$y)) %>%
-  ungroup() %>%
-  group_by(tool_ref, new_level, d) %>% arrange(loc) %>%
-  do({
-    df <- .
-    rbind(data.frame(dens = 0, loc = min(df$loc)),  
-      df[, c("dens", "loc")],                
-      data.frame(dens = 0, loc = max(df$loc))) %>%
-      cbind(df[1, c("tool_ref", "new_level", "d")]) }) %>% 
-  ungroup() %>% group_by(tool_ref, new_level, d) %>% mutate(p = dens / sum(dens)) %>%  mutate(P = sum(p)) 
+# csc1 <- ggplot(pdat[pdat$d == "csc",] %>% filter(new_level %in% top_cso[1:5]), aes(loc, p, fill = tool_ref,  group = interaction(d))) + 
+#   geom_polygon(color = "black") +
+#   facet_grid(facet_var ~ tool_ref, scales = "free_y") +
+#   xlab("%") +
+#   ylab("Density") + 
+#   theme_minimal() +
+#   scale_fill_manual(values = pal_10_q[tools_levels %in% c("DeepARG", "fARGene", "RGI-DIAMOND", "ResFinder")], 
+#                     labels = tools_levels[tools_levels %in% c("DeepARG", "fARGene",  "RGI-DIAMOND", "ResFinder")]) +
+#   theme5 +
+#   theme(axis.text.y = element_blank()) +
+#   geom_path(data = pdat[pdat$d != "csc",] %>% filter(new_level %in% top_cso[1:5]), linetype = "solid", color = "#666666", linewidth = 0.8) +
+#   geom_jitter(data = d1 %>% filter(new_level %in% top_cso[1:5]), aes(y = 0.03, x = recall * 100), height = 0.03, width = 0, size = 1) 
 
-pdat$facet_var <- gsub(" ", "\n", pdat$new_level)
-d1$facet_var <- gsub(" ", "\n", d1$new_level)
 
-csc1 <- ggplot(pdat[pdat$d == "csc",], aes(loc, p, fill = tool_ref,  group = interaction(d))) + 
-  geom_polygon(color = "black") +
-  facet_grid(facet_var ~ tool_ref, scales = "free_y") +
+
+#JI_all <- JI_all %>% mutate(texture = d1$texture[match(tool_ref, d1$tool_ref)])
+
+cs1 <- ggplot(d1 %>% 
+         filter(tool_ref %in% c("DeepARG","fARGene", "RGI-DIAMOND","AMRFinderPlus"),
+                new_level %in% top_cso[1:(length(top_cso)-1)]), #%>%
+  aes(x = recall*100, y = new_level)) + 
+  geom_boxplot(aes(fill = tool_ref),
+               position = position_dodge2(preserve = "single"),
+               color = "black") +
+  facet_grid(. ~ tool_ref, scales = "free_y") +
+  scale_fill_manual(values = pal_10_q[match(c("DeepARG","fARGene", "RGI-DIAMOND","AMRFinderPlus"), tools_levels)]) +
+  scale_y_discrete(drop = FALSE) +
   xlab("%") +
-  ylab("Density") + 
   theme_minimal() +
-  scale_fill_manual(values = pal_10_q[tools_levels %in% c("DeepARG", "fARGene", "RGI-DIAMOND", "ResFinder")], 
-                    labels = tools_levels[tools_levels %in% c("DeepARG", "fARGene",  "RGI-DIAMOND", "ResFinder")]) +
   theme5 +
-  theme(axis.text.y = element_blank()) +
-  geom_path(data = pdat[pdat$d != "csc",], linetype = "solid", color = "#666666", linewidth = 0.8) +
-  geom_jitter(data = d1, aes(y = 0.03, x = recall * 100), height = 0.03, width = 0, size = 1) 
+  theme( panel.grid = element_blank())
 
-
-s1 <- recall_fnr %>% 
-  group_by(tool_ref, new_level) %>% 
-  summarise(recall = median(recall, na.rm = T)) %>%
-  filter(tool_ref %in% c("DeepARG", "fARGene", "RGI-DIAMOND", "ResFinder")) %>%
-  mutate(tool_ref = factor(as.character(tool_ref), 
-                           levels = tools_levels[tools_levels %in% 
-                                                   c("DeepARG", "fARGene",  "RGI-DIAMOND", "ResFinder")])) %>% 
-  mutate(facet_var = gsub("-", "-\n", tool_ref)) %>%
-  mutate(facet_var = gsub(" ", "\n", facet_var)) %>%
-  mutate(facet_var = gsub("Plus", "\n Plus", facet_var)) %>%
-  mutate(facet_var = fct_reorder(facet_var, as.numeric(tool_ref)))  %>% 
-  mutate(val = recall, d = "csc")
-
-
-s2 <- unigenes %>% 
-  #filter(tool %in% c("DeepARG",  "RGI-DIAMOND", "ResFinder")) %>%
-  mutate(facet_var = gsub("-", "-\n", tool)) %>%
-  mutate(facet_var = gsub(" ", "\n", facet_var)) %>%
-  mutate(facet_var = gsub("Plus", "\n Plus", facet_var)) %>%
-  mutate(facet_var = fct_reorder(facet_var, as.numeric(tool))) %>%
-  mutate(tool_ref = tool)
-
-S <- bind_rows(s1 %>% select(tool_ref, recall, new_level) %>% mutate(d = "csc", recall = recall*100) %>% rename(val = recall),
-               s2 %>%  filter(tool %in% c("DeepARG",  "RGI-DIAMOND", "ResFinder")) %>% select(tool_ref, id, new_level) %>% mutate(id = id, d = "id") %>% rename(val = id))
-
-sdat <- S %>%
-  group_by(tool_ref, d) %>%
-  do(data.frame(loc = density(.$val,  n = 25, from = min(.$val, na.rm = TRUE), to = max(.$val, na.rm = TRUE))$x,
-                dens = density(.$val, n = 25, from = min(.$val, na.rm = TRUE), to = max(.$val, na.rm = TRUE))$y)) %>%
-  ungroup() %>%
-  group_by(tool_ref, d) %>% arrange(loc) %>%
-  do({
-    df <- .
-    rbind(
-      data.frame(dens = 0, loc = min(df$loc)),  # start baseline
-      df[, c("dens", "loc")],                   # density curve
-      data.frame(dens = 0, loc = max(df$loc))   # end baseline
-    ) %>%
-      cbind(df[1, c("tool_ref", "d")])
-  }) %>%
-  ungroup() %>%
-  group_by(tool_ref, d) %>%
-  mutate(p = dens / sum(dens)) %>% 
-  mutate(P = sum(p)) 
-
-sdat$facet_var <- "All gene classes"
-sdat$facet_var <- gsub(" ", "\n", sdat$facet_var)
-s1$facet_var <- "All gene classes"
-s1$facet_var <- gsub(" ", "\n", s1$facet_var)
-s2$facet_var <- "All gene classes"
-s2$facet_var <- gsub(" ", "\n", s2$facet_var)
-
-csc2 <- ggplot(sdat[sdat$d == "csc",], aes(loc, p, fill = tool_ref,  group = interaction(d))) + 
-  geom_polygon(color = "black") +
-  facet_grid(facet_var ~ tool_ref, scales = "free_y") +
+cs11 <- ggplot(d1 %>% 
+                filter(tool_ref %in% c("DeepARG","fARGene", "RGI-DIAMOND","AMRFinderPlus"),
+                       new_level %in% top_cso[1:(length(top_cso)-1)]), #%>%
+              aes(x = recall*100, y = new_level)) + 
+  geom_boxplot(aes(fill = tool_ref),
+               position = position_dodge2(preserve = "single"),
+               color = "black") +
+  facet_grid(tool_ref ~ ., scales = "free_y") +
+  scale_fill_manual(values = pal_10_q[match(c("DeepARG","fARGene", "RGI-DIAMOND","AMRFinderPlus"), tools_levels)]) +
+  scale_y_discrete(drop = FALSE) +
   xlab("%") +
-  ylab("Density") + 
   theme_minimal() +
-  scale_fill_manual(values = pal_10_q[tools_levels %in% c("DeepARG", "fARGene", "RGI-DIAMOND", "ResFinder")], 
-                    labels = tools_levels[tools_levels %in% c("DeepARG", "fARGene",  "RGI-DIAMOND", "ResFinder")]) +
   theme5 +
-  theme(axis.text.y = element_blank()) +
-  geom_path(data = sdat[sdat$d != "csc",], linetype = "solid", color = "#666666", linewidth = 0.8) +
-  geom_jitter(data = s1, aes(y = 0.03, x = recall * 100), height = 0.03, width = 0, size = 1) 
+  theme( panel.grid = element_blank())
 
 
-f5 <- plot_grid(csc1 + xlab("") + theme(axis.text.x = element_blank(), plot.margin = margin(0,0,0,0)) ,
-                csc2 + theme(strip.text.x = element_blank(), plot.margin = margin(-3,0,0,0)), nrow = 2,  rel_heights = c(4, 1), align = "v", axis = "tblr")
+
+cs2 <- ggplot(d1 %>% 
+         filter(tool_ref %in% c("RGI-DIAMOND", "fARGene","DeepARG","AMRFinderPlus")), #%>%
+       aes(x = recall*100, y = tool_comp)) + 
+  geom_boxplot(aes(fill = tool_ref, pattern = texture),
+                   position = position_dodge2(preserve = "single"), color = "black") +
+                   # pattern_color = "white", # pattern_density = pattern_density,  # pattern_spacing = pattern_spacing, 
+                   # pattern_fill = pattern_fill, # pattern_size = pattern_size, # pattern_key_scale_factor = 1.2,
+  #scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+  facet_grid(. ~ tool_ref, scales = "free_y") +
+  scale_fill_manual(values = pal_10_q[match(c("DeepARG","fARGene", "RGI-DIAMOND","AMRFinderPlus"), tools_levels)]) +
+  scale_y_discrete(drop = FALSE) +
+  xlab("%") +
+  theme_minimal() +
+  theme5 +
+  theme(panel.grid = element_blank())
+
+#(cs1) | (cs2)
+grid.arrange(cs2, cs1, nrow = 1)
+grid.arrange(cs2, cs11, nrow = 1)
+
+
+cs3 <- ggplot(d1,  aes(x = recall*100, y = tool_comp)) + 
+  geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture2),
+               position = position_dodge2(preserve = "single"), color = "black",
+  pattern_color = "white", 
+  pattern_fill = pattern_fill) +
+  scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+  facet_grid(. ~ tool_ref, scales = "free_y") +
+  scale_fill_manual(values = pal_10_q) +
+  scale_y_discrete(drop = FALSE) +
+  xlab("%") +
+  theme_minimal() +
+  theme5 +
+  theme(panel.grid = element_blank())
+
+
+
+# d1 %>% filter(!tool_ref %in% "ResFinder") %>% ggplot(aes(x = tool_ref, tool_comp)) +
+#   geom_tile(aes(fill = recall)) +
+#   facet_grid(new_level ~ tool_ref, scales = "free_x") +
+#   scale_fill_gradientn( colors = brewer.pal(9, "YlOrBr")) +
+#   theme_minimal() + 
+#   labs(fill = "CSC") + 
+#   theme(axis.text.y = element_blank(),
+#         panel.grid = element_blank(),
+#         panel.background = element_rect(colour = "black", fill = NA),
+#         strip.text.y = element_text(angle = 60),
+#         panel.spacing = unit(0, "pt"))
+
+
 
 ggsave("code_R_analysis/output_plots/fig5.svg", f5, width = 180, height = 210, unit = "mm")
-
 
 
 s3 <- recall_fnr %>% 
@@ -1123,6 +1146,27 @@ p4 <- plot_grid(p4a + ggtitle("A"),
                   rel_heights = c(7,2,15))
 
 ggsave("code_R_analysis/output_plots/fig4.svg", p4, width = 180, height = 210, unit = "mm")
+
+ggsave("code_R_analysis/output_plots/fig4_2.svg", 
+       plot_grid(p4a + ggtitle("A"),
+       circle_triangle_legends,
+       p4b2 + ggtitle("B") + xlab("Pan- and core-resistomes"),
+       ncol = 1,
+       align = "hv",
+       axis = "tblr",
+       rel_heights = c(7,2,15)), 
+       width = 180, height = 210, unit = "mm")
+
+
+ggsave("code_R_analysis/output_plots/fig4_3.svg", 
+       plot_grid(p4a + ggtitle("A"),
+                 circle_triangle_legends,
+                 p4b3 + ggtitle("B") + xlab("Pan- and core-resistomes"),
+                 ncol = 1,
+                 align = "hv",
+                 axis = "tblr",
+                 rel_heights = c(7,2,15)), 
+       width = 180, height = 210, unit = "mm")
 
 # OVERLAPS 
 

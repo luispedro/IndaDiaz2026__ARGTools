@@ -18,132 +18,190 @@ library(magrittr)
 library(shinycssloaders)
 library(ggrastr)
 library(ragg)
+library(patchwork)
+
 
 options(dplyr.summarise.inform = FALSE)
 options(shiny.useragg = TRUE)
 
-# Defining the root and app directory 
-APP_DIR  <- normalizePath(getwd(), mustWork = TRUE)                
-ROOT_DIR <- normalizePath(file.path(APP_DIR, "..", ".."), mustWork = TRUE)
 
-# Building paths from ROOT_DIR to ensure they are correct regardless of where the app is launched from
-DATA_DIR      <- file.path(ROOT_DIR, "code_R_analysis", "output_abundance_diversity_resistome")
-METADATA_PATH <- file.path(ROOT_DIR, "data", "metadata_GMGC10.sample.meta.tsv")
-
-# Sourcing the scripts using the constructed paths
-source(file.path(ROOT_DIR, "code_R_analysis", "helper.R"), local = TRUE)
-
-if (!exists("plot_total_abundance_diversity_new_version_shiny", mode = "function") &&
-    exists("plot_total_abundance_diversity_new_version", mode = "function")) {
-  plot_total_abundance_diversity_new_version_shiny <- plot_total_abundance_diversity_new_version
+general_size <- 12
+lab_fn <- function(x) {
+  x <- gsub("-", "-\n", x)
+  x <- gsub(" ", "\n", x)
+  x <- gsub("/", "/\n", x)
+  x
 }
 
+# FORMAT PLOTS OLD COLORS
+pal_7 <- brewer.pal(8, "Dark2")
+pal_7 <- pal_7[-7]
+pal_7 <- pal_7[c(1,2,3,4,6,5,7)]
+#pal_7 <- pal_7[c(1,7,2,6,3,5,4)]
+pal_10_q <- pal_7[c(1,2,3,4,5,5,6,6,7,7)]
 
-# Constants & Plotting config
-general_size <- 10
-pal_7 <- brewer.pal(8, "BrBG")[c(4, 5, 3, 6, 2, 7, 1)]
-pal_10_q <- pal_7[c(1, 2, 3, 4, 5, 5, 6, 6, 7, 7)]
-pal_10_complete <- brewer.pal(10, "BrBG")
-pal_10_complete <- pal_10_complete[c(-1,-10)]
+pal_10_complete <- brewer.pal(7, "Dark2")
+pal_10_complete <- pal_7
 
 # pattern for plots
 
 pattern_density <- 0.001 
 pattern_spacing <- 0.025
-pattern_fill <- "white"
+pattern_fill <- "black"
 pattern_size <- 0.12
 
-# All HABITATS
-EN <- c("human gut", "human oral",  "human skin", "human nose", "human vagina", 
-        "dog gut", "cat gut", "mouse gut", "pig gut", "wastewater", "marine", 
-        "freshwater", "soil" , "amplicon", "isolate",  "built-environment" )
+# all HABITATS
+EN <- c("human gut", "human oral",  "human skin", 
+        "human nose", "human vagina", 
+        "dog gut", "cat gut", "mouse gut", 
+        "pig gut", "wastewater", "marine", 
+        "freshwater", "soil" )
 
 # SOURCE FOR EACH HABITAT
 
 SO <- c(rep("humans", 5), rep("mammals", 4),  
-        "wastewater", "marine", "freshwater", 
-        "soil", rep("other", 2), "built-environment")
+        "wastewater", "marine", "freshwater", "soil")
 
 names(SO) <- EN
 
-not_env <- c("amplicon", "isolate", "built-environment" )
-EN2  <- EN[!EN %in% not_env]
-h2 <- c("humans","mammals","wastewater", "freshwater", "soil", "marine")
+basic_tools <- c(
+  "DeepARG", "fARGene","ABRicate-ARGANNOT", "ABRicate-MEGARes",
+  "RGI-DIAMOND", "ABRicate-CARD","AMRFinderPlus", "ABRicate-NCBI",
+  "ResFinder", "ABRicate-ResFinder")
 
-# Tool Definitions
-tools_levels <- c("DeepARG", "fARGene", "ABRicate-ARGANNOT", "ABRicate-MEGARes", 
-                  "RGI-DIAMOND", "ABRicate-CARD", "AMRFinderPlus", 
-                  "ABRicate-NCBI", "ResFinder", "ABRicate-ResFinder")
+tools_levels <- c(
+  "DeepARG", "DeepARG70","DeepARG80","DeepARG90",
+  "fARGene","ABRicate-ARGANNOT", "ABRicate-MEGARes",
+  "RGI-DIAMOND", "RGI-DIAMOND70","RGI-DIAMOND80","RGI-DIAMOND90",
+  "ABRicate-CARD","AMRFinderPlus", "ABRicate-NCBI",
+  "ResFinder", "ABRicate-ResFinder",
+  "DeepARG-aa", "RGI-BLAST", "RGI-DIAMOND-aa", "fARGene-aa", "AMRFinderPlus-nt")
 
-tools_labels <- c("DeepARG", "fARGene", "ABRicate-ARGANNOT", "ABRicate-MEGARes", 
-                  "RGI-CARD", "ABRicate-CARD", "AMRFinderPlus-NCBI", 
-                  "ABRicate-NCBI", "ResFinder", "ABRicate-ResFinder")
+names(pal_10_q) <- basic_tools
 
-tools_texture <- c("ABRicate-ARGANNOT", "ABRicate-MEGARes", "ABRicate-CARD", 
-                   "ABRicate-NCBI", "ABRicate-ResFinder")
+da <- rep(pal_10_q["DeepARG"],3)
+names(da) <- c("DeepARG70","DeepARG80","DeepARG90")
+rgi <- rep(pal_10_q["RGI-DIAMOND"],3)
+names(rgi) <- c("RGI-DIAMOND70","RGI-DIAMOND80","RGI-DIAMOND90")
+other <- c(pal_10_q["DeepARG"], pal_10_q["RGI-DIAMOND"],
+           pal_10_q["RGI-DIAMOND"],pal_10_q["fARGene"],pal_10_q["AMRFinderPlus"])
+names(other) <- c("DeepARG-aa", "RGI-BLAST", 
+                  "RGI-DIAMOND-aa", "fARGene-aa","AMRFinderPlus-nt")
+pal_10_q <- c(pal_10_q[1],da,pal_10_q[2:5],rgi,pal_10_q[6:10],other)
+#pal_10_q <- c(pal_10_q, da, rgi, other)
+rm(da, rgi, other)
 
+tools_labels <- c(
+  "DeepARG", "DeepARG-70%","DeepARG-80%","DeepARG-90%", "fARGene", "ABRicate", "ABRicate",
+  "RGI", "RGI-70%","RGI-80%","RGI-90%",
+  "ABRicate", "AMRFinder-\nPlus", "ABRicate",
+  "ResFinder", "ABRicate",
+  "DeepARG-aa", "RGI/nBLAST", "RGI-aa", "fARGene-aa", "AMRFinder-\nPlus-nt")
 
-tool_choices <- c("DeepARG" = "DeepARG", "fARGene" = "fARGene", 
-                  "ABRicate-ARGANNOT" = "ABRicate-ARGANNOT" , 
-                  "ABRicate-MEGARes" = "ABRicate-MEGARes", 
-                  "RGI-CARD" = "RGI-DIAMOND", "ABRicate-CARD" = "ABRicate-CARD", 
-                  "AMRFinderPlus-NCBI" = "AMRFinderPlus", 
-                  "ABRicate-NCBI" = "ABRicate-NCBI", "ResFinder" = "ResFinder", 
-                  "ABRicate-ResFinder" = "ABRicate-ResFinder")
+names(tools_labels) <- tools_levels
 
-top20 <- c("van", "efflux pump", "cell wall charge", "rpoB", "tet RPG", "class A beta-lactamase", 
-           "aph", "MFS efflux pump", "erm", "target-modifying enzyme", "tet enzyme")
+tools_labels_factor <- c(
+  "DeepARG","DeepARG-70%","DeepARG-80%","DeepARG-90%", "fARGene", "RGI",
+  "RGI-70%","RGI-80%","RGI-90%", "AMRFinder-\nPlus", 
+  "ResFinder", "ABRicate",
+  "DeepARG-aa", "RGI/nBLAST", "RGI-aa", "fARGene-aa", "AMRFinder-\nPlus-nt")
 
+# one space for DeepARG
+# two spaces for fARGene
 
-# Load all pre-calculated data
+tools_db <- c(rep("",4), " ", "ARG-\nANNOT", "MEGA-\nRes", rep("CARD", 4),"CARD",
+              "NCBI","NCBI", 
+              "Res-\nFinder","Res-\nFinder","","CARD","CARD",
+              " ","NCBI")
 
-data_args      <- qs::qread(file.path(ROOT_DIR, "data", "data_args.qs"))
-data_abundance <- qs::qread(file.path(ROOT_DIR, "data", "data_abundance.qs"))
-data_pan_core  <- qs::qread(file.path(ROOT_DIR, "data", "data_pan_core.qs"))
-data_overlap   <- qs::qread(file.path(ROOT_DIR, "data", "data_overlap.qs"))
+# one space for DeepARG
+# two spaces for fARGene
+tools_db_factor <- c("", " ", "ARG-\nANNOT", "MEGA-\nRes",
+                     "CARD", "NCBI", "Res-\nFinder")
 
-
-# Ensure same variable names as before where possible
-
-# Shared variable
-gene_classes    <- data_args$levels_unigenes
-
-# ARGs tab — now pre-filtered per threshold
-data_list <- list(
-  unigenes_prepped = data_args$unigenes_prepped,   # named list: default/60/70/80
-  levels_unigenes  = data_args$levels_unigenes
-)
-
-# Abundance tab
-abundance_prepped       <- data_abundance$abundance_prepped
-abundance_class_prepped <- data_abundance$abundance_class_prepped
-
-# Pan & Core tab
-pan_prepped      <- data_pan_core$pan_prepped
-core_prepped     <- data_pan_core$core_prepped
-sumpan2_prepped  <- data_pan_core$sumpan2_prepped
-core_sum_prepped <- data_pan_core$core_sum_prepped  # all 196 combos
-pan_core_joined_prepped <- data_pan_core$pan_core_joined_prepped #The precomputed join for sumpan2_prepped and core_sum_prepped
-
-# Overlap tab
-data_list$recall_fnr         <- data_overlap$recall_fnr
-data_list$recall_fnr60       <- data_overlap$recall_fnr60
-data_list$recall_fnr70       <- data_overlap$recall_fnr70
-data_list$recall_fnr80       <- data_overlap$recall_fnr80
-data_list$cstc_summary_prepped <- data_overlap$cstc_summary_prepped  
-data_list$csno_summary_prepped <- data_overlap$csno_summary_prepped 
-
-rm(data_args, data_abundance, data_pan_core, data_overlap)
+tools_texture <- c("ABRicate-CARD", "ABRicate-NCBI", "ABRicate-ResFinder")
 
 
-# Helpers
-pal_for_tools <- function(selected_tools, tools_levels, pal_10_q) {
-  sel  <- intersect(tools_levels, selected_tools)
-  cols <- pal_10_q[match(sel, tools_levels)]
-  stats::setNames(cols, sel)
+lst_results <- readRDS("data.rds")
+
+abundance_tool_sample <- lst_results$abundance_tool_sample
+core <- lst_results$core
+sumpan2 <- lst_results$sumpan2
+unigenes <- lst_results$unigenes
+recall_fnr <- lst_results$recall_fnr
+abundance_class_summary <- lst_results$abundance_class_summary
+rm(lst_results)
+
+
+top_abundance <- c("efflux pump", "van" , "class A beta-lactamase", 
+                   "tet RPG",  "cell wall charge", "MFS efflux pump", 
+                   "rpoB", "erm")
+
+top_cso <- c("van", "efflux pump",  "tet RPG", "class A beta-lactamase", 
+             "class B beta-lactamase","class C beta-lactamase", "class D beta-lactamase",
+             "aph", "MFS efflux pump", "erm", "aac")
+
+
+
+basic_tools <- c(
+  "DeepARG", "fARGene","ABRicate-ARGANNOT", "ABRicate-MEGARes",
+  "RGI-DIAMOND", "ABRicate-CARD","AMRFinderPlus", "ABRicate-NCBI",
+  "ResFinder", "ABRicate-ResFinder")
+
+tool_choices <- c(basic_tools,"DeepARG70","DeepARG80","DeepARG90",
+                  "RGI-DIAMOND70", "RGI-DIAMOND80", "RGI-DIAMOND90")
+
+
+tool_lab1 <- tools_db[match(tool_choices, names(tools_labels))]
+tool_lab2 <- as.vector(tools_labels[tool_choices])
+tool_lab1[!grepl("ABRicate", tool_lab2)] <- ""
+tool_lab1 <- gsub("-\n","",tool_lab1)
+
+tool_choices_label <- paste(tool_lab2, tool_lab1)
+
+tool_choices <- as.list(setNames(tool_choices, tool_choices_label))
+
+gene_classes <- unigenes %>% 
+  ungroup() %>% 
+  group_by(query) %>% 
+  slice_head(n = 1) %>% 
+  ungroup() %>% 
+  group_by(new_level) %>% 
+  summarise( n = n()) %>% 
+  arrange(desc(n)) %>%
+  ungroup() %>% 
+  pull(new_level)
+
+
+unigenes_propotion <- unigenes %>% 
+  group_by(tool, tools_labels, tools_db, new_level) %>% 
+  summarise(n = n()) %>% 
+  mutate(p = n / sum(n)) %>%
+  ungroup() %>%
+  mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
+  mutate(new_level = gsub("rifampin inactivation enzyme","RIF-inact. enz.", new_level)) %>%
+  mutate(new_level = gsub("inactivation enzyme","\ninact. enz.", new_level)) %>%
+  mutate(new_level = gsub("cell wall ","cell wall\n", new_level)) %>%
+  mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
+  mutate(new_level = gsub("efflux pump","efflux", new_level)) %>%
+  mutate(new_level = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", new_level)) %>%
+  mutate(new_level = gsub("target-modifying enzyme","target-\nmodif. enz.", new_level)) %>%
+  mutate(new_level = gsub("self-resistance","self-resistance\n", new_level)) %>% 
+  mutate(new_level = gsub("host-dependent","host-dependent\n", new_level)) %>% 
+  mutate(new_level = gsub("variant or","variant or\n", new_level)) 
+
+
+shape_tools <- rep(21, length(tools_labels))
+shape_tools[tools_levels %in% tools_texture] <- 24
+
+
+sum_core_adjust <- function(core, cnt_subset = 900, threshold_samples = 0.5){
+  return(core %>% 
+           filter(cut %in% threshold_samples & cnt > cnt_subset) %>% 
+           ungroup() %>% 
+           group_by(new_level, tool, habitat) %>% 
+           summarise(unigenes = n_distinct(X)))
 }
 
-# Lookup key for core_sum_prepped: "<threshold>|<proportion>|<sample_thr>"
-core_sum_key <- function(thr, prop, samp) {
-  paste(thr, prop, samp, sep = "|")
-}
+names(shape_tools) <- 
+names(pal_7) <- tools_db_factor

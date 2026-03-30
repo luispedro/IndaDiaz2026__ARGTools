@@ -41,7 +41,7 @@ ps_intro <- fluidPage(
       
       card(
         card_header("Pipeline"),
-        card_image("../../code_R_analysis/output_plots/fig1_shiny.svg", height = "100%"),
+        card_image("../../code_R_analysis/output_plots/fig0_shiny.svg", height = "100%"),
         card_footer("The GMGC dataset was analyzed in nucleotide and/or amino acid format by the ARG detection tools to obtain a list of putative resistance genes. We quantified the resistome (abundance, diversity, pan- and core-resistome) using the putative ARGs in host-associated and external environments.")
         )
       )
@@ -56,34 +56,23 @@ ps_args <- page_sidebar(
       inputId = "tools_unigenes",
       label = "Choose the tools you want to compare:",
       choices = tool_choices,
-      selected = as.vector(tools_levels),
+      selected = basic_tools,
       multiple = TRUE,
       options = list(
         `actions-box` = TRUE,
         `selected-text-format` = "count > 2",
         `count-selected-text` = "{0} tools selected"
       )
-    ),
-    
-    pickerInput(
-      inputId = "threshold_unigenes_id",
-      label = "Identity threshold DeepARG/RGI (amino acid)",
-      choices = list("Default" = 0.0, ">= 60%" = 60.0, ">= 70%" = 70.0, ">= 80%" = 80.0),
-      selected = 0.0
-     )
+    )
     ),
   
   layout_column_wrap( 
-    width = 1/2,
+    width = 1, fill = TRUE,
         card(
-          card_header("A: Number of putative ARGs"),
-          withSpinner(plotOutput("plot_count_genes_tool", height = "450px"), type = 8, color = "#1b9e77") # Spinner + Stable height 
-        ),
-        
-        card(
-          card_header("B: Proportion of ARGs per class"),
-          withSpinner(plotOutput("plot_alluvial_classes", height = "450px"), type = 8, color = "#1b9e77"), 
-          card_footer("Genes forming at least 99% and with 0.5% proportion are shown.")
+          full_screen = TRUE,  # optional but nice
+          fill = TRUE,  
+          card_header("(a) Number of putative ARGs and (b) gene class proportion"),
+          withSpinner(plotOutput("plot_count_genes_tool", height = "1000px"), type = 8, color = "#1b9e77") # Spinner + Stable height 
         )
       )
 )
@@ -96,7 +85,7 @@ ps_pan_core <- page_sidebar(
       inputId = "tool_pan_core",
       label = "Choose the tools you want to show the number of genes for:",
       choices = tool_choices,
-      selected = as.vector(tools_levels),
+      selected = basic_tools,
       multiple = TRUE,
       options = list(
         `actions-box` = TRUE,
@@ -108,8 +97,8 @@ ps_pan_core <- page_sidebar(
     pickerInput(
       inputId = "environment_pan_core",
       label = "Choose the environments you want to show:",
-      choices = as.list(EN2),
-      selected = EN2[c(1,9,10,13)],
+      choices = as.list(EN),
+      selected = EN[c(1,9,10,13)],
       multiple = TRUE,
       options = list(
         `actions-box` = TRUE,
@@ -122,7 +111,7 @@ ps_pan_core <- page_sidebar(
     pickerInput(
       inputId = "single_environment_pan_core",
       label = "Choose the environment you want to show the proportion of genes for:",
-      choices = as.list(EN2),
+      choices = as.list(EN),
       selected = "human gut",
       multiple = FALSE,
       options = list(
@@ -172,21 +161,13 @@ ps_pan_core <- page_sidebar(
   
   
   layout_column_wrap( 
-    width = 1/2,
-      #Sub-card for Plot A
+    width = 1,
       card(
-        # full_screen = TRUE,
         card_header("Number of genes"),
-        withSpinner(plotOutput("plot_pan_core_resistome", height = "450px"), type = 8, color = "#1b9e77") 
-      ),
-      #Sub-card for Plot B
-      card(
-        # full_screen = TRUE,
-        card_header("Proportion of genes"),
-        withSpinner(plotOutput("plot_pan_core_proportion", height = "450px"), type = 8, color = "#1b9e77")
+        #withSpinner(plotOutput("pan_core", height = "1000px"), type = 8, color = "#1b9e77") 
       )
   )
-    )
+)
 
 
 ## Abundance and Diversity Tab
@@ -198,7 +179,7 @@ ps_abundance_diversity <- page_sidebar(
       inputId = "tool_abundance",
       label = "Choose the tools you want to show:",
       choices = tool_choices,
-      selected = as.vector(tools_levels),
+      selected = basic_tools,
       multiple = TRUE,
       options = list(
         `actions-box` = TRUE,            # Adds "Select All / Deselect All" buttons
@@ -210,8 +191,8 @@ ps_abundance_diversity <- page_sidebar(
     pickerInput(
       inputId = "environment_abundance",
       label = "Choose the environments you want to show:",
-      choices = as.list(EN2),
-      selected = EN2[1],
+      choices = as.list(EN),
+      selected = EN[1],
       multiple = TRUE,
       options = list(
         `actions-box` = TRUE,
@@ -220,26 +201,12 @@ ps_abundance_diversity <- page_sidebar(
       )
     ),
     
-    radioGroupButtons(
-      inputId = "threshold_abundance_id",
-      label = "Identity threshold DeepARG/RGI (amino acid):",
-      choices = c(
-        "Default" = "0.0",
-        ">= 60%" = "60.0",
-        ">= 70%" = "70.0",
-        ">= 80%" = "80.0"
-      ),
-      selected = "0.0",
-      status = "primary",  # Matches the Yeti theme's blue
-      size = "sm",
-      justified = TRUE     # Stretches buttons to fill the width evenly
-    ),
     
     pickerInput(
       inputId = "abundance_genes",
       label = "Choose the genes you want to show:",
       choices = as.list(as.character(gene_classes)),
-      selected = top20,
+      selected = top_abundance,
       multiple = TRUE,
       options = list(
         `actions-box` = TRUE,
@@ -261,58 +228,18 @@ ps_abundance_diversity <- page_sidebar(
   ),
   
   navset_card_underline(
-    
-    ## Overview panel
-    nav_panel("Overview of abundance and diversity",
-      
-      layout_columns(
-        col_widths = c(6, 6, 6, 6, 12),
-        
-        card(
-          full_screen = TRUE,
-          card_header("Abundance per sample"),
-          withSpinner(plotOutput("plot_abundance_overview", height = "450px"), type = 8, color = "#1b9e77")
-        ),
-        card(
-          full_screen = TRUE,
-          card_header("Diversity per sample"),
-          withSpinner(plotOutput("plot_diversity_overview", height = "450px"), type = 8, color = "#1b9e77")
-        ),
-        card(
-          full_screen = TRUE,
-          card_header("Median abundance per class"),
-          withSpinner(plotOutput("plot_abundance_class_overview", height = "450px"), type = 8, color = "#1b9e77")
-        ),
-        card(
-          full_screen = TRUE,
-          card_header("Median diversity per class"),
-          withSpinner(plotOutput("plot_diversity_class_overview", height = "450px"), type = 8, color = "#1b9e77")
-        ),
-        card(
-          class = "border-0",
-          plotOutput("plot_diversity_class_legend_overview", height = "50px")
-        )
-      )
-    ),
-    
-    ## Abundance menu
     nav_panel(
-      "Abundance",
+      "Relative abundance",
+      fill = TRUE,
       page_fillable(
         layout_columns(
-          col_widths = c(6, 6, 12),
-          row_heights = c("1fr", "0.3fr"),
+          #col_widths = c(6, 6, 12),
+          #row_heights = c("1fr", "0.3fr"),
           
           card(
-            card_header("Abundance per sample"),
-            withSpinner(plotOutput("plot_abundance", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
-          ),
-          card(
-            card_header("Median abundance per class"),
-            withSpinner(plotOutput("plot_abundance_class", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
-          ),
-          card(
-            plotOutput("plot_abundance_class_legend", height = "160px")
+            fill = TRUE,
+            card_header("Relaltive abundance per sample and gene class"),
+            withSpinner(plotOutput("plot_abundance", height = "1000px", fill = TRUE), type = 8, color = "#1b9e77")
           )
         )
       )
@@ -320,22 +247,15 @@ ps_abundance_diversity <- page_sidebar(
     
     ## Diversity menu
     nav_panel(
-      "Diversity",
+      "Richness",
       page_fillable(
         layout_columns(
           col_widths = c(6, 6, 12),
           row_heights = c("1fr", "0.3fr"),
           
           card(
-            card_header("Diversity per sample"),
-            withSpinner(plotOutput("plot_diversity", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
-          ),
-          card(
-            card_header("Median diversity per class"),
-            withSpinner(plotOutput("plot_diversity_class", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
-          ),
-          card(
-            plotOutput("plot_diversity_class_legend", height = "160px")
+            card_header("Richness per sample"),
+            #withSpinner(plotOutput("plot_diversity", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
           )
         )
       )
@@ -376,7 +296,7 @@ ps_overlap <- page_sidebar(
       inputId = "overlap_genes",
       label = "Choose the genes you want to show:",
       choices = as.list(as.character(gene_classes)),
-      selected = top20,
+      selected = top_cso,
       multiple = TRUE,
       options = list(
         `actions-box` = TRUE,
@@ -413,22 +333,22 @@ ps_overlap <- page_sidebar(
         card(
           full_screen = TRUE,
           card_header("CSTC"),
-          withSpinner(plotOutput("overlap_cstc_overview", height = "450px"), type = 8, color = "#1b9e77")
+          #withSpinner(plotOutput("overlap_cstc_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
           full_screen = TRUE,
           card_header("CSNO"),
-          withSpinner(plotOutput("overlap_csno_overview", height = "450px"), type = 8, color = "#1b9e77")
+          #withSpinner(plotOutput("overlap_csno_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
           full_screen = TRUE,
           card_header("CSTC – Medians per class"),
-          withSpinner(plotOutput("overlap_cstc_summary_overview", height = "450px"), type = 8, color = "#1b9e77")
+          #withSpinner(plotOutput("overlap_cstc_summary_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
           full_screen = TRUE,
           card_header("CSNO – Medians per class"),
-          withSpinner(plotOutput("overlap_csno_summary_overview", height = "450px"), type = 8, color = "#1b9e77")
+          #withSpinner(plotOutput("overlap_csno_summary_overview", height = "450px"), type = 8, color = "#1b9e77")
         ),
         card(
           plotOutput("overlap_legend", height = "50px")
@@ -445,15 +365,15 @@ ps_overlap <- page_sidebar(
           card(
             full_screen = TRUE,
             card_header("CSTC"),
-            withSpinner(plotOutput("overlap_cstc", height = "600px"), type = 8, color = "#1b9e77")
+            #withSpinner(plotOutput("overlap_cstc", height = "600px"), type = 8, color = "#1b9e77")
           ),
           card(
             full_screen = TRUE,
             card_header("CSTC – Medians per class"),
-            withSpinner(plotOutput("overlap_cstc_summary", height = "600px"), type = 8, color = "#1b9e77")
+            #withSpinner(plotOutput("overlap_cstc_summary", height = "600px"), type = 8, color = "#1b9e77")
           ),
           card(
-            plotOutput("plot_cstc_legend", height = "160px")
+            #plotOutput("plot_cstc_legend", height = "160px")
           )
         )
       )
@@ -469,15 +389,15 @@ ps_overlap <- page_sidebar(
           card(
             full_screen = TRUE,
             card_header("CSNO"),
-            withSpinner(plotOutput("overlap_csno", height = "600px"), type = 8, color = "#1b9e77")
+            #withSpinner(plotOutput("overlap_csno", height = "600px"), type = 8, color = "#1b9e77")
           ),
           card(
             full_screen = TRUE,
             card_header("CSNO – Medians per class"),
-            withSpinner(plotOutput("overlap_csno_summary", height = "600px"), type = 8, color = "#1b9e77")
+            #withSpinner(plotOutput("overlap_csno_summary", height = "600px"), type = 8, color = "#1b9e77")
           ),
           card(
-            plotOutput("plot_csno_legend", height = "160px")
+            #plotOutput("plot_csno_legend", height = "160px")
           )
         )
       )
