@@ -57,3 +57,5 @@ split_data_resfinder.py
 genes_prot_dna.csv
 
 .Rproj.user
+code_R_analysis/data_to_Zenodo/args_abundances.tsv
+code_R_analysis/data_to_Zenodo/args_abundances.tsv.gz

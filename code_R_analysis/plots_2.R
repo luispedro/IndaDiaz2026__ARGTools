@@ -908,7 +908,7 @@ rgi_over <- rgi_query2%>%
     x <- gsub(" ", "\n", x)
     x}, expand = 0) +
   theme_overlap + 
-  theme(plot.margin = margin(0, -10, 0, 0, unit = "pt"))
+  theme(plot.margin = margin(5, 5, 5, 5, unit = "pt"))
 
 
 plot_overlaps <- function(x, y, nxy, nx, ny, nam=""){
@@ -963,7 +963,7 @@ plot_overlaps_same_tool <-
   (fargene_over + theme(legend.position = "none")) /
   (amrfinder_over + xlab("ARGs"))) + 
   patchwork::plot_layout(heights = c(1, 1, 1, 1)) & 
-    theme(plot.margin = margin(10, 10, 10, 10, unit = "pt"))
+  theme(plot.margin = margin(5, 5, 5, 5, unit = "pt"))
 
 
 card_over <- plot_overlaps(lst$rgi.diamond.prot$query, lst$abricate.card.norm$query, "RGI and\nABRicate", "only RGI", "only ABRicate", nam = "CARD")
@@ -974,7 +974,7 @@ plot_db <-
   (card_over + ggtitle("b")) / 
   ncbi_over / 
   resfinder_over + xlab("ARGs") & 
-  theme(plot.margin = margin(10, 10, 10, 10, unit = "pt"))
+  theme(plot.margin = margin(5, 5, 5, 5, unit = "pt"))
 
 
 other_abricate <- unique(c(lst$abricate.argannot.norm$query, lst$abricate.card.norm$query, 
@@ -1045,7 +1045,7 @@ abricate_plot <- abricate_p1 %>%
     x <- gsub(" ", "\n", x)
     x}, expand = 0) +
   theme_overlap + 
-  theme(plot.margin = margin(10, 10, 10, 10, unit = "pt"))
+  theme(plot.margin = margin(5, 5, 5, 5, unit = "pt"))
 
 
 meg_plot_1 <- ntools_abricate1 %>% filter(grepl("MEGARes and", s)) %>% 
@@ -1075,7 +1075,7 @@ megares_plot <- meg_plot_1 %>%
     x <- gsub(" ", "\n", x)
     x}, expand = 0) +
   theme_overlap + 
-  theme(plot.margin = margin(10, 10, 10, 10, unit = "pt"))
+  theme(plot.margin = margin(5, 5, 5, 5, unit = "pt"))
 
 plot_megares <- (abricate_plot + ggtitle("c")) / megares_plot
 
@@ -1091,10 +1091,13 @@ plot_megares <- (abricate_plot + ggtitle("c")) / megares_plot
 #  abricate_meg1 + xlab("% of ARGs")
 
   
-overlap_all_plots <- ((plot_overlaps_same_tool) | 
- (plot_db ) | 
-(((abricate_plot + ggtitle("c")) / megares_plot) + patchwork::plot_layout(widths = c(1, 1)))) + 
-  patchwork::plot_layout(widths = c(1, 1, 1))
+overlap_all_plots <- (plot_overlaps_same_tool | 
+ plot_db ) +  patchwork::plot_layout(widths = c(1, 1)) / 
+(((abricate_plot + ggtitle("c")) | megares_plot) + patchwork::plot_layout(widths = c(1, 1))) + 
+  patchwork::plot_layout(heights = c(2, 1))
+
+overlap_all_plots <- (plot_overlaps_same_tool / abricate_plot + ggtitle("c")) + patchwork::plot_layout(heights = c(1,1,1,1,1)) |
+(plot_db / megares_plot + ggtitle("d")) + patchwork::plot_layout(heights = c(1,1,1,1))
 
 
 ggsave("code_R_analysis/output_plots/overlaps_tool.svg", plot_overlaps_same_tool, width = 100, height = 90, unit = "mm")
@@ -1102,7 +1105,7 @@ ggsave("code_R_analysis/output_plots/overlaps_db.svg", plot_db, width = 100, hei
 ggsave("code_R_analysis/output_plots/overlaps_megares.svg", plot_megares, width = 100, height = 90, unit = "mm")
 
 
-ggsave("code_R_analysis/output_plots/overlaps_all_plots.svg", overlap_all_plots, width = 180, height = 150, unit = "mm")
+ggsave("code_R_analysis/output_plots/overlaps_all_plots.svg", overlap_all_plots, width = 180, height = 180, unit = "mm")
 
 
 
