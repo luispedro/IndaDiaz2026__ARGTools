@@ -41,7 +41,7 @@ ps_intro <- fluidPage(
       
       card(
         card_header("Pipeline"),
-        card_image("../../code_R_analysis/output_plots/fig0_shiny.svg", height = "600px"),
+        card_image("../../code_R_analysis/output_plots/fig0_shiny.svg", height = "800px"),
         card_footer("The GMGC dataset was analyzed in nucleotide and/or amino acid format by the ARG detection tools to obtain a list of putative resistance genes. We quantified the resistome (abundance, diversity, pan- and core-resistome) using the putative ARGs in host-associated and external environments.")
         )
       )
@@ -72,12 +72,30 @@ ps_args <- page_sidebar(
       selected = gene_classes,
       multiple = TRUE,
       options = list(`actions-box` = TRUE)
-      )
-    ),
+      ),
+  
+    card(
+      markdown(
+        "This section highlights how different computational pipelines influence the detection of Antimicrobial Resistance Genes (ARGs) from the unigene dataset. 
+          * **Number of ARGs (Left):** A total of 178,107 unigenes from GMGCv1 were reported as antibiotic resistance geneS (ARG) by at least one pipeline. 
+          The total ARG count varies across pipelines;for example, in the case of ABRicate-ResFinder and DeepARG, there is about a 45-fold difference in the count.
+
+          
+          ******
+          * **ARG Class Proportion (Right):** A heatmap illustrating the proportion of ARG classes as reported by each pipeline. Also note that for 
+          this heatmap, only classes representing 5% of the total within at least one pipeline is visualised. Despite the massive differences in absolute counts seen on the left, this plot reveals how the proportional 
+          makeup of gene classes shifts depending on the tool chosen.
+          
+          *Use the sidebar to filter specific tools or focus on particular gene classes to see how the resistome profile shifts.*"
+      ),
+      style = "padding: 5px; background-color: #f8f9fa; border-left: 5px solid #1b9e77;" 
+    )
+  ),
     
 
   nav_panel(
     "Number of ARGs and Gene Class Proportion",
+    
     page_fillable(
       layout_columns(
         col_widths = c(6, 6),
@@ -88,7 +106,7 @@ ps_args <- page_sidebar(
         ),
         card(
           card_header("ARG Class Proportion"),
-          withSpinner(plotOutput("plot_gene_class_proportion", height = "1000px", fill = TRUE), type = 8, color = "#1b9e77")
+          withSpinner(plotOutput("plot_gene_class_proportion", height = "900px", fill = TRUE), type = 8, color = "#1b9e77")
         )
       )
     )
@@ -117,7 +135,7 @@ ps_abundance <- page_sidebar(
     
     pickerInput(
       inputId = "environment_abundance",
-      label = "Choose the environments you want to show:",
+      label = "Choose the habitats you want to show:",
       choices = as.list(EN),
       selected = EN[1],
       multiple = TRUE,
@@ -140,6 +158,22 @@ ps_abundance <- page_sidebar(
         `selected-text-format` = "count > 3",
         `count-selected-text` = "{0} genes selected"
       )
+    ),
+    
+    card(
+      markdown(
+        "This section explores the **Relative Abundance** of Antimicrobial Resistance Genes (ARGs) across different host habitats, highlighting how the choice of pipeline impacts the estimation of the quantity of ARGs.
+        
+        * **Relative Abundance per Sample (Left):** This displays the total relative abundance of ARGs detected by each pipeline per sample across various habitats. For interpreting the boxplot, 
+        it would be helpful to note that the center line denotes the median while each box limits is the interquartile range (IQR) and the
+        whiskers extent to 1.5× IQR beyond the first and third quartiles.
+        ******
+        * **Abundance by Gene Class (Right):** This plots illustrates the relative abundance by gene classes based on their specific resistance mechanisms in different habitats.
+        For the gene classes, the groups 'class A' and 'tet RPG' represent Class A β-lactamases and tetracycline ribosomal protection genes, respectively. 
+
+        *Use the sidebar to filter specific tools, habitats, or focus on particular gene classes to observe these shifts/difference in abundance of genes estimation.*"
+      ),
+      style = "padding: 5px; background-color: #f8f9fa; border-left: 5px solid #1b9e77;"
     )
   ),
     
@@ -150,7 +184,7 @@ ps_abundance <- page_sidebar(
         col_widths = c(6, 6),
         
         card(
-          card_header("Relative abundance per sample"),
+          card_header("Relative abundance per Sample"),
           withSpinner(plotOutput("plot_abundance", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
         ),
         card(
@@ -182,7 +216,7 @@ ps_pan_core <- page_sidebar(
     
     pickerInput(
       inputId = "environment_pan_core",
-      label = "Choose the environments you want to show:",
+      label = "Choose the habitats you want to show:",
       choices = as.list(EN),
       selected = EN[c(1,9,10,13)],
       multiple = TRUE,
@@ -192,17 +226,31 @@ ps_pan_core <- page_sidebar(
         `selected-text-format` = "count > 2",
         `count-selected-text` = "{0} environments selected"
       )
-    )
-  ),
+    ),
     
+    card(
+      markdown(
+        "This section shows the **Pan-** and **Core** resistomes across different host habitats for each pipeline.
+      
+      * **Pan-resistome (Left, Panel a):** This represents the *total pool* of unique ARGs found across all samples within a given habitat by the pipelines. It is also shown that these numbers vary depending on the pipelines use.
+      It also represents the diversity of resistance genes in the chosen habitat.
+      ******
+      * **Core-resistome (Right, Panel b):** This represents the ARGs that are persistently found across almost *all* samples within a habitat. Pipeline-specific detection influences which genes are considered ubiquitous.
+      
+      *Use the sidebar to compare specific tools, select different habitats, or adjust the strictness of the core-resistome threshold.*"
+      ),
+      style = "padding: 5px; background-color: #f8f9fa; border-left: 5px solid #1b9e77;"
+    )
+    
+  ),
     
   layout_column_wrap( 
     width = 1,
       card(
         card_header("Number of genes"),
-        withSpinner(plotOutput("pan_core", height = "600px"), type = 8, color = "#1b9e77") 
+        withSpinner(plotOutput("pan_core", height = "800px"), type = 8, color = "#1b9e77") 
       )
-    )
+    ),
   )
 
 
@@ -235,6 +283,20 @@ ps_overlap <- page_sidebar(
         `selected-text-format` = "count > 3",
         `count-selected-text` = "{0} genes selected"
       )
+    ),
+    
+    card(
+      markdown(
+        "This tab examines **Class-Specific Coverage (CSC)**, showing the degree of overlap or agreement between different detection pipelines. In simple terms, this is it: *For a given ARG class g, the CSC of pipeline A with respect to 
+        pipeline B represents the proportion of ARGs identified by pipeline B that were also captured by pipeline A.*
+        
+        * **Class-Specific Coverage (Left):** This is the overall percentage of ARGs detected by a reference pipeline that were also successfully identified by the compared pipeline. A higher percentage indicates strong agreement between the pipelines.
+        ******
+        * **CSC by Gene Class (Right):** This plot breaks down this overlap by gene classes based on specific resistance mechanisms. This reveals whether two tools might agree perfectly on certain gene classes (like tetracycline resistance) but completely miss each other on others.
+        
+        *Use the sidebar to select the tools you want to compare or filter specific gene classes to see exactly where the pipelines agree or diverge.*"
+      ),
+      style = "padding: 5px; background-color: #f8f9fa; border-left: 5px solid #1b9e77;"
     )
   ),
 
@@ -245,7 +307,7 @@ ps_overlap <- page_sidebar(
         col_widths = c(6, 6),
         
         card(
-          card_header("Class-Specific Coverage"),
+          card_header("Class-Specific Coverage by Pipeline"),
           withSpinner(plotOutput("overlap", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
         ),
         card(
@@ -254,7 +316,7 @@ ps_overlap <- page_sidebar(
         )
       )
     )
-  )
+  ),
 )
   
 

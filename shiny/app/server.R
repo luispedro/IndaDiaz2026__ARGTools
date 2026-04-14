@@ -289,14 +289,14 @@ server <- function(input, output, session) {
           color  = pal_10_q_2[names(pal_10_q_2) %in% pan_core_df_plot$tool2])), shape = "none") + 
       theme(
         legend.position = "none",
-        text = element_text(size = general_size, color = "black"),
-        title = element_text(size = general_size + 2, face = "bold"),
-        axis.title = element_text(size = general_size , face = "bold"),
-        strip.text = element_text(size = general_size, angle = 0),
+        text = element_text(size = 16, color = "black"),
+        title = element_text(size = 16, face = "bold"),
+        axis.title = element_text(size = 16 , face = "bold"),
+        strip.text = element_text(size = 16, angle = 0),
         panel.background = element_blank(),
-        axis.text.x = element_text(size = general_size, angle = 90,
+        axis.text.x = element_text(size = 16, angle = 90,
                                    vjust = 0.5, hjust = 1),
-        axis.text.y = element_text(size = general_size),
+        axis.text.y = element_text(size = 16),
         panel.border = element_rect(color =  "black"),
         plot.margin = margin(5, 5, 5, 5, unit = "pt"),
         legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
@@ -305,8 +305,8 @@ server <- function(input, output, session) {
         legend.text = element_text(size = general_size),
         panel.grid.minor.y = element_blank()) +
       theme(axis.text.y = element_blank(), 
-            strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5),
-            strip.text.y = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0.5),
+            strip.text.x = element_text(size = 16, angle = 0, vjust = 0, hjust = 0.5),
+            strip.text.y = element_text(size = 16, angle = 0, vjust = 0.5, hjust = 0.5),
             legend.position = "bottom",
             panel.grid.major.y = element_blank(),
             panel.grid.minor.y = element_blank(),
@@ -333,14 +333,14 @@ server <- function(input, output, session) {
           color  = pal_10_q_2[names(pal_10_q_2) %in% pan_core_df_plot$tool2])), shape = "none") + 
       theme(
         legend.position = "none",
-        text = element_text(size = general_size, color = "black"),
-        title = element_text(size = general_size + 2, face = "bold"),
-        axis.title = element_text(size = general_size , face = "bold"),
-        strip.text = element_text(size = general_size, angle = 0),
+        text = element_text(size = 16, color = "black"),
+        title = element_text(size = 16 + 2, face = "bold"),
+        axis.title = element_text(size = 16 , face = "bold"),
+        strip.text = element_text(size = 16, angle = 0),
         panel.background = element_blank(),
-        axis.text.x = element_text(size = general_size, angle = 90,
+        axis.text.x = element_text(size = 16, angle = 90,
                                    vjust = 0.5, hjust = 1),
-        axis.text.y = element_text(size = general_size),
+        axis.text.y = element_text(size = 16),
         panel.border = element_rect(color =  "black"),
         plot.margin = margin(5, 5, 5, 5, unit = "pt"),
         legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
@@ -349,7 +349,7 @@ server <- function(input, output, session) {
         legend.text = element_text(size = general_size),
         panel.grid.minor.y = element_blank()) +
       theme(axis.text.y = element_blank(), 
-            strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5),
+            strip.text.x = element_text(size = 16, angle = 0, vjust = 0, hjust = 0.5),
             strip.text.y = element_blank(),
             legend.position = "none",
             panel.grid.major.y = element_blank(),
@@ -388,7 +388,7 @@ server <- function(input, output, session) {
       facet_grid(tool_ref2 ~ " ", scales = "free_y") +
       scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap]) +
       scale_y_discrete(drop = FALSE) +
-      xlab("%") +
+      xlab("Percentage (%)") +
       ylab("ARG class") + 
       theme_minimal() +
       theme5 +
