@@ -18,14 +18,14 @@ The folder `code_R_analysis` contains the script `retrieve_aros_abundances_diver
 
 The tools used to detect ARGs are listed below.
 
-| **Tool** | **Availability** | **Database** |
-| :---: | :---: | :---: |
-| fARGene (v0.1) | https://github.com/fannyhb/fargene | |
-| DeepARG (v2) | https://github.com/gaarangoa/deeparg | |
-| AMRFinderPlus (v4.0.15) | https://github.com/ncbi/amr | 2024-12-18.1 |
-| RGI (v6.0.3) | https://github.com/arpcard/rgi | CARD (v4.0.0) |
-| ResFinder (v2.4.0) | https://github.com/cadms/resfinder | |
-| ABRicate v1.0.1 | https://github.com/tseemann/ABRICATE | ARG-ANNOT, CARD, MEGARes v2.0, ResFinder, NCBI (all databases updated 2025-01-14) |
+| **Tool** | **Availability** | 
+| :---: | :---: | 
+| fARGene (v0.1) | https://github.com/fannyhb/fargene | 
+| DeepARG (v2) | https://github.com/gaarangoa/deeparg | 
+| AMRFinderPlus (v4.0.15), database 2024-12-18.1 | https://github.com/ncbi/amr |
+| RGI (v6.0.3), database CARD (v4.0.0) | https://github.com/arpcard/rgi | 
+| ResFinder (v2.4.0) | https://github.com/cadms/resfinder | 
+| ABRicate v1.0.1, databases: ARG-ANNOT, CARD, MEGARes v2.0, ResFinder, and NCBI (all updated 2025-01-14) | https://github.com/tseemann/ABRICATE |  
 
 ### Normalization
 
