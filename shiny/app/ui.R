@@ -5,7 +5,7 @@ library(shinycssloaders)
 
 
 ps_intro <- fluidPage(
-  layout_column_wrap( 
+  bslib::layout_column_wrap( 
     width = 1/2,
       card(
         card_header("Introduction"),
@@ -97,7 +97,7 @@ ps_args <- page_sidebar(
     "Number of ARGs and Gene Class Proportion",
     
     page_fillable(
-      layout_columns(
+      bslib::layout_columns(
         col_widths = c(6, 6),
         
         card(
@@ -180,7 +180,7 @@ ps_abundance <- page_sidebar(
   nav_panel(
     "Relative Abundance per Sample and Gene Class",
     page_fillable(
-      layout_columns(
+      bslib::layout_columns(
         col_widths = c(6, 6),
         
         card(
@@ -244,7 +244,7 @@ ps_pan_core <- page_sidebar(
     
   ),
     
-  layout_column_wrap( 
+  bslib::layout_column_wrap( 
     width = 1,
       card(
         card_header("Number of genes"),
@@ -303,7 +303,7 @@ ps_overlap <- page_sidebar(
   nav_panel(
     "Class-Specific Coverage (CSC)",
     page_fillable(
-      layout_columns(
+      bslib::layout_columns(
         col_widths = c(6, 6),
         
         card(
