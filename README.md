@@ -19,18 +19,18 @@ The folder `code_R_analysis` contains the script `retrieve_aros_abundances_diver
 The tools used to detect ARGs are listed below.
 
 | **Tool** | **Availability** | **Database** |
-| :---: | :---: | :---: | 
+| :---: | :---: | :---: |
 | fARGene (v0.1) | https://github.com/fannyhb/fargene | |
 | DeepARG (v2) | https://github.com/gaarangoa/deeparg | |
 | AMRFinderPlus (v4.0.15) | https://github.com/ncbi/amr | 2024-12-18.1 |
 | RGI (v6.0.3) | https://github.com/arpcard/rgi | CARD (v4.0.0) |
 | ResFinder (v2.4.0) | https://github.com/cadms/resfinder | |
 | ABRicate v1.0.1 | https://github.com/tseemann/ABRICATE | (all databases updated 2025-01-14 |
-|  |  | ARG-ANNOT |
-|  |  | CARD |
-|  |  | MEGARes v2.0 |
-|  |  | ResFinder |
-|  |  | NCBI |
+| ^^  | ^^ | ARG-ANNOT |
+| ^^ | ^^ | CARD |
+| ^^ | ^^ | MEGARes v2.0 |
+| ^^ | ^^ | ResFinder |
+| ^^ | ^^ | NCBI |
 
 
 ### Normalization
@@ -40,4 +40,4 @@ The outputs of DeepARG, AMRFinderPlus, ABRicate, and ResFinder were processed wi
 
 ### Preprocessed data
 
-ARG pipeline and normalization outputs as well as the estimated abundance, richness and gene classes are available at zenodo and under `code_R_analysis/data_to_Zenodo` folder.
+ARG pipeline and normalization outputs as well as the estimated abundance, and richness have been deposited at Zenodo (link) and are available in this repository under `code_R_analysis/data_to_Zenodo`.
