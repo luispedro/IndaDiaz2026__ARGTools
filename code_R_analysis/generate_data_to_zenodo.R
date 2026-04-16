@@ -22,17 +22,17 @@ conversion_file <- readRDS("code_R_analysis/output_abundance_diversity_resistome
 conversion_file <- conversion_file %>% rename(geneclass = new_level)
 
 
-lst2 <- lapply(lst, function(x) x <- x %>% rename(geneclass_argcompare = new_level))
+lst2 <- lapply(lst, function(x) x <- x %>% rename(geneclass_argcompare = new_level,
+                                                  pipeline = tool))
 lst2 <- lst2[1:15]
 
 lapply(names(lst2), function(nm) {
-  write.csv(lst2[[nm]], paste0("code_R_analysis/data_to_Zenodo/",nm,".csv"), row.names = FALSE)
+  write.csv(lst2[[nm]], paste0("code_R_analysis/data_to_Zenodo/pipelines_output/",nm,".csv"), row.names = FALSE)
 })
 
 
-
 write.csv(abundance, file = gzfile("code_R_analysis/data_to_Zenodo/abundance_richness.csv.gz"), row.names = F)
-write.csv(metadata, file = "code_R_analysis/data_to_Zenodo/metadata.csv", row.names = F)
+write.csv(metadata, file = "code_R_analysis/data_to_Zenodo/metagenomes_metadata.csv", row.names = F)
 write.csv(conversion_file, file = "code_R_analysis/data_to_Zenodo/conversion_aro_geneclass.csv", row.names = F)
 
 

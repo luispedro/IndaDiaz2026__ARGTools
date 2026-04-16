@@ -58,7 +58,7 @@ The columns include:
 
 The abundance and richness of each gene (only from the habitats we are interested in) are found in the file `abundance_richness.csv.gz`. The columns include:
 
-- sample: metagenomic sample ID from GMGC
+- sample: metagenomic sample ID from the Global Microbial Gene Catalog v1.0 (GMCG).
 - geneclass: manually curated gene class
 - pipeline: tool and database identifier
 - abundance: normalized read by gene size, scaled to 1 million reads per metagenome aggregated at the gene class level

@@ -88,30 +88,32 @@ pal_10_q <- c(pal_10_q, da, rgi, other)
 rm(da, rgi, other)
 
 tools_labels <- c(
-  "DeepARG", "fARGene", "ABRicate", "ABRicate",
-  "RGI", "ABRicate", "AMRFinder-\nPlus", "ABRicate",
-  "ResFinder", "ABRicate","DeepARG-70%","DeepARG-80%","DeepARG-90%","RGI-70%","RGI-80%","RGI-90%",
+  "DeepARG", "fARGene", "ABRicate-\nARGANNOT", "ABRicate-\nMEGARes",
+  "RGI", "ABRicate-\nCARD", "AMRFinder-\nPlus", "ABRicate-\nNCBI",
+  "ResFinder", "ABRicate-\nResFinder",
+  "DeepARG-70%","DeepARG-80%","DeepARG-90%","RGI-70%","RGI-80%","RGI-90%",
   "DeepARG-aa", "RGI/nBLAST", "RGI-aa", "fARGene-aa", "AMRFinder-\nPlus-nt")
 
 names(tools_labels) <- tools_levels
 
 tools_labels_factor <- c(
-  "DeepARG", "fARGene", "RGI","AMRFinder-\nPlus", 
-  "ResFinder", "ABRicate","DeepARG-70%","DeepARG-80%","DeepARG-90%",
+  "DeepARG", "fARGene", "ABRicate-\nARGANNOT", "ABRicate-\nMEGARes", 
+  "RGI", "ABRicate-\nCARD", "AMRFinder-\nPlus", "ABRicate-\nNCBI",
+  "ResFinder", "ABRicate-\nResFinder", "DeepARG-70%","DeepARG-80%","DeepARG-90%",
   "RGI-70%","RGI-80%","RGI-90%",
   "DeepARG-aa", "RGI/nBLAST", "RGI-aa", "fARGene-aa", "AMRFinder-\nPlus-nt")
 
 # one space for DeepARG
 # two spaces for fARGene
 
-tools_db <- c(" ", "  ", "ARG-\nANNOT", "MEGA-\nRes", "CARD", "CARD","NCBI","NCBI", 
-              "Res-\nFinder","Res-\nFinder"," "," "," ","CARD","CARD","CARD",
+tools_db <- c(" ", "  ", "   ", "    ", "CARD", "CARD","NCBI","NCBI", 
+              "ResFinder","ResFinder"," "," "," ","CARD","CARD","CARD",
               " ", "CARD", "CARD", "  ", "NCBI")
 
 # one space for DeepARG
 # two spaces for fARGene
-tools_db_factor <- c(" ", "  ", "ARG-\nANNOT", "MEGA-\nRes",
-                     "CARD", "NCBI", "Res-\nFinder")
+tools_db_factor <- c(" ", "  ", "   ", "    ",
+                     "CARD", "NCBI", "ResFinder")
 
 tools_texture <- c("ABRicate-CARD", "ABRicate-NCBI", "ABRicate-ResFinder")
 
@@ -125,7 +127,7 @@ metadata <- read.delim("data/metadata_GMGC10.sample.meta.tsv")
 
 # abundance <- readRDS("output_abundance_diversity_resistome/abundance_diversity.rds")
 abundance <- readRDS("code_R_analysis/output_abundance_diversity_resistome/abundance_diversity.rds")
-
+abundance <- abundance %>% mutate(gene = ifelse(gene == "MFS efflux pump", "efflux pump", gene))
 
 
 abundance <- abundance %>%
@@ -171,6 +173,8 @@ abundance_class <- abundance %>%
 ## CORE RESISTOME 
 
 core <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/core_resistome.rds")
+core <- core %>% mutate(new_level_centroid = ifelse(new_level_centroid == "MFS efflux pump", "efflux pump", new_level_centroid))
+
 core <- core %>% 
   rename(new_level = new_level_centroid, 
          X = centroid) %>% 
@@ -190,6 +194,8 @@ sumcore <- sum_core_adjust(core, 450, 0.5) %>%
 ## PAN RESISTOME
 
 pan <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/pan_resistome.rds")
+pan <- pan %>% mutate(gene_class = ifelse(gene_class == "MFS efflux pump", "efflux pump", gene_class))
+
 pan <- pan %>% 
   mutate(habitat = factor(habitat, levels = EN), 
          tool = factor(tool, levels = tools_levels)) %>% 
@@ -224,6 +230,7 @@ pan_core <- sumpan2 %>%
 ## unigenes identified by tool
 
 unigenes <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/unigenes_per_tool.rds") %>% 
+  mutate(new_level = ifelse(new_level == "MFS efflux pump", "efflux pump", new_level)) %>% 
   mutate(tool = factor(tool, levels = tools_levels)) %>%
   mutate(tools_labels = factor(tools_labels[tool], levels = tools_labels_factor),
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
@@ -269,15 +276,15 @@ levels_abundance_div <- abundance_class %>%
 
 
 top_abundance <- c("efflux pump", "van" , "class A beta-lactamase", 
-                   "tet RPG",  "cell wall charge", "MFS efflux pump", 
-                   "rpoB", "erm")
+                   "tet RPG",  "cell wall charge", 
+                   "rpoB", "erm", "aph")
 
 
 #top20
 
 top_cso <- c("van", "efflux pump",  "tet RPG", "class A beta-lactamase", 
              "class B beta-lactamase","class C beta-lactamase", "class D beta-lactamase",
-             "aph", "MFS efflux pump", "erm", "aac")
+             "aph", "erm", "aac")
 
 
 df_abundance_class_human <- abundance_class %>% 
@@ -357,7 +364,7 @@ p2a <- unigenes %>%
   theme(panel.border = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 0))
+        strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5))
 
 p2a
 
@@ -411,7 +418,7 @@ df_plot <- unigenes %>%
   mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
   mutate(new_level = gsub("efflux pump","efflux", new_level)) %>%
   mutate(new_level = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", new_level)) %>%
-  mutate(new_level = gsub("target-modifying enzyme","target-\nmodif. enz.", new_level)) %>%
+  mutate(new_level = gsub("target-modifying enzyme","target-modif.\nenzyme", new_level)) %>%
   mutate(new_level = gsub("self-resistance","self-resistance", new_level)) 
 
 
@@ -423,8 +430,17 @@ df_plot1 <-  df_plot %>%
                         labels = percent_format(accuracy = 1),
                         breaks = c(0.0001, 0.2, 0.4, 0.6)) + 
   facet_grid(.~tools_db, scales = "free_x", space = "free") +
+  scale_y_discrete(labels = function(x) {
+    out <- ifelse(
+      x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
+      paste0("italic('", x, "')"),
+      ifelse(x %in% "abcF", "ABC-F",
+      paste0("'", x, "'"))
+    )
+    parse(text = out)
+  }) + 
   geom_text(
-    data = df_plot %>% filter(p >= 0.03),  # only these get labels
+    data = df_plot %>% filter(tool %in% basic_tools, p >= 0.03),  # only these get labels
     aes(label = scales::percent(p, accuracy = 1),
         color = p >= 0.40), 
     size = general_size / .pt, show.legend = F) +
@@ -435,12 +451,63 @@ df_plot1 <-  df_plot %>%
   theme1 +
   theme(legend.position = "bottom", panel.grid = element_blank(),
         panel.border =  element_blank(),
-        plot.margin = margin(0, 0, 0, 10, unit = "pt"),
-        strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 0))
+        plot.margin = margin(0, 0, 0, 20, unit = "pt"),
+        strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5))
 
 df_plot1
 
 
+
+mat <- JI_all %>% 
+  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>% 
+  select(tool_ref, tool_comp, jaccard) %>%
+  pivot_wider(names_from = tool_comp, values_from = jaccard)
+
+mat_matrix <- as.matrix(mat[,-1])   # remove tool_ref column
+rownames(mat_matrix) <- mat$tool_ref
+dist_mat <- as.dist(1 - mat_matrix)
+hc <- hclust(dist_mat)  # or "ward.D2"
+plot(hc)
+ordered_tools <- hc$labels[hc$order]
+
+
+JI_all_plot <- JI_all %>% 
+  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>% 
+  mutate(tool_lab_ref = factor(tools_labels[tool_ref], levels = tools_labels[ordered_tools]),
+         tool_lab_comp = factor(tools_labels[tool_comp], levels = tools_labels[ordered_tools]))
+
+
+
+jaccard_plot <-  JI_all_plot %>% filter(as.numeric(tool_lab_ref) < as.numeric(tool_lab_comp)) %>% 
+  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>% 
+  ggplot(aes(x = tool_lab_ref, y = tool_lab_comp, fill = jaccard)) + 
+  geom_tile(color = "grey") + 
+  scale_fill_gradientn( colors = brewer.pal(9, "YlOrBr"),
+                        labels = percent_format(accuracy = 1),
+                        breaks = c(0, 0.2, 0.4, 0.6, 0.8)) + 
+  geom_text(
+    data = JI_all_plot %>% 
+      filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools, 
+             as.numeric(tool_lab_ref) < as.numeric(tool_lab_comp), 
+             jaccard >= 0.05),
+    aes(label = scales::percent(jaccard, accuracy = 1),
+        color = jaccard >= 0.50), 
+    size = general_size / .pt, show.legend = F) +
+  scale_color_manual(values = c( "black", "white")) +
+  scale_y_discrete(labels = function(x) {
+    x <- gsub("ABRicate-\n", "ABRicate-", x)
+    x <- gsub("-\nPlus", "Plus", x)
+    x}, expand = 0) +
+  labs(fill = "") + 
+  ylab("") + 
+  xlab("") + 
+  theme1 +
+  theme(legend.position = "bottom", panel.grid = element_blank(),
+        panel.border =  element_blank(),
+        plot.margin = margin(0, 0, 0, 10, unit = "pt"),
+        strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5))
+
+jaccard_plot
 
 p2_1 <- ((p2a + ggtitle("a")) /
   (id_plot + ggtitle("c")) +
@@ -448,8 +515,21 @@ p2_1 <- ((p2a + ggtitle("a")) /
   (df_plot1 + ggtitle("b"))) + 
   patchwork::plot_layout(widths = c(1,1))
 
+p2_1 <- ((p2a + ggtitle("a")) /
+           (jaccard_plot + ggtitle("c")) +
+           patchwork::plot_layout(heights = c(1,1)) |
+           (df_plot1 + ggtitle("b"))) + 
+  patchwork::plot_layout(widths = c(1,1))
 
-ggsave("code_R_analysis/output_plots/fig1.svg", p2_1, width = 180, height = 110, unit = "mm")
+p2_1 <- ((p2a + ggtitle("a")) /
+           (jaccard_plot + ggtitle("c")) /
+           (id_plot + ggtitle("d")) +
+           patchwork::plot_layout(heights = c(1,1,1)) |
+           (df_plot1 + ggtitle("b"))) + 
+  patchwork::plot_layout(widths = c(1,1))
+
+
+ggsave("code_R_analysis/output_plots/fig1.svg", p2_1, width = 180, height = 180, unit = "mm")
 
 
 # tools 
@@ -462,7 +542,7 @@ env_to_plot_supp <- EN[!EN %in% env_to_plot_main]
 scale_f <- 10^0
 
 lims_abundance <- abundance_tool_sample %>%
-  group_by(tool, habitat,tools_db, tools_labels) %>% 
+  group_by(tool, habitat,tools_db, tools_labels, texture) %>% 
   summarise(
     median = ifelse(quantile(abundance, 0.5) < 0, 0, quantile(abundance, 0.5)),
     q25 = ifelse(quantile(abundance, 0.25) < 0, 0, quantile(abundance, 0.25)),
@@ -473,7 +553,7 @@ lims_abundance <- abundance_tool_sample %>%
                 quantile(abundance, 0.75) + 1.5*IQR(abundance))) 
 
 lims_richness <- abundance_tool_sample %>%
-  group_by(tool, habitat,tools_db, tools_labels) %>% 
+  group_by(tool, habitat,tools_db, tools_labels, texture) %>% 
   summarise(
     median = ifelse(quantile(richness, 0.5) < 0, 0, quantile(richness, 0.5)),
     q25 = ifelse(quantile(richness, 0.25) < 0, 0, quantile(richness, 0.25)),
@@ -483,7 +563,7 @@ lims_richness <- abundance_tool_sample %>%
     w2 = ifelse(quantile(richness, 0.75) + 1.5*IQR(richness)<0,0,
                 quantile(richness, 0.75) + 1.5*IQR(richness))) 
 
-  
+lims_richness  
 abu_plots <- list()
 set.seed(2026)
 
@@ -496,26 +576,32 @@ for(j in 1:length(EN)){
     mutate(N = n_distinct(sample),
            abundance = abundance)
   
-  abu_plots[[j]] <- df_plot %>%
+  df_jitter <- df_plot %>% 
+    ungroup() %>%
+    group_by(habitat, tool) %>% 
+    filter(abundance < quantile(abundance, 0.75) + 1.5*IQR(abundance))
+  
+  lims_abundance_max = lims_abundance %>%
+    filter(habitat %in% EN[j]) %>%
     filter(tool %in% basic_tools) %>% 
-    ggplot(aes(x = tools_labels, y = abundance, fill = tools_db, pattern = texture)) + 
-    geom_boxplot_pattern(position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
-                         width = 1.3, pattern_color = "black", pattern_fill = "black", pattern_density = 0.000000001,
-                         pattern_spacing = 0.2,
-                         pattern_size =  0.3, color = "black", outliers = FALSE, outlier.shape = NA,
-                         linewidth = 0.15) +
-    scale_x_discrete(expand = expansion(add = 1)) +#, 
-                     #breaks = levels(df_plot$tool)[levels(df_plot$tool) %in% df_plot$tool],
-                     #labels = gsub("RGI-DIAMOND", "RGI", 
-                     #levels(df_plot$tool)[levels(df_plot$tool) %in% df_plot$tool])) +
-    #geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-    geom_jitter(data = df_plot %>% 
-                  ungroup() %>%
-                  group_by(habitat, tool) %>% 
-                  filter(abundance < quantile(abundance, 0.75) + 1.5*IQR(abundance)) %>%
-                  slice_sample(n = min(100, df_plot$N[1])), width = 0.35, size = 0.4, alpha = 0.1) + 
+    ungroup() %>% summarise(max(w2)) %>% pull()
+  
+  abu_plots[[j]] <- lims_abundance %>%
+    filter(habitat %in% EN[j]) %>%
+    filter(tool %in% basic_tools) %>% 
+    ggplot(aes(x = tools_labels, y=median, fill = tools_db))  + 
+    geom_boxplot_pattern(aes(ymin = w1, lower = q25, middle = median, upper = q75, ymax = w2, pattern = texture), stat = "identity",
+      position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
+      width = 1.3, pattern_color = "black", pattern_fill = "black", pattern_density = 0.000000001,
+      pattern_spacing = 0.2,
+      pattern_size =  0.3, color = "black", outliers = FALSE, outlier.shape = NA, linewidth = 0.15) +
+    scale_x_discrete(expand = expansion(add = 1)) +
+    geom_jitter(data = df_jitter %>%
+                slice_sample(n = min(100, df_jitter$N[1])), 
+                aes(y = abundance),
+                width = 0.35, size = 0.4, alpha = 0.1) + 
     facet_grid(habitat ~ tools_db  , scales = "free_x", space = "free_x") +
-    scale_y_continuous(labels = scales::comma) + 
+    scale_y_continuous(labels = scales::comma, limits = c(0, lims_abundance_max + 2)) + 
     scale_fill_manual(values = pal_7) +
     scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
     theme1 + 
@@ -523,18 +609,20 @@ for(j in 1:length(EN)){
           strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 0),
           panel.grid.major.x = element_blank(),
           panel.grid.minor.x = element_blank(),
-          plot.margin = margin(5.5, 5.5, 5.5, 0, unit = "pt")) 
+          plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")) 
 }
 
 main_abundance_left <- 
-  (abu_plots[[1]] + theme(axis.text.x = element_blank(), strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 0)) + xlab("") + ylab("") + ggtitle("a")) / 
+  #(abu_plots[[1]] + theme(axis.text.x = element_blank(), strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5)) + xlab("") + ylab("") + ggtitle("a")) / 
+  ((abu_plots[[1]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("") + ggtitle("a")) / 
   (abu_plots[[10]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") +  ylab("Relative abundance")) /
-  (abu_plots[[11]] + theme(strip.text.x = element_blank()) + xlab("") + ylab("")) 
+  (abu_plots[[11]] + theme(strip.text.x = element_blank()) + xlab("") + ylab("")))  + patchwork::plot_layout(heights = c(1,1,1))
   
 main_abundance_right <- 
-  (abu_plots[[9]] + theme(axis.text.x = element_blank(), strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 0)) + xlab("") + ylab("")) / 
+  #(abu_plots[[9]] + theme(axis.text.x = element_blank(), strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5)) + xlab("") + ylab("")) / 
+  ((abu_plots[[9]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
   (abu_plots[[12]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") +  ylab("")) /
-  (abu_plots[[13]] + theme(strip.text.x = element_blank()) + xlab("") + ylab("")) 
+  (abu_plots[[13]] + theme(strip.text.x = element_blank()) + xlab("") + ylab(""))) + patchwork::plot_layout(heights = c(1,1,1)) 
 
 left1 <- main_abundance_left | main_abundance_right
 
@@ -552,7 +640,7 @@ df_abundance_class_all <- abundance_class %>%
   mutate(gene = factor(gene, levels = c(top_abundance, "other"))) %>%
   ungroup() %>% 
   group_by(habitat, sample, tool, gene) %>%
-  summarise(abundance = sum(abundance, richness = sum(richness)), texture = texture[1]) %>%
+  summarise(abundance = sum(abundance), richness = sum(richness), texture = texture[1]) %>%
   mutate(tools_labels = factor(tools_labels[tool], levels = tools_labels[!duplicated(tools_labels)]),
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
          tools_db = factor(tools_db[tool], levels = tools_db[!duplicated(tools_db)]))
@@ -584,7 +672,18 @@ a0 <- df_a0 %>%
                                 gsub("RGI-DIAMOND", "RGI", basic_tools)))) +
   scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
   geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-  facet_grid(gene ~ habitat, scales = "free", space = "free") +
+  facet_grid(gene ~ habitat, scales = "free", space = "free",
+             labeller = labeller(
+               gene = as_labeller(function(x) {
+                 out <- ifelse(
+                   x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim", "vat", "mph", "qnr"),
+                   paste0("italic('", x, "')"),
+                   ifelse(x == "abcF", "ABC-F",
+                          paste0("'", x, "'"))
+                 )
+                 return(out)
+               }, default = label_parsed)
+             )) + 
   xlab("Relative abundance") +
   scale_x_continuous(labels = scales::comma, expand = c(0,0)) +
   ylab("") + 
@@ -608,23 +707,21 @@ a0 <- df_a0 %>%
 a0
 
 left_block <- (left1/patchwork::wrap_elements(full = g_legend(a0))) + patchwork::plot_layout(heights = c(15,1))
-p30 <- (left_block | (a0 + theme(legend.position = "none"))) + patchwork::plot_layout(widths = c(3,1))
+p30 <- (left_block | (a0 + theme(legend.position = "none"))) + patchwork::plot_layout(widths = c(4,1))
 ggsave("code_R_analysis/output_plots/fig2.svg", p30, width = 180, height = 130, unit = "mm")
 
 
 #a0_new <- (a0_van / (a0_not_van + theme(legend.position = "none"))) + patchwork::plot_layout(heights = c(1,9))
 
 
-
-
 sup_abundance_left <- 
-  (abu_plots[[2]] + theme(axis.text.x = element_blank()) + xlab("") + ylab("")) / 
+  (abu_plots[[2]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
   (abu_plots[[3]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("Relative abundance")) /
   (abu_plots[[4]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) /
   (abu_plots[[5]] + theme(strip.text.x = element_blank()) + xlab("") + ylab(""))
 
 sup_abundance_right <- 
-  (abu_plots[[6]] + theme(axis.text.x = element_blank()) + xlab("") + ylab("")) / 
+  (abu_plots[[6]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
   (abu_plots[[7]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) /
   (abu_plots[[8]] + theme(strip.text.x = element_blank()) + xlab("") + ylab("")) / 
   patchwork::wrap_elements(full = g_legend(a0 + 
@@ -683,6 +780,7 @@ p4a1 <- pan_core_df_plot %>% filter(metric %in% "Pan-resistome") %>%
       color  = pal_10_q[1:10])), shape = "none") + 
   theme(axis.text.y = element_blank(), 
         strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
+        strip.text.y = element_text(size = general_size, vjust = 0.5, hjust = 0.5, angle = 0),
         legend.position = "bottom",
         panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank(),
@@ -707,7 +805,7 @@ p4a2 <- pan_core_df_plot %>% filter(!metric %in% "Pan-resistome") %>%
   geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
   theme1 +
   theme(axis.text.y = element_blank(), 
-        strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
+        strip.text.x = element_text(size = general_size, vjust = 0.5, hjust = 0.5),
         panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank(),
         strip.text.y = element_blank(),
@@ -727,7 +825,7 @@ df_sumcore <- sumcore %>% filter(habitat %in% "human gut") %>%
   mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
   mutate(new_level = gsub("efflux pump","efflux", new_level)) %>%
   mutate(new_level = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", new_level)) %>%
-  mutate(new_level = gsub("target-modifying enzyme","target-\nmodif. enz.", new_level)) %>%
+  mutate(new_level = gsub("target-modifying enzyme","target-modif.\nenzyme", new_level)) %>%
   mutate(new_level = gsub("self-resistance","self-resistance", new_level)) %>% 
   mutate(new_level = gsub("variant or","variant or\n", new_level)) 
 
@@ -795,25 +893,49 @@ d1 <- recall_fnr %>%
 
 cs11 <- ggplot(d1 %>% 
                  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
-                 filter(tool_ref %in% c("DeepARG","fARGene", "RGI-DIAMOND")) %>% 
+                 #filter(tool_ref %in% c("DeepARG","fARGene", "RGI-DIAMOND")) %>% 
                  filter(new_level %in% top_cso) %>%
                  mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
                  mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
                  mutate(new_level = gsub("efflux pump","efflux", new_level)), 
-               aes(x = recall*100, y = new_level)) + 
-  geom_boxplot(aes(fill = tool_ref),
-               position = position_dodge2(preserve = "single"),
-               color = "black", outliers = FALSE) +
-  facet_grid(tool_ref ~ " ", scales = "free_y") +
-  scale_fill_manual(values = pal_10_q[match(c("DeepARG","fARGene", "RGI-DIAMOND","AMRFinderPlus"), tools_levels)]) +
-  scale_y_discrete(drop = FALSE) +
-  xlab("%") +
+               aes(x = recall*100, y = 0)) + 
+  geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture2),
+                       position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
+                       width = 1.3, pattern_color = "black", pattern_fill = "black", pattern_density = 0.000000001,
+                       pattern_spacing = 0.2,
+                       pattern_size =  0.3, color = "black", outliers = FALSE, outlier.shape = NA, linewidth = 0.15) +
+  scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+  facet_grid(new_level ~ tools_labels_ref, scales = "free_y", space = "free",
+             labeller = labeller(
+               new_level = as_labeller(function(x) {
+                 out <- ifelse(
+                   x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim", "vat", "mph", "qnr"),
+                   paste0("italic('", x, "')"),
+                   ifelse(x == "abcF", "ABC-F",
+                          paste0("'", x, "'"))
+                 )
+                 return(out)
+               }, default = label_parsed)
+             )) +
+  scale_fill_manual(values = pal_10_q)  + 
+  #scale_y_discrete(drop = FALSE) +
+  xlab("CSC %") +
   ylab("ARG class") + 
   theme_minimal() +
   theme5 +
   theme( panel.grid = element_blank(),
-         strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
-         strip.text.y = element_text(size = general_size, vjust = 0, hjust = 0.5))
+         strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5 , angle = 0),
+         strip.text.y = element_text(size = general_size, vjust = 0, hjust = 0, angle = 0),
+         panel.spacing = unit(5, "pt")) +
+  scale_y_discrete(labels = function(x) {
+    out <- ifelse(
+      x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
+      paste0("italic('", x, "')"),
+      ifelse(x %in% "abcF", "ABC-F",
+             paste0("'", x, "'"))
+    )
+    parse(text = out)
+  })
 
 cs11
 
@@ -839,10 +961,10 @@ cs2 <- ggplot(d1 %>%
 
 cs2
 
-p5 <- (cs2 + ggtitle("a")| cs11 + ggtitle("b")) + patchwork::plot_layout(widths = c(2, 1))
+#p5 <- (cs2 + ggtitle("a")| cs11 + ggtitle("b")) + patchwork::plot_layout(widths = c(2, 1))
+p5 <-  cs11
 
-
-ggsave("code_R_analysis/output_plots/fig4.svg", p5, width = 180, height = 110, unit = "mm")
+ggsave("code_R_analysis/output_plots/fig4.svg", p5, width = 180, height = 100, unit = "mm")
 
 
 
@@ -959,7 +1081,7 @@ amrfinder_over <- plot_overlaps(lst$amrfinder.norm$query, lst$amrfinder.norm.pro
 
 plot_overlaps_same_tool <- 
   ((rgi_over + xlab("") + ggtitle("a")) / 
-  (deeparg_over + theme(legend.position = "none")) /
+  (deeparg_over + theme(legend.position = "none") + ggtitle("c")) /
   (fargene_over + theme(legend.position = "none")) /
   (amrfinder_over + xlab("ARGs"))) + 
   patchwork::plot_layout(heights = c(1, 1, 1, 1)) & 
@@ -1093,11 +1215,11 @@ plot_megares <- (abricate_plot + ggtitle("c")) / megares_plot
   
 overlap_all_plots <- (plot_overlaps_same_tool | 
  plot_db ) +  patchwork::plot_layout(widths = c(1, 1)) / 
-(((abricate_plot + ggtitle("c")) | megares_plot) + patchwork::plot_layout(widths = c(1, 1))) + 
+(((abricate_plot + ggtitle("d")) | megares_plot) + patchwork::plot_layout(widths = c(1, 1))) + 
   patchwork::plot_layout(heights = c(2, 1))
 
-overlap_all_plots <- (plot_overlaps_same_tool / abricate_plot + ggtitle("c")) + patchwork::plot_layout(heights = c(1,1,1,1,1)) |
-(plot_db / megares_plot + ggtitle("d")) + patchwork::plot_layout(heights = c(1,1,1,1))
+overlap_all_plots <- (plot_overlaps_same_tool / abricate_plot + ggtitle("d")) + patchwork::plot_layout(heights = c(1,1,1,1,1)) |
+(plot_db / megares_plot + ggtitle("e")) + patchwork::plot_layout(heights = c(1,1,1,1))
 
 
 ggsave("code_R_analysis/output_plots/overlaps_tool.svg", plot_overlaps_same_tool, width = 100, height = 90, unit = "mm")
@@ -1137,6 +1259,8 @@ pan_core_supp <- pan_core_df_plot %>% filter(metric %in% "Pan-resistome") %>%
       color  = pal_10_q[1:10])), shape = "none") + 
   theme(axis.text.y = element_blank(), 
         legend.position = "bottom",
+        strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
+        strip.text.y = element_text(size = general_size, vjust = 0.5, hjust = 0.5, angle = 0),
         panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank(),
         panel.border = element_blank(),
@@ -1170,7 +1294,7 @@ pan_core_supp2 <- pan_core_df_plot %>% filter(!metric %in% "Pan-resistome") %>%
 pan_core_supp | pan_core_supp2
 
 panel1_s <- (pan_core_supp + theme(legend.position = "none") | pan_core_supp2) + patchwork::plot_layout(widths = c(1,1))
-p4_S <- (panel1 / (g_legend(p4a1) )) + patchwork::plot_layout(heights = c(12,1))
+p4_S <- (panel1_s / (g_legend(p4a1) )) + patchwork::plot_layout(heights = c(12,1))
 
 ggsave("code_R_analysis/output_plots/sup_pan_core.svg", p4_S, width = 120, height = 180, unit = "mm")
 
@@ -1191,69 +1315,101 @@ for(j in 1:length(EN)){
     mutate(N = n_distinct(sample),
            richness = richness)
   
-  limits_plot <- df_plot %>% 
+  df_jitter <- df_plot %>% 
     ungroup() %>%
     group_by(habitat, tool) %>% 
     filter(richness < quantile(richness, 0.75) + 1.5*IQR(richness))
   
-  
-  
-  rich_plots[[j]] <- df_plot %>%
+  lims_richness_max = lims_richness %>%
+    filter(habitat %in% EN[j]) %>%
     filter(tool %in% basic_tools) %>% 
-    ggplot(aes(x = tools_labels, y = richness, fill = tools_db, pattern = texture)) + 
-    geom_boxplot_pattern(position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
+    ungroup() %>% summarise(max(w2)) %>% pull()
+  
+  rich_plots[[j]] <- lims_richness %>%
+    filter(habitat %in% EN[j]) %>%
+    filter(tool %in% basic_tools) %>% 
+    ggplot(aes(x = tools_labels, y=median, fill = tools_db))  + 
+    geom_boxplot_pattern(aes(ymin = w1, lower = q25, middle = median, upper = q75, ymax = w2, pattern = texture), stat = "identity",
+                         position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
                          width = 1.3, pattern_color = "black", pattern_fill = "black", pattern_density = 0.000000001,
                          pattern_spacing = 0.2,
-                         pattern_size =  0.3, color = "black", outliers = FALSE, outlier.shape = NA,
-                         linewidth = 0.15) +
-    scale_x_discrete(expand = expansion(add = 1)) +#, 
-    geom_jitter(data = limits_plot %>%
-                  slice_sample(n = min(100, df_plot$N[1])), width = 0.35, size = 0.4, alpha = 0.1) + 
-    facet_grid(habitat ~ tools_db  , scales = "free_x", space = "free_x") +
-    scale_y_continuous(labels = scales::comma, limits = c(0, max(limits_plot$richness))) + 
+                         pattern_size =  0.3, color = "black", outliers = FALSE, outlier.shape = NA, linewidth = 0.15) +
+    scale_x_discrete(expand = expansion(add = 1)) +
+    geom_jitter(data = df_jitter %>%
+                  slice_sample(n = min(100, df_jitter$N[1])), 
+                aes(y = abundance),
+                width = 0.35, size = 0.4, alpha = 0.1) + 
+    facet_grid(habitat ~ tools_db , scales = "free_x", space = "free_x") +
+    scale_y_continuous(labels = scales::comma, limits = c(0, lims_richness_max + 2)) + 
     scale_fill_manual(values = pal_7) +
     scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
     theme1 + 
     theme(panel.border = element_blank(),
-          strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 1),
+          strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 0),
           panel.grid.major.x = element_blank(),
           panel.grid.minor.x = element_blank(),
-          plot.margin = margin(5.5, 5.5, 5.5, 0, unit = "pt"))  
+          plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")) 
 }
 
 
 sup_rich_left <- 
-  (rich_plots[[1]] + theme(axis.text.x = element_blank()) + xlab("") + ylab("")) / 
+  ((rich_plots[[1]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
   (rich_plots[[2]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
   (rich_plots[[3]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("Richness")) /
   (rich_plots[[4]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) /
-  (rich_plots[[5]] + theme(strip.text.x = element_blank()) + xlab("") + ylab(""))
+  (rich_plots[[5]] + theme(strip.text.x = element_blank()) + xlab("") + ylab(""))) +
+  patchwork::plot_layout(heights = c(1, 1, 1, 1, 1))
 
 sup_rich_mid <- 
-  patchwork::plot_spacer() /
-  (rich_plots[[6]] + theme(axis.text.x = element_blank()) + xlab("") + ylab("")) / 
+  (patchwork::plot_spacer() /
+  (rich_plots[[6]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
   (rich_plots[[7]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) /
   (rich_plots[[8]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
-  (rich_plots[[9]] + theme(strip.text.x = element_blank()) + xlab("") + ylab(""))
+  (rich_plots[[9]] + theme(strip.text.x = element_blank()) + xlab("") + ylab(""))) +
+  patchwork::plot_layout(heights = c(1, 1, 1, 1, 1))
    
   
-
 sup_rich_right <- 
-  patchwork::plot_spacer() /
-  (rich_plots[[10]] + theme(axis.text.x = element_blank()) + xlab("") + ylab("")) / 
+  (patchwork::plot_spacer() /
+  (rich_plots[[10]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
   (rich_plots[[11]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) /
   (rich_plots[[12]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
-  (rich_plots[[13]] + theme(strip.text.x = element_blank()) + xlab("") + ylab("")) 
+  (rich_plots[[13]] + theme(strip.text.x = element_blank()) + xlab("") + ylab(""))) +
+  patchwork::plot_layout(heights = c(1, 1, 1, 1, 1))
 
 
-sup_rich <- ((sup_rich_left | sup_rich_mid | sup_rich_right) / 
-  patchwork::wrap_elements(full = g_legend(a0 + 
-                                             guides(fill = guide_legend(
-                                               override.aes = list(
-                                                 pattern = c(rep("none", 5),"stripe","none","stripe","none","stripe"),
-                                                 fill  = pal_10_q[1:10]),
-                                               nrow = 2), pattern = "none")))) +
-  patchwork::plot_layout(heights = c(8, 1))
+# sup_rich_top <- 
+#   ((rich_plots[[1]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) |
+#      (patchwork::plot_spacer()) |
+#         (patchwork::plot_spacer())) +
+#   patchwork::plot_layout(widths = c(1, 1, 1))
+# 
+# sup_rich_sec <- 
+#   ((rich_plots[[2]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) |
+#      (rich_plots[[6]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) |
+#      (rich_plots[[10]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab(""))) +
+#   patchwork::plot_layout(widths = c(1, 1, 1))
+# 
+# 
+# sup_rich_third <- 
+#   ((rich_plots[[3]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) |
+#      (rich_plots[[7]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) |
+#      (rich_plots[[11]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab(""))) +
+#   patchwork::plot_layout(widths = c(1, 1, 1))
+# 
+# sup_rich_fourth <- 
+#   ((rich_plots[[4]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) |
+#      (rich_plots[[8]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) |
+#      (rich_plots[[12]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab(""))) +
+#   patchwork::plot_layout(widths = c(1, 1, 1))
+# 
+# sup_rich_bottom <- 
+#   ((rich_plots[[5]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) |
+#      (rich_plots[[9]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) |
+#      (rich_plots[[13]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab(""))) +
+#   patchwork::plot_layout(widths = c(1, 1, 1))
+
+sup_rich <- sup_rich_left | sup_rich_mid | sup_rich_right 
 
 ggsave("code_R_analysis/output_plots/sup_richness.svg", sup_rich, width = 180, height = 180, unit = "mm")
 
@@ -1278,7 +1434,7 @@ for( j in 1:length(EN)){
     mutate(gene = factor(gene, levels = c(all_top_abundance, "other"))) %>%
     ungroup() %>% 
     group_by(habitat, sample, tool, gene) %>%
-    summarise(abundance = sum(abundance, richness = sum(richness)), texture = texture[1]) %>%
+    summarise(abundance = sum(abundance), richness = sum(richness), texture = texture[1]) %>%
     mutate(tools_labels = factor(tools_labels[tool], levels = tools_labels[!duplicated(tools_labels)]),
            texture = ifelse(tool %in% tools_texture, "yes", "no"),
            tools_db = factor(tools_db[tool], levels = tools_db[!duplicated(tools_db)]))
@@ -1337,7 +1493,18 @@ for( j in 1:length(EN)){
                              gsub("AMRFinderPlus", "AMRFinder-\nPlus", 
                                   gsub("RGI-DIAMOND", "RGI", basic_tools)))) +
     scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
-    facet_grid(gene ~ habitat, scales = "free", space = "free") +
+    facet_grid(gene ~ habitat, scales = "free", space = "free",
+               labeller = labeller(
+                 gene = as_labeller(function(x) {
+                   out <- ifelse(
+                     x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim", "vat", "mph", "qnr"),
+                     paste0("italic('", x, "')"),
+                     ifelse(x == "abcF", "ABC-F",
+                            paste0("'", x, "'"))
+                   )
+                   return(out)
+                 }, default = label_parsed)
+               )) + 
     xlab("Relative abundance") +
     ylab("") + 
     labs(fill = "") + 
@@ -1414,54 +1581,169 @@ ggsave("code_R_analysis/output_plots/sup_abundance_class_external_env.svg", sup_
 
 d2 <- d1 %>% mutate(texture = unigenes$texture[match(tool_ref, unigenes$tool)])
 
-cs11_sup <- ggplot(d2 %>% 
-                 filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
-                 filter(!tool_ref %in% c("DeepARG","fARGene", "RGI-DIAMOND")) %>% 
-                 filter(new_level %in% top_cso) %>%
-                 mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
-                 mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
-                 mutate(new_level = gsub("efflux pump","efflux", new_level)), 
-               aes(x = recall*100, y = new_level)) + 
-  geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture),
-               position = position_dodge2(preserve = "single"),
-               color = "black", outliers = FALSE) +
+cs11_sup <- ggplot(d1 %>% 
+                             filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
+                             #filter(tool_ref %in% c("DeepARG","fARGene", "RGI-DIAMOND")) %>% 
+                             filter(!new_level %in% top_cso) %>%
+                             mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
+                             mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
+                             mutate(new_level = gsub("efflux pump","efflux", new_level)), 
+                           aes(x = recall*100, y = 0)) + 
+  geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture2),
+                       position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
+                       width = 1.3, pattern_color = "black", pattern_fill = "black", pattern_density = 0.000000001,
+                       pattern_spacing = 0.2,
+                       pattern_size =  0.3, color = "black", outliers = FALSE, outlier.shape = NA, linewidth = 0.15) +
   scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
-  facet_grid(. ~ tool_ref, scales = "free_y") +
-  scale_fill_manual(values = pal_10_q[match(tools_levels[!tools_levels %in% c("DeepARG","fARGene", "RGI-DIAMOND")], tools_levels)]) +
-  scale_y_discrete(drop = FALSE) +
-  xlab("%") +
+  facet_grid(new_level ~ tools_labels_ref, scales = "free_y", space = "free",
+             labeller = labeller(
+               new_level = as_labeller(function(x) {
+                 out <- ifelse(
+                   x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "bah", "cpa", 
+                            "cpt", "dfr", "fai", "mel", "mgt","sat","sul","vph",
+                            "aac", "lnu", "nim", "vat", "mph", "qnr"),
+                   paste0("italic('", x, "')"),
+                   ifelse(x == "abcF", "ABC-F",
+                          paste0("'", x, "'"))
+                 )
+                 return(out)
+               }, default = label_parsed)
+             )) +
+  scale_fill_manual(values = pal_10_q)  + 
+  #scale_y_discrete(drop = FALSE) +
+  xlab("CSC %") +
   ylab("ARG class") + 
   theme_minimal() +
   theme5 +
   theme( panel.grid = element_blank(),
-         strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
-         strip.text.y = element_text(size = general_size, vjust = 0, hjust = 0.5))
+         strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5 , angle = 0),
+         strip.text.y = element_text(size = general_size, vjust = 0, hjust = 0, angle = 0),
+         panel.spacing = unit(5, "pt")) +
+  scale_y_discrete(labels = function(x) {
+    out <- ifelse(
+      x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
+      paste0("italic('", x, "')"),
+      ifelse(x %in% "abcF", "ABC-F",
+             paste0("'", x, "'"))
+    )
+    parse(text = out)
+  })
 
-cs11_sup
-
-cs2_sup <- ggplot(d2 %>% 
-                filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
-                filter(!tool_ref %in% c("RGI-DIAMOND", "fARGene","DeepARG")), #%>%
-              aes(x = recall*100, y = tool_comp)) + 
-  geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture),
-               position = position_dodge2(preserve = "single", width = 0, padding = 0), 
-               width = 0.5, color = "black", outliers = FALSE) +
-  facet_grid(tools_db_comp ~ tool_ref, scales = "free_y", space = "free") +
-  scale_fill_manual(values = pal_10_q[match(tools_levels[!tools_levels %in% c("DeepARG","fARGene", "RGI-DIAMOND")], tools_levels)]) +
-  scale_y_discrete(drop = T) +
-  xlab("%") +
-  ylab("Pipeline covered") +
-  theme_minimal() +
-  theme5 +
-  theme(panel.grid = element_blank(), 
-        plot.margin = margin(0, 10, 0, 0, unit = "pt"),
-        strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
-        strip.text.y = element_text(size = general_size, vjust = 0, hjust = 0))
-
-cs2_sup
+ggsave("code_R_analysis/output_plots/fig_csc_sup_class.svg", cs11_sup, width = 180, height = 200, unit = "mm")
 
 
-ggsave("code_R_analysis/output_plots/fig_csc_sup_class.svg", cs11_sup, width = 180, height = 110, unit = "mm")
-ggsave("code_R_analysis/output_plots/fig_csc_sup_tool.svg", cs2_sup, width = 180, height = 110, unit = "mm")
+
+### 
+
+
+core_class_human <- core %>% filter(cut == 0.5, cnt > 450, tool %in% basic_tools, habitat %in% "human gut") %>%
+  ungroup() %>%
+  group_by(X) %>% mutate(n_tool = ifelse(n_distinct(tool)==1,"Exclusive to the pipeline", "Found also in other pipelines")) %>% 
+  ungroup() %>% 
+  group_by(tool, n_tool, new_level) %>% 
+  summarise(n = n()) %>% 
+  mutate(tools_labels = factor(tools_labels[tool], levels =tools_labels_factor)) %>% 
+  mutate(r = ifelse(tool %in% basic_tools[c(2,3,4,6)], "1",
+                    ifelse(tool %in% basic_tools[c(7,8,9,10)], "2", "3"))) %>% 
+  mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
+  mutate(new_level = gsub("rifampin inactivation enzyme","RIF-inact. enz.", new_level)) %>%
+  #mutate(new_level = gsub("cell wall ","cell wall\n", new_level)) %>%
+  mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
+  mutate(new_level = gsub("efflux pump","efflux", new_level)) %>%
+  mutate(new_level = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", new_level)) %>%
+  mutate(new_level = gsub("target-modifying enzyme","target-modif.\nenzyme", new_level)) %>%
+  mutate(new_level = gsub("self-resistance","self-resistance", new_level)) 
+
+pcore1 <- ggplot(core_class_human %>% filter(r %in% "1"), aes(x = new_level, y = n, fill=n_tool)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  facet_grid(r~tools_labels, scales = "free_x") +
+  scale_x_discrete(labels = function(x) {
+    out <- ifelse(
+      x %in% c(c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
+               c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "bah", "cpa", 
+                 "cpt", "dfr", "fai", "mel", "mgt","sat","sul","vph",
+                 "aac", "lnu", "nim", "vat", "mph", "qnr")),
+      paste0("italic('", x, "')"),
+      ifelse(x %in% "abcF", "ABC-F",
+             paste0("'", x, "'"))
+    )
+    parse(text = out)
+  }) +
+  ylab("Number of ARGs") +
+  xlab("") +
+  scale_fill_manual(values = brewer.pal(8, "Dark2")[c(1,2)]) +#, 
+  theme1 +
+  theme(
+        strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5),
+        axis.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 1),
+        strip.text.y = element_blank(),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")) 
+
+
+pcore2 <- ggplot(core_class_human %>% filter(r %in% "2"), aes(x = new_level, y = n, fill=n_tool)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  facet_grid(r~tools_labels, scales = "free_x") +
+  scale_x_discrete(labels = function(x) {
+    out <- ifelse(
+      x %in% c(c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
+               c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "bah", "cpa", 
+                 "cpt", "dfr", "fai", "mel", "mgt","sat","sul","vph",
+                 "aac", "lnu", "nim", "vat", "mph", "qnr")),
+      paste0("italic('", x, "')"),
+      ifelse(x %in% "abcF", "ABC-F",
+             paste0("'", x, "'"))
+    )
+    parse(text = out)
+  }) +
+  ylab("Number of ARGs") +
+  xlab("") +
+  scale_fill_manual(values = brewer.pal(8, "Dark2")[c(1,2)]) +#, 
+  theme1 +
+  theme(
+    axis.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 1),
+    strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5),
+    strip.text.y = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")) 
+
+
+pcore3 <- ggplot(core_class_human %>% filter(r %in% "3"), aes(x = new_level, y = n, fill=n_tool)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  facet_grid(r~tools_labels, scales = "free_x") +
+  scale_x_discrete(labels = function(x) {
+    out <- ifelse(
+      x %in% c(c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
+               c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "bah", "cpa", 
+                 "cpt", "dfr", "fai", "mel", "mgt","sat","sul","vph",
+                 "aac", "lnu", "nim", "vat", "mph", "qnr")),
+      paste0("italic('", x, "')"),
+      ifelse(x %in% "abcF", "ABC-F",
+             paste0("'", x, "'"))
+    )
+    parse(text = out)
+  }) +
+  ylab("Number of ARGs") +
+  xlab("") +
+  scale_fill_manual(values = brewer.pal(8, "Dark2")[c(1,2)]) +#, 
+  theme1 +
+  theme(
+    axis.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 1),
+    strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5),
+    strip.text.y = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")) 
+
+
+
+core_human_all <- ((pcore1)  / 
+    (pcore2) /
+    (pcore3 + labs(fill = "") + theme(legend.position = "bottom"))) + patchwork::plot_layout(widths = c(4,4,2))
+
+
+ggsave("code_R_analysis/output_plots/fig_human_core.svg", core_human_all, width = 180, height = 180, unit = "mm")
 
 
