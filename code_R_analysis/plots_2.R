@@ -240,7 +240,20 @@ unigenes <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome
 # Jaccard index, recall/class specific concordance, fnr/class specific non-overlap
 # per class and tool
 recall_fnr <- create_class_overlaps(unigenes)
+#recall_fnr0 <- recall_fnr
 
+#recall_fnr2 <- recall_fnr %>% left_join(recall_fnr0, by = c("tool_ref","tool_comp","new_level"))
+#recall_fnr2[recall_fnr2$recall.x != recall_fnr2$recall.y,]
+
+#max(abs(recall_fnr2$recall.x[recall_fnr2$tool_ref %in% basic_tools & recall_fnr2$tool_comp %in% basic_tools] - recall_fnr2$recall.y[recall_fnr2$tool_ref %in% basic_tools & recall_fnr2$tool_comp %in% basic_tools]), na.rm = T)
+
+#check_csc <- data.frame(recall_fnr2 %>% filter(tool_ref != tool_comp, tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>% 
+#  mutate(recall_diff = abs(recall.x - recall.y)) %>% arrange(desc(recall_diff)) %>% 
+#  filter(recall_diff > 0) %>% 
+#  group_by(tool_ref, new_level) %>% 
+#  summarise(n_changes = n(), cummulative_error = round(sum(recall_diff),3), max_error = round(max(recall_diff),3)))
+
+#write.csv(check_csc, file = "~/Documents/revised_csc.csv", row.names = F)
 
 # per tool
 JI_all <- return_overlap_tools(unigenes)
@@ -615,7 +628,7 @@ for(j in 1:length(EN)){
 main_abundance_left <- 
   #(abu_plots[[1]] + theme(axis.text.x = element_blank(), strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5)) + xlab("") + ylab("") + ggtitle("a")) / 
   ((abu_plots[[1]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("") + ggtitle("a")) / 
-  (abu_plots[[10]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") +  ylab("Relative abundance")) /
+  (abu_plots[[10]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") +  ylab("Relative abundance\n(aligned reads per million)")) /
   (abu_plots[[11]] + theme(strip.text.x = element_blank()) + xlab("") + ylab("")))  + patchwork::plot_layout(heights = c(1,1,1))
   
 main_abundance_right <- 
@@ -684,7 +697,7 @@ a0 <- df_a0 %>%
                  return(out)
                }, default = label_parsed)
              )) + 
-  xlab("Relative abundance") +
+  xlab("Relative abundance\n(aligned reads per million)") +
   scale_x_continuous(labels = scales::comma, expand = c(0,0)) +
   ylab("") + 
   labs(fill = "") + 
@@ -704,7 +717,7 @@ a0 <- df_a0 %>%
       pattern = c(rep("none", 5),"stripe","none","stripe","none","stripe"),
       fill  = pal_10_q[1:10])), pattern = "none")
 
-a0
+#a0
 
 left_block <- (left1/patchwork::wrap_elements(full = g_legend(a0))) + patchwork::plot_layout(heights = c(15,1))
 p30 <- (left_block | (a0 + theme(legend.position = "none"))) + patchwork::plot_layout(widths = c(4,1))
@@ -716,7 +729,7 @@ ggsave("code_R_analysis/output_plots/fig2.svg", p30, width = 180, height = 130, 
 
 sup_abundance_left <- 
   (abu_plots[[2]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
-  (abu_plots[[3]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("Relative abundance")) /
+  (abu_plots[[3]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("Relative abundance\n(aligned reads per million)")) /
   (abu_plots[[4]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) /
   (abu_plots[[5]] + theme(strip.text.x = element_blank()) + xlab("") + ylab(""))
 
@@ -919,7 +932,7 @@ cs11 <- ggplot(d1 %>%
              )) +
   scale_fill_manual(values = pal_10_q)  + 
   #scale_y_discrete(drop = FALSE) +
-  xlab("CSC %") +
+  xlab("Class-specific coverage (%)") +
   ylab("ARG class") + 
   theme_minimal() +
   theme5 +
@@ -1213,10 +1226,10 @@ plot_megares <- (abricate_plot + ggtitle("c")) / megares_plot
 #  abricate_meg1 + xlab("% of ARGs")
 
   
-overlap_all_plots <- (plot_overlaps_same_tool | 
- plot_db ) +  patchwork::plot_layout(widths = c(1, 1)) / 
-(((abricate_plot + ggtitle("d")) | megares_plot) + patchwork::plot_layout(widths = c(1, 1))) + 
-  patchwork::plot_layout(heights = c(2, 1))
+#overlap_all_plots <- (plot_overlaps_same_tool | 
+# plot_db ) +  patchwork::plot_layout(widths = c(1, 1)) / 
+#(((abricate_plot + ggtitle("d")) | megares_plot) + patchwork::plot_layout(widths = c(1, 1))) + 
+#  patchwork::plot_layout(heights = c(2, 1))
 
 overlap_all_plots <- (plot_overlaps_same_tool / abricate_plot + ggtitle("d")) + patchwork::plot_layout(heights = c(1,1,1,1,1)) |
 (plot_db / megares_plot + ggtitle("e")) + patchwork::plot_layout(heights = c(1,1,1,1))
@@ -1505,7 +1518,7 @@ for( j in 1:length(EN)){
                    return(out)
                  }, default = label_parsed)
                )) + 
-    xlab("Relative abundance") +
+    xlab("Relative abundance\n(aligned reads per million)") +
     ylab("") + 
     labs(fill = "") + 
     scale_x_continuous(labels = scales::comma, expand = c(0,0)) +
@@ -1657,6 +1670,7 @@ core_class_human <- core %>% filter(cut == 0.5, cnt > 450, tool %in% basic_tools
 pcore1 <- ggplot(core_class_human %>% filter(r %in% "1"), aes(x = new_level, y = n, fill=n_tool)) +
   geom_bar(stat = "identity", width = 0.8) +
   facet_grid(r~tools_labels, scales = "free_x") +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
   scale_x_discrete(labels = function(x) {
     out <- ifelse(
       x %in% c(c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
@@ -1685,6 +1699,7 @@ pcore1 <- ggplot(core_class_human %>% filter(r %in% "1"), aes(x = new_level, y =
 pcore2 <- ggplot(core_class_human %>% filter(r %in% "2"), aes(x = new_level, y = n, fill=n_tool)) +
   geom_bar(stat = "identity", width = 0.8) +
   facet_grid(r~tools_labels, scales = "free_x") +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
   scale_x_discrete(labels = function(x) {
     out <- ifelse(
       x %in% c(c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
@@ -1713,6 +1728,7 @@ pcore2 <- ggplot(core_class_human %>% filter(r %in% "2"), aes(x = new_level, y =
 pcore3 <- ggplot(core_class_human %>% filter(r %in% "3"), aes(x = new_level, y = n, fill=n_tool)) +
   geom_bar(stat = "identity", width = 0.8) +
   facet_grid(r~tools_labels, scales = "free_x") +
+  scale_y_continuous(breaks = scales::pretty_breaks()) +
   scale_x_discrete(labels = function(x) {
     out <- ifelse(
       x %in% c(c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
@@ -1747,3 +1763,91 @@ core_human_all <- ((pcore1)  /
 ggsave("code_R_analysis/output_plots/fig_human_core.svg", core_human_all, width = 180, height = 180, unit = "mm")
 
 
+
+
+# tool_queries <- unigenes %>% filter(tool %in% basic_tools) %>% 
+#   distinct(tool, query)
+# 
+# 
+# tool_queries_summary <- unigenes %>%
+#   distinct(tool, new_level, query) %>%
+#   group_by(tool, new_level) %>%
+#   summarise(queries = list(query), .groups = "drop") %>%
+#   tidyr::crossing(tool2 = basic_tools) %>% 
+#   mutate(
+#     prop = mapply(function(q, t2) {
+#       other_q <- unigenes$query[unigenes$tool == t2]
+#       length(intersect(q, other_q)) / length(unique(other_q))
+#     }, queries, tool2))
+# 
+# 
+# 
+# tool_queries_summary
+# 
+# 
+# 
+# tool_queries_summary <- tool_queries_summary %>% 
+#   mutate(tool_ref = tool, tool_comp = tool2) %>% 
+#   mutate(tool_ref = factor(as.character(tool_ref), 
+#                            levels = tools_levels)) %>% 
+#   mutate(texture = ifelse(tool_comp %in% tools_texture, "yes", "no")) %>%
+#   mutate(texture2 = ifelse(tool_ref %in% tools_texture, "yes", "no")) %>%
+#   mutate(facet_var = gsub("-", "-\n", tool_ref)) %>%
+#   mutate(facet_var = gsub(" ", "\n", facet_var)) %>%
+#   mutate(facet_var = gsub("Plus", "\n Plus", facet_var)) %>%
+#   mutate(facet_var = fct_reorder(facet_var, as.numeric(tool_ref)))  %>% 
+#   mutate(val = prop, d = "csc") %>% 
+#   mutate(tools_labels_comp = factor(tools_labels[tool_comp], levels = tools_labels_factor),
+#          texture_comp = ifelse(tool_comp %in% tools_texture, "yes", "no"),
+#          tools_db_comp = factor(tools_db[tool_comp], levels = tools_db_factor)) %>% 
+#   mutate(tools_labels_comp = factor(gsub("-\n","",tools_labels_comp), levels = gsub("-\n","", levels(tools_labels_comp)))) %>%
+#   mutate(tools_labels_ref = factor(tools_labels[tool_ref], levels = tools_labels_factor))
+# 
+# 
+# 
+# 
+# cs12 <- ggplot(tool_queries_summary %>% 
+#                  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
+#                  filter(new_level %in% top_cso) %>%
+#                  mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
+#                  mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
+#                  mutate(new_level = gsub("efflux pump","efflux", new_level)), 
+#                aes(x = prop*100, y = 0)) + 
+#   geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture2),
+#                        position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
+#                        width = 1.3, pattern_color = "black", pattern_fill = "black", pattern_density = 0.000000001,
+#                        pattern_spacing = 0.2,
+#                        pattern_size =  0.3, color = "black", outliers = FALSE, outlier.shape = NA, linewidth = 0.15) +
+#   scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+#   facet_grid(new_level ~ tools_labels_ref, scales = "free_y", space = "free",
+#              labeller = labeller(
+#                new_level = as_labeller(function(x) {
+#                  out <- ifelse(
+#                    x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim", "vat", "mph", "qnr"),
+#                    paste0("italic('", x, "')"),
+#                    ifelse(x == "abcF", "ABC-F",
+#                           paste0("'", x, "'"))
+#                  )
+#                  return(out)
+#                }, default = label_parsed)
+#              )) +
+#   scale_fill_manual(values = pal_10_q)  + 
+#   xlab("CSC %") +
+#   ylab("ARG class") + 
+#   theme_minimal() +
+#   theme5 +
+#   theme( panel.grid = element_blank(),
+#          strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5 , angle = 0),
+#          strip.text.y = element_text(size = general_size, vjust = 0, hjust = 0, angle = 0),
+#          panel.spacing = unit(5, "pt")) +
+#   scale_y_discrete(labels = function(x) {
+#     out <- ifelse(
+#       x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
+#       paste0("italic('", x, "')"),
+#       ifelse(x %in% "abcF", "ABC-F",
+#              paste0("'", x, "'"))
+#     )
+#     parse(text = out)
+#   })
+# 
+# cs12

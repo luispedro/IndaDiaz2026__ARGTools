@@ -94,10 +94,13 @@ gene_classes <- setNames(as.list(gene_classes$new), gene_classes$old)
 new_intersect_lists <- function(qc_ref, q_ref, qc_comp, q_comp){
   A <- unlist(qc_ref)
   B <- unlist(q_ref)
+  A_complement <- setdiff(B, A)
   C <- unlist(qc_comp)
   D <- unlist(q_comp)
-  comp_class <- C[!C %in% setdiff(B, A)] # remove from the class in the comparison tool those found in a different class in reference tool
-  comp_class <- c(comp_class, D[D %in% intersect(setdiff(D, B), A)]) # complement class in comparison tool those genes found in a different class but they are in the right class in reference tool
+  C_complement <- setdiff(D, C)
+  x1 <- intersect(C_complement, A) # genes in a different class in comparison group but right class in reference group
+  x2 <- setdiff(C, A_complement) # genes in the right class in comparison group and not in any other class in reference group
+  comp_class <- unique(union(x1, x2))
   r <- ifelse(length(A) == 0 & length(comp_class) == 0, NA, 
               ifelse(length(A) == 0 & length(comp_class) != 0, NA, 
               ifelse(length(A) != 0 & length(comp_class) == 0, NA, 
@@ -105,19 +108,19 @@ new_intersect_lists <- function(qc_ref, q_ref, qc_comp, q_comp){
   return(r)
 }
 
-new_difference_list <- function(qc_ref, q_ref, qc_comp, q_comp){
-  A <-  unlist(qc_ref)
-  B <- unlist(q_ref)
-  C <- unlist(qc_comp)
-  D <- unlist(q_comp)
-  comp_class <- C[!C %in% setdiff(B, A)] # remove from the class in the comparison tool those found in a different class in reference tool
-  comp_class <- c(comp_class, D[D %in% intersect(setdiff(D, B), A)]) # complement class in comparison tool those genes found in a different class but they are in the right class in reference tool
-  r <- ifelse(length(A) == 0 & length(comp_class) == 0, NA, 
-       ifelse(length(A) == 0 & length(comp_class) != 0, NA, 
-       ifelse(length(A) != 0 & length(comp_class) == 0, NA, 
-       length(setdiff(A, comp_class)) / length(A))))
-  return(r)
-}
+# new_difference_list <- function(qc_ref, q_ref, qc_comp, q_comp){
+#   A <-  unlist(qc_ref)
+#   B <- unlist(q_ref)
+#   C <- unlist(qc_comp)
+#   D <- unlist(q_comp)
+#   comp_class <- C[!C %in% setdiff(B, A)] # remove from the class in the comparison tool those found in a different class in reference tool
+#   comp_class <- c(comp_class, D[D %in% intersect(setdiff(D, B), A)]) # complement class in comparison tool those genes found in a different class but they are in the right class in reference tool
+#   r <- ifelse(length(A) == 0 & length(comp_class) == 0, NA, 
+#        ifelse(length(A) == 0 & length(comp_class) != 0, NA, 
+#        ifelse(length(A) != 0 & length(comp_class) == 0, NA, 
+#        length(setdiff(A, comp_class)) / length(A))))
+#   return(r)
+# }
 
 create_class_overlaps <- function(unigenes){
   tools_per_unigene <- unigenes %>% ungroup()  %>% 
@@ -153,7 +156,7 @@ create_class_overlaps <- function(unigenes){
     rowwise() %>%
     mutate(recall = new_intersect_lists(qc_ref, q_ref, qc_comp, q_comp)) %>% 
     rowwise() %>% 
-    mutate(fnr = new_difference_list(qc_ref, q_ref, qc_comp, q_comp)) %>% 
+    #mutate(fnr = new_difference_list(qc_ref, q_ref, qc_comp, q_comp)) %>% 
     mutate(ref_n_class = length(qc_ref), comp_n_class = length(qc_comp), ref_n_all = length(q_ref), comp_n_all = length(q_comp)) %>% 
     ungroup() %>% 
     filter(tool_ref != tool_comp) %>% 
@@ -177,79 +180,11 @@ return_overlap_tools <- function(unigenes) {
     rename(values2 = query) %>%
     mutate(jaccard = map2_dbl(values1, values2, ~ length(intersect(.x, .y)) / length(union(.x, .y)))) %>%
     mutate(recall = map2_dbl(values1, values2, ~ length(intersect(.x, .y)) / length( .y))) %>%
-    mutate(fnr = map2_dbl(values1, values2, ~ length(setdiff(.x, .y)) / length( .x))) %>%
-    select(tool_ref, tool_comp, jaccard, recall, fnr) 
+    #mutate(fnr = map2_dbl(values1, values2, ~ length(setdiff(.x, .y)) / length( .x))) %>%
+    #select(tool_ref, tool_comp, jaccard, recall, fnr) 
+    select(tool_ref, tool_comp, jaccard, recall) 
   
   return(JI_all)
   
 }
-
-new_union <- function(qc_ref, q_ref, qc_comp, q_comp){
-  A <-  unlist(qc_ref)
-  B <- unlist(q_ref)
-  C <- unlist(qc_comp)
-  D <- unlist(q_comp)
-  x <- intersect(A, setdiff(D, C))
-  y <- setdiff(C, intersect(C, setdiff(B, A)))
-  z <- union(x, y)
-  d <- union(A, z)
-  r <- ifelse(length(d) == 0, 0, length(d))
-  return(r)
-}
-
-new_intersect2 <- function(qc_ref, q_ref, qc_comp, q_comp){
-  A <-  unlist(qc_ref)
-  B <- unlist(q_ref)
-  C <- unlist(qc_comp)
-  D <- unlist(q_comp)
-  x <- intersect(A, setdiff(D, C))
-  y <- setdiff(C, intersect(C, setdiff(B, A)))
-  z <- union(x, y)
-  d <- intersect(A, z)
-  r <- ifelse(length(z) == 0, NA, length(d))
-  return(r)
-}
-
-
-create_class_overlaps_core <- function(core, cut_threshold, count_threshold, habitat){
-  sets0 <- core %>% 
-    filter(cut %in% cut_threshold & cnt > count_threshold, habitat %in% habitat) %>%
-    group_by(tool) %>%
-    summarise(query = list(X), .groups = "drop")
-  
-  sets1 <- core %>% 
-    filter(cut %in% cut_threshold & cnt > count_threshold, habitat %in% habitat) %>%
-    group_by(new_level, tool) %>%
-    summarise(query = list(X), .groups = "drop")
-  
-  pairwise <- sets1 %>%
-    group_by(new_level) %>%
-    summarise(pairs = list(expand_grid(tool_ref = tool, tool_comp = tool)), .groups = "drop") %>%
-    unnest(pairs)
-  
-  JI_core_class <- pairwise %>%
-    left_join(sets1, by = c("new_level", "tool_ref" = "tool")) %>%
-    rename(qc_ref = query) %>%
-    left_join(sets1, by = c("new_level", "tool_comp" = "tool")) %>%
-    rename(qc_comp = query) %>%
-    left_join(sets0, by = c( "tool_ref" = "tool")) %>%
-    rename(q_ref = query) %>% 
-    left_join(sets0, by = c( "tool_comp" = "tool")) %>%
-    rename(q_comp = query)
-  
-  JI_core_class <- JI_core_class %>% 
-    rowwise() %>% 
-    mutate(recall = new_intersect_lists(qc_ref, q_ref, qc_comp, q_comp)) %>% 
-    mutate(fnr = new_difference_list(qc_ref, q_ref, qc_comp, q_comp)) %>%
-    mutate(union = new_union(qc_ref, q_ref, qc_comp, q_comp)) %>%
-    mutate(intersect = new_intersect2(qc_ref, q_ref, qc_comp, q_comp)) %>%
-    mutate(ref_n_class = length(qc_ref), comp_n_class = length(qc_comp), ref_n_all = length(q_ref), comp_n_all = length(q_comp)) %>%
-    mutate(jaccard = intersect / union) %>% 
-    ungroup() %>% 
-    filter(tool_ref != tool_comp) %>% 
-    select(-c(qc_ref, qc_comp, q_ref, q_comp))
-  
-  return(JI_core_class)
-}
-
 
