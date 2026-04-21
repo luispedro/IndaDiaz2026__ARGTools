@@ -4,7 +4,7 @@
 
 ## Overview
 
-This repository contains the R scripts used to generate figures and analysis results. The pipeline covers:
+This repository contains the R scripts used to generate figures and analysis results. It covers:
 
 ---
 
@@ -62,13 +62,13 @@ All commands should be run from the **project root** (`IndaDiaz2026__ARGTools/`)
 ### Running the Scripts
 
 ```bash
-+ Generate all figures
+# 1. Generate all figures
 pixi run Rscript code_R_analysis/plots_2.R
 
-+ Generate data files for Zenodo
+# 2. Generate data files for Zenodo
 pixi run Rscript code_R_analysis/generate_data_to_zenodo.R
 
-+ Prepare Shiny app data
+# 3. Prepare Shiny app data
 pixi run Rscript code_R_analysis/data_for_shinny.R
 ```
 
