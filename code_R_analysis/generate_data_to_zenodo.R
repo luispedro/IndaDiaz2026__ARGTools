@@ -8,7 +8,7 @@ options(dplyr.summarise.inform = FALSE)
 
 
 # results per individual tool 
-lst <- readRDS("code_R_analysis/output_abundance_diversity_resistome/results_tools.rds")
+lst <- readRDS("code_R_analysis/output_abundance_diversity_resistome/results_tools_all_GMGC.rds")
 
 # metagenomes' metadata
 metadata <- read.delim("data/metadata_GMGC10.sample.meta.tsv")
@@ -34,5 +34,12 @@ lapply(names(lst2), function(nm) {
 write.csv(abundance, file = gzfile("code_R_analysis/data_to_Zenodo/abundance_richness.csv.gz"), row.names = F)
 write.csv(metadata, file = "code_R_analysis/data_to_Zenodo/metagenomes_metadata.csv", row.names = F)
 write.csv(conversion_file, file = "code_R_analysis/data_to_Zenodo/conversion_aro_geneclass.csv", row.names = F)
+
+
+reported_unigenes_as_ARG_per_habitat <- read.delim("code_R_analysis/output_abundance_diversity_resistome/reported_unigenes_as_ARG_per_habitat.csv", sep = ",")
+reported_unigenes_as_ARG_per_habitat <- reported_unigenes_as_ARG_per_habitat %>% rename(unigene = X)
+
+write.csv(reported_unigenes_as_ARG_per_habitat, file = "code_R_analysis/data_to_Zenodo/reported_unigenes_as_ARG_per_habitat.csv", row.names = F)
+
 
 

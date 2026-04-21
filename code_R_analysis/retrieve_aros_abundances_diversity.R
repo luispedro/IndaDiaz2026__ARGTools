@@ -1081,6 +1081,33 @@ lst$fargene.prot <- lst$fargene.prot %>%
 
 rm(list = setdiff(ls(), "lst"))
 
+
+lst$deeparg.norm.id70 <- lst$deeparg.norm[lst$deeparg.norm$id>=70,]
+lst$deeparg.norm.id70$tool <- "DeepARG70"
+lst$deeparg.norm.id80 <- lst$deeparg.norm[lst$deeparg.norm$id>=80,]
+lst$deeparg.norm.id80$tool <- "DeepARG80"
+lst$deeparg.norm.id90 <- lst$deeparg.norm[lst$deeparg.norm$id>=90,]
+lst$deeparg.norm.id90$tool <- "DeepARG90"
+
+lst$rgi.diamond.id70 <- lst$rgi.diamond[lst$rgi.diamond$id>=70,]
+lst$rgi.diamond.id70$tool <- "RGI-DIAMOND70"
+lst$rgi.diamond.id80 <- lst$rgi.diamond[lst$rgi.diamond$id>=80,]
+lst$rgi.diamond.id80$tool <- "RGI-DIAMOND80"
+lst$rgi.diamond.id90 <- lst$rgi.diamond[lst$rgi.diamond$id>=90,]
+lst$rgi.diamond.id90$tool <- "RGI-DIAMOND90"
+
+
+# save the result of all tools
+saveRDS(lst,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools_all_GMGC.rds", compress = T)
+
+lst$deeparg.norm.id70 <- NULL
+lst$deeparg.norm.id80 <- NULL
+lst$deeparg.norm.id90 <- NULL
+lst$rgi.diamond.id70 <- NULL
+lst$rgi.diamond.id80 <- NULL
+lst$rgi.diamond.id90 <- NULL
+
+
 ################################################################################################################################################
 ################################################################################################################################################
 ################################################################################################################################################
@@ -1110,6 +1137,10 @@ genes_right_habitat <- abund_habitat %>%
   ungroup() %>%
   distinct() %>%
   pull(X)
+
+detected_unigenes_per_habitat <- abund_habitat %>% group_by(X, habitat) %>% slice_head(n = 1) %>% select(-sample)
+write.csv(detected_unigenes_per_habitat, file = "code_R_analysis/output_abundance_diversity_resistome/reported_unigenes_as_ARG_per_habitat.csv", row.names = F)
+rm(detected_unigenes_per_habitat)
 
 lst <- lapply(lst, function(x) x %>% filter(query %in% genes_right_habitat))
 

@@ -24,7 +24,7 @@ The outputs of DeepARG, AMRFinderPlus, ABRicate, and ResFinder were processed wi
 
 ### Output from ARG detection pipelines
 
-Each file is located in the folder `pipelines_output`. The result of each individual pipeline, after processing them with argNorm (except for fARGene), and adding their manually curated class. 
+Each file is located in the folder `pipelines_output`. The result of each individual pipeline, after processing them with argNorm (except for fARGene), and adding their manually curated class. We include all unigenes from the Global Microbial Gene Catalog v1.0 ([GMGC](https://gmgc.embl.de/)) reported as ARG by the tools. 
 
 For each pipeline, we add the columns from argNorm (we direct the reader to argNorm):
 
@@ -63,6 +63,8 @@ Pipeline abbreviations:
 - ABRicate-ResFinder: ABRicate tool using ResFinder reference database
 
 Note: the pipelines DeepARG70, DeepARG80, DeepARG90, RGI-DIAMOND70, RGI-DIAMOND80, and RGI-DIAMOND90 were added to the abundance file to calculate aggregated abundance and richness by gene class, first filtering genes at 70%, 80%, and 90% identity. 
+
+The list of unigenes per habitat reported as ARG by any pipeline is found in the file `reported_unigenes_as_ARG_per_habitat.csv`. 
 
 ### Conversion and aggregation of AROs to gene classes
 

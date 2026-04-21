@@ -1624,7 +1624,7 @@ cs11_sup <- ggplot(d1 %>%
              )) +
   scale_fill_manual(values = pal_10_q)  + 
   #scale_y_discrete(drop = FALSE) +
-  xlab("CSC %") +
+  xlab("Class-specific coverage (%)") +
   ylab("ARG class") + 
   theme_minimal() +
   theme5 +
