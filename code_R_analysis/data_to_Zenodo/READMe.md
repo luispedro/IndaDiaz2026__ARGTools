@@ -25,7 +25,6 @@ ARG detection was performed using:
 | ResFinder (v2.4.0) | https://github.com/cadms/resfinder | 
 | ABRicate v1.0.1, databases: ARG-ANNOT, CARD, MEGARes v2.0, ResFinder, and NCBI (all updated 2025-01-14) | https://github.com/tseemann/ABRICATE |  
 
----
 
 ## Normalization
 
@@ -57,7 +56,6 @@ As well as resistance ontology mapping:
 
 **Pipeline identifiers.** Pipeline names encode tool, database, and sequence type (nucleotide or amino acid). Additional filtered variants (70/80/90% identity thresholds) were used for analyses.
 
----
 
 ### 2. Unified ARG unigene list
 
@@ -65,7 +63,6 @@ As well as resistance ontology mapping:
 
 List of all unigenes detected as ARGs by any pipeline, stratified by habitat.
 
----
 
 ### 3. Ontology mapping
 
@@ -81,7 +78,6 @@ The columns include:
 - Parent\_Label: description of the Parent\_ID
 - geneclass: manually curated gene class
 
----
 
 ### 4. Abundance and richness
 
@@ -98,7 +94,6 @@ Columns:
 - richness: rarefied ARG diversity, number of unique unigenes detected as ARG each metagenomic sample
 - richness\_no\_rarified: aw ARG diversity
 
----
 
 ### 5. Unigene-level abundance
 
@@ -106,7 +101,6 @@ Columns:
 
 Abundance of individual ARG-associated unigenes ([GMGC](https://gmgc.embl.de/) format), scaled per 10 million reads per metagenome.
 
----
 
 ### 6. Metadata
 
@@ -117,11 +111,4 @@ Columns:
 - habitat
 - insertsHQ: high-quality reads
 
----
-
-## Repository purpose
-
-This dataset supports analyses of how ARG detection pipelines influence:
-- abundance and richness of ARGs across habitats
-- pan- and core-resistome size and composition  
 
