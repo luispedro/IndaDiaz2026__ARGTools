@@ -1,11 +1,20 @@
 
-# File descriptions
 
-## Software
+# Antibiotic resistance gene detection on the Global Microbial Gene Catalog
 
-### Tools and databases 
+## Overview
 
-The tools and databases used to detect ARGs are listed below.
+This dataset contains antibiotic resistance gene (ARG) detection results from unigenes in the Global Microbial Gene Catalog v1.0 ([GMGC](https://gmgc.embl.de/)) using multiple widely used detection pipelines (including DeepARG, RGI, fARGene, ResFinder, AMRFinderPlus, and ABRicate with multiple databases).
+
+Outputs were harmonized using argNorm and manually curated, estimations of ARG abundance and richness as well as pan- and core-resistome were done across 11,519 metagenomic samples spanning 13 habitats (human-associated, animal-associated, and environmental), at the ARG class level. 
+
+This resource supports comparative analyses of how ARG detection pipelines influence resistome interpretation.
+
+---
+
+## Tools and databases 
+
+ARG detection was performed using:
 
 | **Tool** | **Availability** | 
 | :---: | :---: | 
@@ -16,90 +25,103 @@ The tools and databases used to detect ARGs are listed below.
 | ResFinder (v2.4.0) | https://github.com/cadms/resfinder | 
 | ABRicate v1.0.1, databases: ARG-ANNOT, CARD, MEGARes v2.0, ResFinder, and NCBI (all updated 2025-01-14) | https://github.com/tseemann/ABRICATE |  
 
-### Normalization
+---
 
-The outputs of DeepARG, AMRFinderPlus, ABRicate, and ResFinder were processed with [argNorm v1.0.0](https://github.com/BigDataBiology/argNorm).
+## Normalization
 
-## Datasets
+Outputs from DeepARG, AMRFinderPlus, ABRicate, and ResFinder were standardized using [argNorm v1.0.0](https://github.com/BigDataBiology/argNorm).
 
-### Output from ARG detection pipelines
+---
 
-Each file is located in the folder `pipelines_output`. The result of each individual pipeline, after processing them with argNorm (except for fARGene), and adding their manually curated class. We include all unigenes from the Global Microbial Gene Catalog v1.0 ([GMGC](https://gmgc.embl.de/)) reported as ARG by the tools. 
+## Datasets contents
 
-For each pipeline, we add the columns from argNorm (we direct the reader to argNorm):
+### 1. Pipeline outputs 
 
-- ARO
-- ARO_name
-- Cut_Off
-- confers_resistance_to
-- confers_resistance_to_names
-- resistance_to_drug_classes
-- resistance_to_drug_classes_names
+`pipelines_output/pipeline`
 
-And from the manual curation of gene classes:
+Contains ARG predictions per pipeline after normalization and manual curation.
 
-- pipeline: internal pipeline name
+Each record includes:
+
+- ARO: identifiers for the reported unigene (after normalization)
+- ARO\_name: (ARO identifier annotation)
+- pipeline: pipeline identifier
 - id: standardize name for the identity level column
+
+As well as resistance ontology mapping:
+
 - parent: first level of ARO aggregation
-- parent_description: description of the first level of aggregation
-- geneclass_argcompare: gene class - final level of aggregation, should perhaps rename it, in the abundance file it’s called gene class
+- parent\_description: description of the first level of aggregation
+- geneclass\_argcompare: gene class - final level of aggregation, should perhaps rename it, in the abundance file it’s called gene class
 
-Pipeline abbreviations:
 
-- DeepARG: DeepARG tool in nucleotide format
-- DeepARG-aa: DeepARG tool in amino acid format
-- fARGene: fARGene tool in nucleotide format
-- fARGene-aa: fARGene tool in amino acid format
-- RGI-DIAMOND: RGI tool in nucleotide format using DIAMOND aligner
-- RGI-DIAMOND-aa: RGI tool in amino acid format using DIAMOND aligner
-- RGI-BLAST: RGI tool in nucleotide format using BLAST aligner
-- AMRFinderPlus: AMRFinderPlus tool in amino acid format
-- AMRFinderPlus-nt: AMRFinderPlus tool in nucleotide format
-- ResFinder: ResFinder tool in nucleotide format
-- ABRicate-ARGANNOT: ABRicate tool using ARGANNOT reference database
-- ABRicate-CARD: ABRicate tool using CARD reference database
-- ABRicate-MEGARes: ABRicate tool using MEGARes reference database
-- ABRicate-NCBI: ABRicate tool using NCBI reference database
-- ABRicate-ResFinder: ABRicate tool using ResFinder reference database
+**Pipeline identifiers.** Pipeline names encode tool, database, and sequence type (nucleotide or amino acid). Additional filtered variants (70/80/90% identity thresholds) were used for analyses.
 
-Note: the pipelines DeepARG70, DeepARG80, DeepARG90, RGI-DIAMOND70, RGI-DIAMOND80, and RGI-DIAMOND90 were added to the abundance file to calculate aggregated abundance and richness by gene class, first filtering genes at 70%, 80%, and 90% identity. 
+---
 
-The list of unigenes per habitat reported as ARG by any pipeline is found in the file `reported_unigenes_as_ARG_per_habitat.csv`. 
+### 2. Unified ARG unigene list
 
-### Conversion and aggregation of AROs to gene classes
+`reported_unigenes_as_ARG_per_habitat.csv`
 
-The mapping of the AROs after argNorm to their parent level and the gene classes used here is found in the file `conversion_aro_geneclass.csv`. AROs were manually added to fARGene.
+List of all unigenes detected as ARGs by any pipeline, stratified by habitat.
+
+---
+
+### 3. Ontology mapping
+
+`conversion_aro_geneclass.csv`
+
+Maps ARO terms to hierarchical ontology levels and curated ARG classes.
 
 The columns include: 
 
-- Term_ID: ARO from argNorm
-- Term_Label: description of the ARO term
-- Parent_ID: RO of the first higher aggregation
-- Parent_Label: description of the Parent_ID
+- Term\_ID: ARO identifier
+- Term\_Label: description of the ARO identifier
+- Parent\_ID: ARO of the first higher aggregation
+- Parent\_Label: description of the Parent\_ID
 - geneclass: manually curated gene class
 
-### Abundance and richness
+---
 
-The abundance and richness of each gene (only from the habitats we are interested in) are found in the file `abundance_richness.csv.gz`. The columns include:
+### 4. Abundance and richness
 
-- sample: metagenomic sample ID from the Global Microbial Gene Catalog v1.0 ([GMGC](https://gmgc.embl.de/)).
-- geneclass: manually curated gene class
-- pipeline: tool and database identifier
-- abundance: normalized read by gene size, scaled to 1 million reads per metagenome aggregated at the gene class level
-- richness: number of unique genes detected in the metagenome (raw count >0) after rarefaction aggregated at the gene class level
-- richness_no_rarified: number of unique genes detected in the metagenome (raw count >0) aggregated at the gene class level
+`abundance_richness.csv.gz`
 
-### Abundance per gene 
+ARG abundance and richness across 11,519 metagenomic samples from [GMGC](https://gmgc.embl.de/). The metagenomic samples span 13 habitats, including human-associated (gut, skin, nose, oral, and vaginal), non-human and host-associated (pig, mouse, dog, and cat), and external habitats (wastewater, marine, freshwater, and soil). The abundance and richness is aggregated at the ARG class level.
 
-Original information from ([GMGC](https://gmgc.embl.de/)) after filtering for those unigenes identified as ARGs found in file `args_abundances.tsv.gz`. The file has the same structure as GMGC. Note that the abundance here is scaled to 10 million per metagenome. 
+Columns:
 
+- sample: [GMGC](https://gmgc.embl.de/) metagenome ID
+- geneclass: curated ARG class
+- pipeline: detection pipeline
+- abundance: normalized read counts (per million, gene-length corrected) and aggregated at the ARG class level
+- richness: rarefied ARG diversity, number of unique unigenes detected as ARG each metagenomic sample
+- richness\_no\_rarified: aw ARG diversity
 
-## Metadata of the metagenomic samples
+---
 
-The metadata of the metagenomes is found in the file `metagenomes_metadata.csv`. The file contains the following information:
-- sample_id: metagenome identifier
+### 5. Unigene-level abundance
+
+`args_abundances.tsv.gz`
+
+Abundance of individual ARG-associated unigenes ([GMGC](https://gmgc.embl.de/) format), scaled per 10 million reads per metagenome.
+
+---
+
+### 6. Metadata
+
+`metagenomes_metadata.csv`
+
+Columns:
+- sample\_id: metagenome identifier
 - habitat
 - insertsHQ: high-quality reads
 
+---
 
+## Repository purpose
+
+This dataset supports analyses of how ARG detection pipelines influence:
+- abundance and richness of ARGs across habitats
+- pan- and core-resistome size and composition  
 
