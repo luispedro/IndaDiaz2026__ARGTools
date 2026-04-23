@@ -45,7 +45,7 @@ head -n1 rgi_diamond/GMGC10.95nr.fna_block_0000.fna.gz_rgi.tsv >> rgi_diamond.ts
 head -n1 rgi_blast/GMGC10.95nr.fna_block_0000.fna.gz_rgi.tsv >> rgi_blast.tsv
 # Merge all the individual results in one file 
 cat rgi_diamond/*rgi.tsv | grep -v "^ORF" >> rgi_diamond.tsv
-cat rgi_blast/*rgi.tsv | grep -v "^ORF" >> rgi_bast.tsv
+cat rgi_blast/*rgi.tsv | grep -v "^ORF" >> rgi_blast.tsv
 ```
 
 - amrfinder
@@ -110,7 +110,7 @@ conda run -n argnorm argnorm abricate -i abricate-argannot.tsv --db argannot -o 
 conda run -n argnorm argnorm abricate -i abricate-ncbi.tsv --db ncbi -o abricate-ncbi.norm.tsv
 ```
 
-- The RGI, fARGene, and normalized results are exported to be analyized locally.
+- The RGI, fARGene, and normalized results are exported to be analyzed locally.
 - From the local analysis we need to retrieve the name of unique unigenes identified to get their length in aa and nt, and their abundance.
 
 ## Running analysis in `.faa` files
@@ -242,7 +242,7 @@ Run the `retrieve_unigenes.R` file, the output should have:
 
 Use that file in the next section to retrieve abundances and gene lengths
 
-## Retrieven the lengths and abundances 
+## Retrieve the lengths and abundances 
 
 - Retrieve the names of unigenes identified as ARGs in any of the tools
 - `genes_prot_dna.csv` has that list of names 
