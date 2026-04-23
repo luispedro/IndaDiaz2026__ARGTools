@@ -307,7 +307,6 @@ ps_abundance <- page_sidebar(
       col_widths = breakpoints(xs = 12, xxl = 6),
       
         card(
-<<<<<<< HEAD
             card_header("Relative abundance per Sample"),
             markdown(
               "This section explores the **Relative Abundance** of Antimicrobial Resistance Genes (ARGs) across different host habitats, highlighting how the choice of pipeline impacts the estimation of the quantity of ARGs.
@@ -318,18 +317,6 @@ ps_abundance <- page_sidebar(
             
             withSpinner(plotOutput("plot_abundance", height = "550px"), type = 8, color = "#1b9e77")
           ),
-=======
-          card_header("Relative abundance per Sample"),
-          markdown(
-            "This section shows the **Relative Abundance** of Antimicrobial Resistance Genes (ARGs) across different habitats and pipelines.
-            \n
-            This displays the total relative abundance of ARGs detected by each pipeline per sample across various habitats. For interpreting the boxplot, 
-            it would be helpful to note that the center line denotes the median while each box limits is the interquartile range (IQR) and the
-            whiskers extent to 1.5× IQR beyond the first and third quartiles."),
-          
-          withSpinner(plotOutput("plot_abundance", height = "600px", fill = TRUE), type = 8, color = "#1b9e77")
-        ),
->>>>>>> 5869d642b9ee4226c9d108580e793ca8cded8de6
         
         card(
           card_header("Relative Abundance per Gene Class"),
@@ -378,13 +365,7 @@ ps_pan_core <- page_sidebar(
         `count-selected-text` = "{0} habitats selected"
       )
     ),
-<<<<<<< HEAD
     markdown("*Use the sidebar to compare specific pipelines, select different habitats, or adjust the strictness of the core-resistome threshold.*")
-=======
-    markdown(
-      "*Use the sidebar to compare specific pipelines, select different habitats, or adjust the core-resistome threshold.*"
-    ),
->>>>>>> 5869d642b9ee4226c9d108580e793ca8cded8de6
   ),
   
   layout_column_wrap( 
