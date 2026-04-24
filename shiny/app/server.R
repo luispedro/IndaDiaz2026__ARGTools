@@ -53,12 +53,10 @@ server <- function(input, output, session) {
     req(input$gene_classes_filter)
     plot_data <- unigenes_propotion %>%
       filter(tool %in% input$tools_unigenes) %>%
-      group_by(new_level) %>%
-      filter(new_level %in% input$gene_classes_filter) %>%
-      ungroup()
-    
+      filter(new_level %in% input$gene_classes_filter)
+
     req(nrow(plot_data) > 0)
-    
+   
     plot_data %>%
       ggplot(aes(x = tool2, y = new_level, fill = p)) +
       geom_tile(color = "grey") +
@@ -144,15 +142,14 @@ server <- function(input, output, session) {
                     ungroup() %>%
                     group_by(habitat, tool) %>% 
                     filter(abundance < quantile(abundance, 0.75) + 1.5*IQR(abundance)) %>%
-                    mutate(n_group = n()) %>%
                     group_modify(~ dplyr::slice_sample(.x, n = min(100, nrow(.x)))), 
-                  width = 0.35, size = 0.4, alpha = 0.1) + 
+                  width = 0.35, size = 0.4, alpha = 0.4) +
       facet_grid(habitat ~ tools_db  , scales = "free") +
       scale_y_continuous(labels = scales::comma) + 
       scale_fill_manual(values = pal_7) +
       scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe', 'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) +
-      xlab("Tools") +
-      ylab("Abundance") +
+      xlab("Pipeline") +
+      ylab("Relative abundance (per million)") +
       theme1 + 
     theme(panel.border = element_blank(),
           strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 0),
@@ -187,7 +184,7 @@ server <- function(input, output, session) {
                      return(out)
                    }, default = label_parsed)
                  )) +
-      xlab("Relative abundance") +
+      xlab("Relative abundance (per million)") +
       ylab("") + 
       labs(fill = "") + 
       scale_x_continuous(labels = scales::comma, expand = c(0,0)) +
