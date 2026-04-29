@@ -384,7 +384,7 @@ df_abundance_class_human <- abundance_class %>%
 
 
 ################################################################################################
-# PLot 1 
+# Plot 1 
 
 tools_texture_code <- rep("none", length(tools_labels))
 tools_texture_code[tools_levels %in% tools_texture] <- "stripe"

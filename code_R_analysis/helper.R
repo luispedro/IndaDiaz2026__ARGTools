@@ -1,12 +1,3 @@
-
-lab_fn <- function(x) {
-  x <- gsub("-", "-\n", x)
-  x <- gsub(" ", "\n", x)
-  x <- gsub("/", "/\n", x)
-  x
-}
-
-
 g_legend <- function(a.gplot){
   tmp <- ggplotGrob(a.gplot)
   leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
@@ -108,20 +99,6 @@ new_intersect_lists <- function(qc_ref, q_ref, qc_comp, q_comp){
   return(r)
 }
 
-# new_difference_list <- function(qc_ref, q_ref, qc_comp, q_comp){
-#   A <-  unlist(qc_ref)
-#   B <- unlist(q_ref)
-#   C <- unlist(qc_comp)
-#   D <- unlist(q_comp)
-#   comp_class <- C[!C %in% setdiff(B, A)] # remove from the class in the comparison tool those found in a different class in reference tool
-#   comp_class <- c(comp_class, D[D %in% intersect(setdiff(D, B), A)]) # complement class in comparison tool those genes found in a different class but they are in the right class in reference tool
-#   r <- ifelse(length(A) == 0 & length(comp_class) == 0, NA, 
-#        ifelse(length(A) == 0 & length(comp_class) != 0, NA, 
-#        ifelse(length(A) != 0 & length(comp_class) == 0, NA, 
-#        length(setdiff(A, comp_class)) / length(A))))
-#   return(r)
-# }
-
 create_class_overlaps <- function(unigenes){
   tools_per_unigene <- unigenes %>% ungroup()  %>% 
     arrange(query) %>% 
@@ -154,9 +131,8 @@ create_class_overlaps <- function(unigenes){
   
   JI_class_other <- JI_class_other %>% 
     rowwise() %>%
-    mutate(recall = new_intersect_lists(qc_ref, q_ref, qc_comp, q_comp)) %>% 
+    mutate(csc = new_intersect_lists(qc_ref, q_ref, qc_comp, q_comp)) %>% 
     rowwise() %>% 
-    #mutate(fnr = new_difference_list(qc_ref, q_ref, qc_comp, q_comp)) %>% 
     mutate(ref_n_class = length(qc_ref), comp_n_class = length(qc_comp), ref_n_all = length(q_ref), comp_n_all = length(q_comp)) %>% 
     ungroup() %>% 
     filter(tool_ref != tool_comp) %>% 
@@ -179,10 +155,8 @@ return_overlap_tools <- function(unigenes) {
     left_join(sets, by = c("tool_comp" = "tool")) %>%
     rename(values2 = query) %>%
     mutate(jaccard = map2_dbl(values1, values2, ~ length(intersect(.x, .y)) / length(union(.x, .y)))) %>%
-    mutate(recall = map2_dbl(values1, values2, ~ length(intersect(.x, .y)) / length( .y))) %>%
-    #mutate(fnr = map2_dbl(values1, values2, ~ length(setdiff(.x, .y)) / length( .x))) %>%
-    #select(tool_ref, tool_comp, jaccard, recall, fnr) 
-    select(tool_ref, tool_comp, jaccard, recall) 
+    mutate(csc = map2_dbl(values1, values2, ~ length(intersect(.x, .y)) / length( .y))) %>%
+    select(tool_ref, tool_comp, jaccard, csc) 
   
   return(JI_all)
   
@@ -221,9 +195,8 @@ create_class_overlaps_no_shuffling <- function(unigenes){
   
   JI_class_other <- JI_class_other %>% 
     rowwise() %>%
-    mutate(recall = length(intersect(qc_ref, qc_comp))/ length(qc_comp)) %>% 
+    mutate(csc = length(intersect(qc_ref, qc_comp))/ length(qc_comp)) %>% 
     rowwise() %>% 
-    #mutate(fnr = new_difference_list(qc_ref, q_ref, qc_comp, q_comp)) %>% 
     mutate(ref_n_class = length(qc_ref), comp_n_class = length(qc_comp), ref_n_all = length(q_ref), comp_n_all = length(q_comp)) %>% 
     ungroup() %>% 
     filter(tool_ref != tool_comp) %>% 

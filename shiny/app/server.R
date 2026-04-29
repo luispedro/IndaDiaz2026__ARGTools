@@ -37,7 +37,7 @@ server <- function(input, output, session) {
     
     req(input$tools_unigenes)
     req(input$gene_classes_filter)
-    plot_data <- unigenes_propotion %>%
+    plot_data <- unigenes_proportion %>%
       filter(tool %in% input$tools_unigenes) %>%
       filter(new_level %in% input$gene_classes_filter)
     
@@ -101,7 +101,12 @@ server <- function(input, output, session) {
     
     abundance_tool_sample %>%
       filter(tool %in% input$tool_abundance) %>% 
-      filter(habitat %in% input$environment_abundance)
+      filter(habitat %in% input$environment_abundance) %>%
+      group_by(tool, habitat) %>%
+      mutate(N_samples = n_distinct(sample)) %>%
+      ungroup() %>%
+      mutate(habitat_label = paste0(habitat, "\n(n = ", scales::comma(N_samples), ")"))
+
   })
   
   filtered_class_abundance_data <- reactive({
@@ -112,7 +117,14 @@ server <- function(input, output, session) {
       filter(habitat %in% input$environment_abundance) %>% 
       filter(gene %in% input$abundance_genes) %>% 
       ungroup() %>%
-      mutate(tools_labels = droplevels(tools_labels))
+      mutate(tools_labels = droplevels(tools_labels)) %>%
+      left_join(
+        abundance_tool_sample %>%
+          group_by(habitat) %>%
+          summarise(N_samples = n_distinct(sample)),
+        by = "habitat"
+      ) %>%
+      mutate(habitat_label = paste0(habitat, "\n(n = ", scales::comma(N_samples), ")"))
   })
   
   output$plot_abundance <- renderPlot({
@@ -131,7 +143,7 @@ server <- function(input, output, session) {
                     filter(abundance < quantile(abundance, 0.75) + 1.5*IQR(abundance)) %>%
                     group_modify(~ dplyr::slice_sample(.x, n = min(100, nrow(.x)))), 
                   width = 0.35, size = 0.4, alpha = 0.4) +
-      facet_grid(habitat ~ tools_db, scales = "free") +
+      facet_grid(habitat_label ~ tools_db, scales = "free") +
       scale_y_continuous(labels = scales::comma) + 
       scale_fill_manual(values = pal_7) +
       scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe', 'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) +
@@ -160,7 +172,7 @@ server <- function(input, output, session) {
         linewidth = 0.1) +
       scale_fill_manual(values = pal_7) +
       scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe', 'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) +
-      facet_grid(gene ~ habitat, scales = "free", space = "free",
+      facet_grid(gene ~ habitat_label, scales = "free", space = "free",
                  labeller = labeller(
                    gene = as_labeller(function(x) {
                      out <- ifelse(
@@ -234,13 +246,11 @@ server <- function(input, output, session) {
     
     req(nrow(pan_core_df_plot) > 0)
     
-    # Legend keys — ordered by tools_levels so grouping is correct
     present_tools <- tools_levels[tools_levels %in% unique(pan_core_df_plot$tool)]
     legend_fills  <- pal_10_q[present_tools]
     legend_shapes <- shape_tools[present_tools]
-    legend_labels <- as.vector(tools_labels2[present_tools])
+    legend_labels <- as.vector(tools_labels[present_tools])
     
-    # Shared theme for both panels
     theme_pan_core <- theme_minimal() +
       theme(
         text          = element_text(size = 16, color = "black"),
@@ -261,7 +271,6 @@ server <- function(input, output, session) {
         legend.margin    = margin(0, 0, 0, 0, unit = "pt")
       )
     
-    # Shared scales
     scale_fill_pan  <- scale_fill_manual(values = pal_10_q_2[levels(droplevels(pan_core_df_plot$tool2))])
     scale_shape_pan <- scale_shape_manual(values = c("no" = 21, "yes" = 24, "y70" = 22, "y80" = 23, "y90" = 25))
     
@@ -288,7 +297,6 @@ server <- function(input, output, session) {
       theme_pan_core +
       theme(strip.text.y = element_blank())
     
-    # Plot for legend extraction only
     legend_df <- data.frame(
       tool2   = factor(legend_labels, levels = legend_labels),
       x = 1, y = 1,
@@ -324,23 +332,61 @@ server <- function(input, output, session) {
   filtered_overlap_data <- reactive({
     req(input$tool_overlap, input$overlap_genes) 
     
-    recall_fnr %>% 
+    csc_fnr %>% 
       filter(tool_ref %in% input$tool_overlap, tool_comp %in% basic_tools) %>%
       filter(new_level %in% input$overlap_genes)
   })
   
+  output$overlap <- renderPlot({
+    overlap_data <- filtered_overlap_data() %>%
+      group_by(tool_ref, tools_labels_ref, tools_db_comp) %>%
+      mutate(n_obs = n()) %>%
+      mutate(n_obs = paste0('n = ', n_obs)) %>%
+      ungroup()
+    
+    ggplot(overlap_data,  
+           aes(x = csc*100, y = fct_rev(tools_labels_comp))) +
+      geom_boxplot(aes(fill = tool_ref, pattern = texture),
+                   position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
+                   width = 0.7, color = "black", outliers = FALSE) +
+      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe',
+                                      'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) +
+      geom_text(aes(x = 50, y = 1, label = n_obs), size = 4) +
+      facet_grid(tools_db_comp ~ tools_labels_ref, scales = "free_y", space = "free") +
+      scale_fill_manual(values = pal_10_q) +
+      scale_y_discrete(drop = T) +
+      xlab("Percentage (%)") +
+      ylab("Pipeline covered") +
+      theme_minimal() +
+      theme5 +
+      theme(panel.grid = element_blank(),
+            plot.margin = margin(0, 10, 0, 0, unit = "pt"),
+            strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
+            strip.text.y = element_text(size = general_size, angle=90, vjust = 0.5, hjust = 0.5))
+    
+  }, height = 600, res = 96) %>% bindCache(input$tool_overlap, input$overlap_genes)
+  
+  
   output$overlap_gene_class <- renderPlot({
     
-    ggplot(filtered_overlap_data(), 
-           aes(x = recall*100, y = new_level)) + 
+    overlap_gene <- filtered_overlap_data() %>%
+      group_by(tool_ref, tools_labels_ref, new_level) %>%
+      mutate(n_obs = n()) %>%
+      mutate(n_obs = paste0('n = ', n_obs)) %>%
+      ungroup()
+    
+    
+    ggplot(overlap_gene, aes(x = csc*100, y = new_level)) + 
+
       geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture),
-                           position = position_dodge2(preserve = "single", width = 0, padding = 0),
-                           color = "black", outliers = FALSE, width = 0.5, 
-                           pattern_color = "black", pattern_fill = pattern_fill, pattern_spacing = 0.07,
-                           pattern_density = 0.15,
-                           pattern_size =  0.07) +
-      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe', 
-                                      'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) + 
+                           position = position_dodge2(preserve = "single", width = 0.3, padding = 0),
+                           width = 0.7, pattern_color = "black", pattern_fill = "black", pattern_density = 0.000000001,
+                           pattern_spacing = 0.2,
+                           pattern_size =  0.3, color = "black", outliers = FALSE, outlier.shape = NA, linewidth = 0.15) +
+
+      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe',
+                                      'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) +
+      geom_text(aes(x = 50, y = 1, label = n_obs), size = general_size / .pt) + 
       facet_grid(new_level ~ tools_labels_ref, scales = "free_y", space = "free",
                  labeller = labeller(
                    new_level = as_labeller(function(x) {
@@ -353,38 +399,17 @@ server <- function(input, output, session) {
                      return(out)
                    }, default = label_parsed)
                  )) +
-      scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap]) +
-      scale_y_discrete(drop = FALSE) +
+      scale_fill_manual(values = pal_10_q)  +
       xlab("Percentage (%)") +
       ylab("ARG class") + 
       theme_minimal() +
       theme5 +
       theme( panel.grid = element_blank(),
-             strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
-             strip.text.y = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0),
+             strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5 , angle = 0),
+             strip.text.y = element_text(size = general_size, vjust = 0.5, hjust = 0, angle = 0),
+             panel.spacing = unit(5, "pt"),
              axis.text.y = element_blank())
-  }, height = 600, res = 96) %>% bindCache(input$tool_overlap, input$overlap_genes)
-  
-  
-  output$overlap <- renderPlot({
-    
-    ggplot(filtered_overlap_data(), # 
-           aes(x = recall*100, y = fct_rev(tools_labels_comp))) +
-      geom_boxplot(aes(fill = tool_ref, pattern = texture),
-                   position = position_dodge2(preserve = "single", width = 0, padding = 0), 
-                   width = 0.5, color = "black", outliers = FALSE) +
-      facet_grid(tools_db_comp ~ tools_labels_ref, scales = "free_y", space = "free") +
-      scale_fill_manual(values = pal_10_q[match(c("DeepARG","fARGene", "RGI-DIAMOND"), tools_levels)]) +
-      scale_y_discrete(drop = T) +
-      xlab("Percentage (%)") +
-      ylab("Pipeline covered") +
-      theme_minimal() +
-      theme5 +
-      theme(panel.grid = element_blank(),
-            plot.margin = margin(0, 10, 0, 0, unit = "pt"),
-            strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
-            strip.text.y = element_text(size = general_size, angle=90, vjust = 0.5, hjust = 0.5))
-    
+      
   }, height = 600, res = 96) %>% bindCache(input$tool_overlap, input$overlap_genes)
   
 }
