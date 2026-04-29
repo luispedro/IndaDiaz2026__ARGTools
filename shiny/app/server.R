@@ -139,7 +139,7 @@ server <- function(input, output, session) {
       ylab("Relative abundance\n(aligned reads per million)") +
       theme1 + 
       theme(panel.border = element_blank(),
-            strip.text.x = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0.5),
+            strip.text.x = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0),
             panel.grid.major.x = element_blank(),
             panel.grid.minor.x = element_blank(),
             plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))
@@ -284,7 +284,7 @@ server <- function(input, output, session) {
       scale_fill_pan + scale_shape_pan +
       scale_x_continuous(labels = label_comma()) +
       labs(y = "", x = "Number of ARGs", fill = "", title = "b",
-           subtitle = paste0("Core-resistome threshold: >", input$threshold_samples, " subsamples")) +
+     subtitle = paste0("Core-resistome threshold: >", input$threshold_samples, " subsamples")) +
       theme_pan_core +
       theme(strip.text.y = element_blank())
     
@@ -334,15 +334,25 @@ server <- function(input, output, session) {
     ggplot(filtered_overlap_data(), 
            aes(x = recall*100, y = new_level)) + 
       geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture),
-                           position = position_dodge2(preserve = "single"),
-                           color = "black", outliers = T,
+                           position = position_dodge2(preserve = "single", width = 0, padding = 0),
+                           color = "black", outliers = FALSE, width = 0.5, 
                            pattern_color = "black", pattern_fill = pattern_fill, pattern_spacing = 0.07,
                            pattern_density = 0.15,
-                           pattern_size =  0.07,
-                           linewidth = 0.1) +
+                           pattern_size =  0.07) +
       scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe', 
                                       'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) + 
-      facet_grid(tool_ref2 ~ " ", scales = "free_y") +
+      facet_grid(new_level ~ tools_labels_ref, scales = "free_y", space = "free",
+                 labeller = labeller(
+                   new_level = as_labeller(function(x) {
+                     out <- ifelse(
+                       x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim", "vat", "mph", "qnr"),
+                       paste0("italic('", x, "')"),
+                       ifelse(x == "abcF", "ABC-F",
+                              paste0("'", x, "'"))
+                     )
+                     return(out)
+                   }, default = label_parsed)
+                 )) +
       scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap]) +
       scale_y_discrete(drop = FALSE) +
       xlab("Percentage (%)") +
@@ -351,25 +361,21 @@ server <- function(input, output, session) {
       theme5 +
       theme( panel.grid = element_blank(),
              strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
-             strip.text.y = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0))
+             strip.text.y = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0),
+             axis.text.y = element_blank())
   }, height = 600, res = 96) %>% bindCache(input$tool_overlap, input$overlap_genes)
   
   
   output$overlap <- renderPlot({
     
     ggplot(filtered_overlap_data(), # 
-           aes(x = recall*100, y = fct_rev(tool_comp2))) +
-      geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture),
-                           position = position_dodge2(preserve = "single"),
-                           color = "black", outliers = T,
-                           pattern_color = "black", pattern_fill = pattern_fill, pattern_spacing = 0.07,
-                           pattern_density = 0.15,
-                           pattern_size =  0.07,
-                           linewidth = 0.1) +
+           aes(x = recall*100, y = fct_rev(tools_labels_comp))) +
+      geom_boxplot(aes(fill = tool_ref, pattern = texture),
+                   position = position_dodge2(preserve = "single", width = 0, padding = 0), 
+                   width = 0.5, color = "black", outliers = FALSE) +
       facet_grid(tools_db_comp ~ tools_labels_ref, scales = "free_y", space = "free") +
-      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe', 
-                                      'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) + 
-      scale_fill_manual(values = pal_10_q[tools_levels %in% input$tool_overlap]) +
+      scale_fill_manual(values = pal_10_q[match(c("DeepARG","fARGene", "RGI-DIAMOND"), tools_levels)]) +
+      scale_y_discrete(drop = T) +
       xlab("Percentage (%)") +
       ylab("Pipeline covered") +
       theme_minimal() +
@@ -377,7 +383,7 @@ server <- function(input, output, session) {
       theme(panel.grid = element_blank(),
             plot.margin = margin(0, 10, 0, 0, unit = "pt"),
             strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
-            strip.text.y = element_text(size = general_size, angle=0, vjust = 0.5, hjust = 0))
+            strip.text.y = element_text(size = general_size, angle=90, vjust = 0.5, hjust = 0.5))
     
   }, height = 600, res = 96) %>% bindCache(input$tool_overlap, input$overlap_genes)
   
