@@ -19,17 +19,17 @@ server <- function(input, output, session) {
       geom_col_pattern(position = position_dodge2(preserve = "single", width = 0.8), 
                        width = 0.8, pattern_color = "black", pattern_fill = pattern_fill, 
                        pattern_size = 0.12, color = "black") +
-      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe', 'y70' = 'circle', 'y80' = 'circle', 'y90' = 'circle')) +
       facet_grid(. ~ tools_db, scales = "free_x", space = "free") +
       scale_fill_manual(values = pal_7, drop = TRUE) +
       xlab("Pipelines") + ylab("Number of ARGs") + 
       scale_y_continuous(expand = c(0.01, 0.01), 
-                         breaks = c(25000,50000,75000,100000,125000), 
+                         #breaks = c(25000,50000,75000,100000,125000), 
                          labels = scales::comma) + 
-      guides(fill = guide_legend(
-        override.aes = list(
-          pattern = rep("none", 7),
-          fill  = pal_7)), pattern = "none") +  
+      #guides(fill = guide_legend(
+      #  override.aes = list(
+      #    pattern = rep("none", 7),
+      #    fill  = pal_7)), pattern = "none") +  
       theme1 +
       theme(panel.border = element_blank(),
             panel.grid.major.x = element_blank(),

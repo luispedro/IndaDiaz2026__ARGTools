@@ -151,18 +151,18 @@ ps_intro <- fluidPage(
     width = 1/2,
     card(
       card_header("Introduction"),
-      tags$p("This app shows the main and supplementary figures for the manuscript and allows to create different variants",
-             tags$b(tags$i("How ARG Detection Pipelines Shape Our View of the Resistome")), 
+      tags$p("This app replicates the main and supplementary figures for the manuscript:",
+             tags$b(tags$i("The elusive resistome: a global comparison reveals large discrepancies among detection pipelines")), 
              "and allows to control different parameters."),
-      tags$p(tags$b("302,655,267 unigenes")),
+      tags$p(tags$b("278,788,551 unigenes")),
       tags$p("The unigenes are representative sequences after clustering 2.3 billion bacterial genes at 95% identity. The unigenes come from ",  tags$a(href="https://gmgc.embl.de/", "GMGC"),
              "and are accessible", tags$a(href="https://gmgc.embl.de/download.cgi", "here.")),
-      tags$p(tags$b("13,174 metagenomic samples from 16 different habitats")),
+      tags$p(tags$b("11,538 metagenomic samples from 13 different habitats")),
       tags$p("The metagenomic samples come from GMGC and are available ",
              tags$a(href="https://gmgc.embl.de/downloads/v1.0/metadata/GMGC10.sample.meta.tsv.gz", "here"), ". In this app, we did not consider the habitats amplicon, isolate, and built-environment.",
-             "The abundance of each gene in the metagenomes can be accessed", tags$a(href="https://gmgc.embl.de/downloads/v1.0/GMGC10.sample-abundance.tsv.xz", "here"), ". The summary of metagenomic samples per habitat can be found in Table S2 in the paper."),
+             "The abundance of each gene in the metagenomes can be accessed", tags$a(href="https://gmgc.embl.de/downloads/v1.0/GMGC10.sample-abundance.tsv.xz", "here"), ". The summary of metagenomic samples per habitat can be found in Supplementary Table S1 in the paper and here. We converted the abundance in GMGC from reads per 10 million to reads per million."),
       tags$p(tags$b("ARG classes")),
-      tags$p("Ontology normalization was done with", tags$a(href="https://github.com/BigDataBiology/argNorm", "argNorm"), ". Gene classes were manually curated after. The gene classes used in this project can be found in Table S3 in the paper."),
+      tags$p("Ontology normalization was done with", tags$a(href="https://github.com/BigDataBiology/argNorm", "argNorm"), ". Gene classes were manually curated after. The gene classes used in this project can be found in Supplementary Table 2 in the paper and here."),
       tags$p(tags$b("Pipelines")),
       "We used full-sized gene in all pipelines. For each pipeline, we chose a single parameter:",
       tags$ul(
@@ -184,7 +184,10 @@ ps_intro <- fluidPage(
     card(
       card_header("Pipeline"),
       card_image("../../code_R_analysis/output_plots/fig0_shiny.svg", height = "800px"),
-      card_footer("The GMGC dataset was analyzed in nucleotide and/or amino acid format by the ARG detection pipelines to obtain a list of putative resistance genes. We quantified the resistome (abundance, diversity, pan- and core-resistome) using the putative ARGs in host-associated and external habitats")
+      card_footer("The GMGCv1 dataset is processed through multiple ARG detection pipelines to generate a comprehensive list of predicted ARGs. 
+      Resistome metrics, including abundance, richness, and pan- and core-resistome sizes, are estimated from unigene profiles and their respective copy numbers across metagenomic samples and habitats. 
+      Pan- and core-resistome analyses are employed to assess the intra- and inter-habitat dissemination of ARGs.
+      The GMGC dataset was analyzed in nucleotide and/or amino acid format by the ARG detection pipelines to obtain a list of putative resistance genes. We quantified the resistome (abundance, diversity, pan- and core-resistome) using the putative ARGs in host-associated and external habitats. The icons excess-weight-male-clothed, mouse-gray, pig-white, and dog in the abstract figure were adapted from Servier Medical Art (https://smart.servier.com) and are licensed under CC BY 3.0 Unported (https://creativecommons.org/licenses/by/3.0/).")
     )
   )
 )
