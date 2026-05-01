@@ -358,6 +358,8 @@ server <- function(input, output, session) {
       geom_point_rast(aes(fill = tool2, shape = texture), color = "black", stroke = 0.3, size = 3) + 
       geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
       facet_grid(habitat ~ metric, scales = "free") +
+      geom_segment(aes(x = 0, xend = value, y = tool, yend = tool, color = tool), linewidth = 0.2, show.legend = F) +
+      scale_color_manual(values = scale_fill_pan) +
       scale_fill_pan + scale_shape_pan +
       scale_x_reverse(labels = label_comma()) +
       labs(y = "", x = "Number of ARGs", fill = "", title = "a") +
@@ -369,6 +371,8 @@ server <- function(input, output, session) {
       geom_point_rast(aes(fill = tool2, shape = texture), color = "black", stroke = 0.3, size = 3) + 
       geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
       facet_grid(habitat ~ metric, scales = "free") +
+      geom_segment(aes(x = 0, xend = value, y = tool, yend = tool, color = tool), linewidth = 0.2, show.legend = F) +
+      scale_color_manual(values = scale_fill_pan) +
       scale_fill_pan + scale_shape_pan +
       scale_x_continuous(labels = label_comma()) +
       labs(y = "", x = "Number of ARGs", fill = "", title = "b",
