@@ -461,20 +461,21 @@ ps_overlap <- page_sidebar(
   nav_panel(
     "Class-Specific Coverage (CSC)",
     layout_columns(
-      col_widths = breakpoints(xs = 12, xxl = 6),
+      width  = 1,
+      #col_widths = breakpoints(xs = 12, xxl = 6),
         
-        card(
-          card_header("Class-Specific Coverage by Pipeline"),
-          markdown(
-            "This tab examines **Class-Specific Coverage (CSC)**, showing the degree of overlap or agreement between different detection pipelines. In simple terms, this is it: *For a given ARG class g, the CSC of pipeline A with respect to 
-              pipeline B represents the proportion of ARGs identified by pipeline B that were also captured by pipeline A.*
-              
-              \n
-              This is the overall percentage of ARGs detected by a reference pipeline that were also successfully identified by the compared pipeline. A higher percentage indicates strong agreement between the pipelines."
-          ),
-          withSpinner(plotOutput("overlap", height = "550px"), type = 8, color = "#1b9e77"),
-          downloadButton("download_overlap", "Download Table")
-        ),
+        #card(
+        #  card_header("Class-Specific Coverage by Pipeline"),
+        #  markdown(
+        #    "This tab examines **Class-Specific Coverage (CSC)**, showing the degree of overlap or agreement between different detection pipelines. In simple terms, this is it: *For a given ARG class g, the CSC of pipeline A with respect to 
+        #      pipeline B represents the proportion of ARGs identified by pipeline B that were also captured by pipeline A.*
+        #      
+        #      \n
+        #      This is the overall percentage of ARGs detected by a reference pipeline that were also successfully identified by the compared pipeline. A higher percentage indicates strong agreement between the pipelines."
+        #  ),
+        #  withSpinner(plotOutput("overlap", height = "550px"), type = 8, color = "#1b9e77"),
+        #  downloadButton("download_overlap", "Download Table")
+        #),
         
         card(
           card_header("Class-Specific Coverage (CSC) by Gene Class"),
