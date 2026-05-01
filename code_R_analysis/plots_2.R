@@ -1,16 +1,11 @@
 library(dplyr)
 library(ggplot2)
-#library(plotly)
-library(ggVennDiagram)
 library(gridExtra)
 library(tidyverse)
 library(RColorBrewer)
 library(ggpattern)
 library(grid)
-library(eulerr)
-library(reactable)
 library(Cairo)
-library(ggalluvial)
 library(cowplot)
 library(scales)
 library(ggbreak)
@@ -34,9 +29,10 @@ lab_fn <- function(x) {
 pal_7 <- brewer.pal(8, "Dark2")
 pal_7 <- pal_7[-7]
 pal_7 <- pal_7[c(1,2,3,4,6,5,7)]
-#pal_7 <- pal_7[c(1,7,2,6,3,5,4)]
-pal_10_q <- pal_7[c(1,2,3,4,5,5,6,6,7,7)]
 
+#pal_7 <- pal_7[c(1,7,2,6,3,5,4)]
+
+pal_10_q <- pal_7[c(1,2,3,4,5,5,6,6,7,7)]
 pal_10_complete <- brewer.pal(7, "Dark2")
 pal_10_complete <- pal_7
 
@@ -61,11 +57,14 @@ SO <- c(rep("humans", 5), rep("mammals", 4),
 
 names(SO) <- EN
 
+# tools compared in the paper 
+
 basic_tools <- c(
   "DeepARG", "fARGene","ABRicate-ARGANNOT", "ABRicate-MEGARes",
   "RGI-DIAMOND", "ABRicate-CARD","AMRFinderPlus", "ABRicate-NCBI",
   "ResFinder", "ABRicate-ResFinder")
 
+# all tool levels
 tools_levels <- c(
   "DeepARG", "fARGene","ABRicate-ARGANNOT", "ABRicate-MEGARes",
   "RGI-DIAMOND", "ABRicate-CARD","AMRFinderPlus", "ABRicate-NCBI",
@@ -73,7 +72,10 @@ tools_levels <- c(
   "RGI-DIAMOND70","RGI-DIAMOND80","RGI-DIAMOND90",
   "DeepARG-aa", "RGI-BLAST", "RGI-DIAMOND-aa", "fARGene-aa", "AMRFinderPlus-nt")
 
+# add the name of each tool to the color palet 
 names(pal_10_q) <- basic_tools
+
+# repeat the color for the different thresholds in deeparg and rgi
 
 da <- rep(pal_10_q["DeepARG"],3)
 names(da) <- c("DeepARG70","DeepARG80","DeepARG90")
@@ -83,10 +85,11 @@ other <- c(pal_10_q["DeepARG"], pal_10_q["RGI-DIAMOND"],
            pal_10_q["RGI-DIAMOND"],pal_10_q["fARGene"],pal_10_q["AMRFinderPlus"])
 names(other) <- c("DeepARG-aa", "RGI-BLAST", 
                   "RGI-DIAMOND-aa", "fARGene-aa","AMRFinderPlus-nt")
-  
+
 pal_10_q <- c(pal_10_q, da, rgi, other)
 rm(da, rgi, other)
 
+# The name of eaach pipeline in the plots
 tools_labels <- c(
   "DeepARG", "fARGene", "ABRicate-\nARGANNOT", "ABRicate-\nMEGARes",
   "RGI", "ABRicate-\nCARD", "AMRFinder-\nPlus", "ABRicate-\nNCBI",
@@ -95,6 +98,8 @@ tools_labels <- c(
   "DeepARG-aa", "RGI/nBLAST", "RGI-aa", "fARGene-aa", "AMRFinder-\nPlus-nt")
 
 names(tools_labels) <- tools_levels
+
+# add factor for ordering the tools within plots 
 
 tools_labels_factor <- c(
   "DeepARG", "fARGene", "ABRicate-\nARGANNOT", "ABRicate-\nMEGARes", 
@@ -110,28 +115,43 @@ tools_db <- c(" ", "  ", "   ", "    ", "CARD", "CARD","NCBI","NCBI",
               "ResFinder","ResFinder"," "," "," ","CARD","CARD","CARD",
               " ", "CARD", "CARD", "  ", "NCBI")
 
-# one space for DeepARG
-# two spaces for fARGene
+# 
+# two spaces for fARGene, one space for DeepARG
 tools_db_factor <- c(" ", "  ", "   ", "    ",
                      "CARD", "NCBI", "ResFinder")
 
 tools_texture <- c("ABRicate-CARD", "ABRicate-NCBI", "ABRicate-ResFinder")
 
+################################################################################
+################################################################################
 ## DATASETS 
 
+# gene classes 
+
+ARO <- read.csv("code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.csv")
+
 # results per individual tool 
+
 lst <- readRDS("code_R_analysis/output_abundance_diversity_resistome/results_tools.rds")
 
 # metagenomes' metadata
+
 metadata <- read.delim("data/metadata_GMGC10.sample.meta.tsv")
 metadata <- metadata %>% filter(!habitat %in% c("amplicon", "isolate", "built-environment"))
+
+# metadata0 will be merged with abundance 
 metadata0 <- metadata %>% select(sample_id, habitat) %>% rename(sample = sample_id)
 
-# abundance <- readRDS("output_abundance_diversity_resistome/abundance_diversity.rds")
 abundance <- readRDS("code_R_analysis/output_abundance_diversity_resistome/abundance_diversity.rds")
+
+# convert MFS to efflux pump
 abundance <- abundance %>% mutate(gene = ifelse(gene == "MFS efflux pump", "efflux pump", gene))
 
+
 metadata0 <- metadata0 %>% left_join(abundance, by = "sample")
+
+# we add one class to avoid NA values and to be able to "complete" for all classes later
+# we add one tool to avoid NA values and to be able to "complete" for all tools later
 metadata0$gene[is.na(metadata0$gene)] <- "efflux pump"
 metadata0$tool[is.na(metadata0$tool)] <- "DeepARG"
 metadata0$abundance[is.na(metadata0$abundance)] <- 0
@@ -147,23 +167,26 @@ abundance <- metadata0 %>%
          tools_db = factor(tools_db[tool], levels = tools_db_factor))
 
 
+# total abundance per sample
+
 abundance_tool_sample <- abundance %>% 
   ungroup() %>%
   group_by(tool, sample, habitat) %>%  
   summarise(abundance = sum(abundance), richness = sum(richness)) %>% 
   ungroup() %>% 
-  complete(sample, tool) %>% # complete with NAs
+  complete(sample, tool) %>% # complete all samples for all tools with NAs
   left_join(abundance %>% select(sample, habitat) %>% 
-              distinct(), by = "sample") %>% # get habitat and habitat2 
+              distinct(), by = "sample") %>% 
   mutate(habitat  = coalesce(habitat.x, habitat.y)) %>%
   select(-habitat.x, -habitat.y) %>% 
-  mutate(abundance = replace_na(abundance, 0)) %>%  # change NAs to 0
-  mutate(richness = replace_na(richness, 0)) %>% # change NAs to 0
+  mutate(abundance = replace_na(abundance, 0)) %>%  
+  mutate(richness = replace_na(richness, 0)) %>% 
   arrange(tool, sample) %>%
   mutate(tools_labels = factor(tools_labels[tool], levels = tools_labels_factor),
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
          tools_db = factor(tools_db[tool], levels = tools_db_factor))
 
+# abundance per sample and gene class
 
 abundance_class <- abundance %>% 
   ungroup() %>% 
@@ -171,18 +194,18 @@ abundance_class <- abundance %>%
   mutate(gene = factor(gene), sample = factor(sample), 
          tool = factor(tool, levels = tools_levels)) %>%
   complete( sample, gene, tool, 
-            fill = list(abundance = 0,  richness = 0)) %>% ## complete for all samples, tools, and gene classes
+            fill = list(abundance = 0,  richness = 0)) %>% 
   mutate(gene = as.character(gene),
          habitat = metadata$habitat[match(sample, metadata$sample_id)])  %>%
   mutate(tools_labels = factor(tools_labels[tool], levels = tools_labels_factor),
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
          tools_db = factor(tools_db[tool], levels = tools_db_factor))
 
-
-
 ## CORE RESISTOME 
 
 core <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/core_resistome.rds")
+
+# convert MFS to efflux pump
 core <- core %>% mutate(new_level_centroid = ifelse(new_level_centroid == "MFS efflux pump", "efflux pump", new_level_centroid))
 
 core <- core %>% 
@@ -196,6 +219,10 @@ core <- core %>%
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
          tools_db = factor(tools_db[tool], levels = tools_db_factor))
 
+# Extract the core-resistome with condition that a gene most be in
+# 450 sub-core resistomes, and those are composed of genes present in at least 
+# 50% of the metagenomic samples in a subsample
+
 sumcore <- sum_core_adjust(core, 450, 0.5) %>%
   mutate(tools_labels = factor(tools_labels[tool], levels = tools_labels_factor),
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
@@ -204,6 +231,8 @@ sumcore <- sum_core_adjust(core, 450, 0.5) %>%
 ## PAN RESISTOME
 
 pan <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/pan_resistome.rds")
+
+# convert MFS to efflux pump
 pan <- pan %>% mutate(gene_class = ifelse(gene_class == "MFS efflux pump", "efflux pump", gene_class))
 
 pan <- pan %>% 
@@ -213,6 +242,7 @@ pan <- pan %>%
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
          tools_db = factor(tools_db[tool], levels = tools_db_factor))
 
+# calculate the total number of unigenes in the pan-resistome of each sample
 sumpan2 <- pan %>% ungroup() %>% 
   group_by(tool, habitat, epoch) %>% 
   summarise(s = sum(unigenes)) %>%
@@ -223,6 +253,7 @@ sumpan2 <- pan %>% ungroup() %>%
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
          tools_db = factor(tools_db[tool], levels = tools_db_factor))
 
+# merge the core and pan resistomes at the sample level
 pan_core <- sumpan2 %>% 
   left_join((sumcore %>% 
                ungroup() %>% 
@@ -240,108 +271,24 @@ pan_core <- sumpan2 %>%
 ## unigenes identified by tool
 
 unigenes <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/unigenes_per_tool.rds") %>% 
-  mutate(new_level = ifelse(new_level == "MFS efflux pump", "efflux pump", new_level)) %>% 
+  # convert MFS to efflux pump
+  mutate(new_level = ifelse(new_level == "MFS efflux pump", "efflux pump", new_level)) %>%  
   mutate(tool = factor(tool, levels = tools_levels)) %>%
   mutate(tools_labels = factor(tools_labels[tool], levels = tools_labels_factor),
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
          tools_db = factor(tools_db[tool], levels = tools_db_factor))
 
 
-# Jaccard index, recall/class specific concordance, fnr/class specific non-overlap
+# Overlap between tools by gene class
 # per class and tool
 recall_fnr <- create_class_overlaps(unigenes)
 
-recall_no_shuffling <- create_class_overlaps_no_shuffling(unigenes)
-
-recall_2 <- recall_fnr %>% left_join(recall_no_shuffling, by = c("tool_ref","tool_comp","new_level", "ref_n_class","comp_n_class","ref_n_all", "comp_n_all"))
-
-recall_2 <- recall_2 %>% rename(CSC = recall.x, CSC_no_reorder = recall.y)
-recall_different <- recall_2 %>% filter(CSC != CSC_no_reorder)
-recall_different <- recall_different %>% mutate(dif = CSC - CSC_no_reorder) %>% arrange(desc(abs(dif)))
-
-recall_different %>% filter(tool_comp %in% basic_tools, tool_ref %in% basic_tools) %>%  
-  ggplot( aes(x = dif)) + 
-  geom_histogram(bins = 20) +
-  facet_wrap(new_level ~ .)
-
-recall_different %>% filter(tool_comp %in% basic_tools, tool_ref %in% basic_tools) %>%  
-  ggplot( aes(x = dif)) + 
-  geom_histogram(bins = 20) +
-  facet_wrap(tool_ref ~ .)
-
-recall_different %>% filter(tool_comp %in% basic_tools, tool_ref %in% basic_tools) %>%  
-  mutate(dif_int = as.character(ceiling(dif * 10) / 10)) %>% 
-  ggplot( aes(x = dif_int, y = dif)) + 
-  geom_boxplot() +
-  facet_wrap(tool_ref ~ .)
-
-ttests <- recall_different %>% filter(tool_comp %in% basic_tools, tool_ref %in% basic_tools) %>%
-  group_by(tool_ref) %>%
-  summarise(
-    test = list(t.test(CSC, CSC_no_reorder, paired = TRUE)),
-    .groups = "drop"
-  ) %>%
-  mutate(tidy = purrr::map(test, broom::tidy)) %>%
-  tidyr::unnest(tidy)
-
-
-ttests_class <- recall_different %>% filter(tool_comp %in% basic_tools, tool_ref %in% basic_tools) %>%
-  group_by(new_level) %>%
-  summarise(
-    test = list(t.test(CSC, CSC_no_reorder, paired = TRUE)),
-    .groups = "drop"
-  ) %>%
-  mutate(tidy = purrr::map(test, broom::tidy)) %>%
-  tidyr::unnest(tidy)
-
-
-ttests %>%
-  mutate(
-    neglog10p = -log10(p.value)
-  ) %>%
-  ggplot(aes(x = estimate, y = neglog10p, label = tool_ref)) +
-  geom_point(size = 3) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  geom_text(nudge_y = 0.2, size = 3) +
-  theme_classic() +
-  xlab("Effect size (CSC − CSC_no_reorder)") +
-  ylab("-log10(p-value)")
-
-ttests_class %>%
-  mutate(
-    neglog10p = -log10(p.value)
-  ) %>%
-  ggplot(aes(x = estimate, y = neglog10p, label = new_level)) +
-  geom_point(size = 3) +
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  geom_text(nudge_y = 0.2, size = 3) +
-  theme_classic() +
-  xlab("Effect size (CSC − CSC_no_reorder)") +
-  ylab("-log10(p-value)")
-
-unigenes_more_class <- unigenes %>% filter(tool %in% basic_tools) %>% 
-  group_by(query) %>% mutate(n_class = n_distinct(new_level)) %>% filter(n_class > 1)
-
-unique(unigenes_more_class$query)
-
-# per tool
+# overlap by pipeline (without considering classes)
 JI_all <- return_overlap_tools(unigenes)
 
 
-
-levels_unigenes <- unigenes %>% 
-  ungroup() %>% 
-  group_by(query) %>% 
-  slice_head(n = 1) %>% 
-  ungroup() %>% 
-  group_by(new_level) %>% 
-  summarise( n = n()) %>% 
-  arrange(desc(n)) %>%
-  ungroup() %>% 
-  pull(new_level)
-
-
-#"cell wall charge", "rpoB",
+# sort the gene classes by abundance and richness to decide which classes to
+# show in sup_abundance plots
 levels_abundance_div <- abundance_class %>% 
   group_by(habitat, tool, gene) %>% 
   summarise(a = sum(abundance), d = sum(richness)) %>% 
@@ -349,25 +296,20 @@ levels_abundance_div <- abundance_class %>%
   ungroup()
 
 
-# levels_abundance_div %>% filter(habitat %in% "human gut") %>% 
-#  select(gene) %>% distinct() %>% print(n = 15)
-
-# levels_abundance_div %>% filter(habitat %in% "pig gut") %>% 
-#   select(gene) %>% distinct() %>% print(n = 15)
-
-
-
+# classes to show in fig2
 top_abundance <- c("efflux pump", "van" , "class A beta-lactamase", 
                    "tet RPG",  "cell wall charge", 
                    "rpoB", "erm", "aph")
 
-
-#top20
+# classes to show in fig4, the other classes are shown in fig_csc_sup_class
 
 top_cso <- c("van", "efflux pump",  "tet RPG", "class A beta-lactamase", 
              "class B beta-lactamase","class C beta-lactamase", "class D beta-lactamase",
              "aph", "erm", "aac")
 
+
+# aggregate the abundance in human gut by class and tool, add the gene class "other"
+# if the gene class is not present in top_abundance
 
 df_abundance_class_human <- abundance_class %>% 
   filter(habitat %in% "human gut") %>% 
@@ -384,20 +326,15 @@ df_abundance_class_human <- abundance_class %>%
 
 
 ################################################################################################
-# Plot 1 
+# PLot 1 
+
+# vector to encode the texture of the bars - 
+# striped for abricate with card, ncbi, and resfinder
 
 tools_texture_code <- rep("none", length(tools_labels))
 tools_texture_code[tools_levels %in% tools_texture] <- "stripe"
 
-tools_main <- c("DeepARG", "fARGene", "ABRicate-MEGARes",
-                "RGI-DIAMOND", "AMRFinderPlus", "ResFinder")
-
-type_tools <- c("solid", "solid", "solid", "dotted")
-
-g1 <- guides(fill = guide_legend(
-    override.aes = list(
-      pattern = tools_texture,
-      fill  = pal_7)), pattern = "none")
+# base format for the plots 
 
 theme1 <- theme_minimal() +
   theme(
@@ -422,6 +359,9 @@ theme1 <- theme_minimal() +
     legend.key.height = unit(0.35, "cm"),
     legend.key.width  = unit(0.35, "cm"),
     legend.box.spacing = unit(0.1, "cm"))
+
+
+# plot the number of unigenes considered ARG by tool
 
 p2a <- unigenes %>%
   filter(tool %in% basic_tools) %>% 
@@ -449,7 +389,8 @@ p2a <- unigenes %>%
         panel.grid.minor.x = element_blank(),
         strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5))
 
-p2a
+# Create the ECDF data for the plot, merging ABRicate and ResFinder, 
+# and removing AMRFinderPlus with HMM and fARGene
 
 id_plot_data <- unigenes %>% 
   filter(tool %in% basic_tools) %>% 
@@ -464,14 +405,17 @@ id_plot_data <- unigenes %>%
   mutate(data_type = ifelse(tool_2 %in% c("DeepARG", "RGI", "ABRicate/\nResFinder"), "nucleotide", "amino acid")) %>% 
   mutate(data_type = factor(data_type, levels = c( "nucleotide", "amino acid"))) %>% 
   ungroup() %>% 
-  group_by(tool_2) %>% mutate(N_obs = n_distinct(query)) %>% 
+  group_by(tool_2) %>% mutate(N_obs = n()) %>% 
   mutate(tool_3 = paste0(tool_2, "\n(n = ", scales::comma(N_obs), ")"))
-  
-unique(id_plot_data$tool_3)
+
+
+id_plot_data %>% group_by(tool_2) %>% summarise(n = n())
+
+# plot the ECDF
 
 id_plot <- id_plot_data %>% 
   mutate(tool_3 = factor(tool_3, levels = c("DeepARG\n(n = 100,075)","RGI\n(n = 65,937)",
-                                            "ABRicate/\nResFinder\n(n = 15,458)", "AMRFinder-\nPlus (aa)\n(n = 3,141)"))) %>% 
+  "ABRicate/\nResFinder\n(n = 37,772)", "AMRFinder-\nPlus (aa)\n(n = 3,141)"))) %>% 
   mutate(data_number = factor(data_type, levels = c( "nucleotide", "amino acid"))) %>% 
   ggplot(aes(x = id , color = tool_3, fill = tool_3)) +
   stat_ecdf(geom = "step", linewidth = 1) + 
@@ -487,14 +431,8 @@ id_plot <- id_plot_data %>%
   theme1 +
   theme(legend.position = "bottom", panel.border = element_blank())
 
-id_plot
 
-
-fig2ab <- plot_grid(
-  p2a + ggtitle("a"), id_plot + ggtitle("c"),
-  ncol = 1, align = "hv", axis = "tblr"
-)
-
+# prepare the data for the proportion of gene class in each tool
 
 df_plot <- unigenes %>% 
   filter(tool %in% basic_tools) %>% 
@@ -505,16 +443,16 @@ df_plot <- unigenes %>%
   group_by(new_level) %>%
   filter(max(p, na.rm = TRUE) >= 0.03) %>%  
   ungroup() %>%
+  # change the name of gene classes to fit in the plot
   mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
   mutate(new_level = gsub("rifampin inactivation enzyme","RIF-inact. enz.", new_level)) %>%
-  #mutate(new_level = gsub("cell wall ","cell wall\n", new_level)) %>%
   mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
   mutate(new_level = gsub("efflux pump","efflux", new_level)) %>%
   mutate(new_level = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", new_level)) %>%
   mutate(new_level = gsub("target-modifying enzyme","target-modif.\nenzyme", new_level)) %>%
   mutate(new_level = gsub("self-resistance","self-resistance", new_level)) 
 
-
+# plot the heatmap of the proportion of each gene class by tool
 df_plot1 <-  df_plot %>% 
   filter(tool %in% basic_tools) %>% 
   ggplot(aes(x = tools_labels, y = new_level, fill = p)) + 
@@ -547,9 +485,8 @@ df_plot1 <-  df_plot %>%
         plot.margin = margin(0, 0, 0, 20, unit = "pt"),
         strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5))
 
-df_plot1
 
-
+# prepare the data for the Jaccard index plot 
 
 mat <- JI_all %>% 
   filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>% 
@@ -559,10 +496,13 @@ mat <- JI_all %>%
 mat_matrix <- as.matrix(mat[,-1])   # remove tool_ref column
 rownames(mat_matrix) <- mat$tool_ref
 dist_mat <- as.dist(1 - mat_matrix)
+
+# hierarchical clustering to order the matrix
 hc <- hclust(dist_mat)  # or "ward.D2"
 plot(hc)
 ordered_tools <- hc$labels[hc$order]
 
+# filter the tools and rearrange the data
 
 JI_all_plot <- JI_all %>% 
   filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>% 
@@ -570,6 +510,7 @@ JI_all_plot <- JI_all %>%
          tool_lab_comp = factor(tools_labels[tool_comp], levels = tools_labels[ordered_tools]))
 
 
+# plot the jaccard index 
 
 jaccard_plot <-  JI_all_plot %>% filter(as.numeric(tool_lab_ref) < as.numeric(tool_lab_comp)) %>% 
   filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>% 
@@ -602,17 +543,8 @@ jaccard_plot <-  JI_all_plot %>% filter(as.numeric(tool_lab_ref) < as.numeric(to
 
 jaccard_plot
 
-p2_1 <- ((p2a + ggtitle("a")) /
-  (id_plot + ggtitle("c")) +
-  patchwork::plot_layout(heights = c(1,1)) |
-  (df_plot1 + ggtitle("b"))) + 
-  patchwork::plot_layout(widths = c(1,1))
+# merge all panels of figure 1 together 
 
-p2_1 <- ((p2a + ggtitle("a")) /
-           (jaccard_plot + ggtitle("c")) +
-           patchwork::plot_layout(heights = c(1,1)) |
-           (df_plot1 + ggtitle("b"))) + 
-  patchwork::plot_layout(widths = c(1,1))
 
 p2_1 <- ((p2a + ggtitle("a")) /
            (jaccard_plot + ggtitle("c")) /
@@ -627,12 +559,7 @@ ggsave("code_R_analysis/output_plots/fig1.svg", p2_1, width = 180, height = 180,
 
 # tools 
 
-
-
-env_to_plot_main <- EN[c(1, 9, 10, 11, 12, 13)]
-env_to_plot_supp <- EN[!EN %in% env_to_plot_main]
-
-scale_f <- 10^0
+# pre-calculate the information in the box plots abundance
 
 lims_abundance <- abundance_tool_sample %>%
   group_by(tool, habitat,tools_db, tools_labels, texture) %>% 
@@ -645,6 +572,8 @@ lims_abundance <- abundance_tool_sample %>%
     w2 = ifelse(quantile(abundance, 0.75) + 1.5*IQR(abundance)<0,0,
                 quantile(abundance, 0.75) + 1.5*IQR(abundance))) 
 
+# pre-calculate the information in the box plots richness
+
 lims_richness <- abundance_tool_sample %>%
   group_by(tool, habitat,tools_db, tools_labels, texture) %>% 
   summarise(
@@ -656,12 +585,16 @@ lims_richness <- abundance_tool_sample %>%
     w2 = ifelse(quantile(richness, 0.75) + 1.5*IQR(richness)<0,0,
                 quantile(richness, 0.75) + 1.5*IQR(richness))) 
 
-lims_richness  
+
+# Create a list to where to keep the total abundance plot of each habitat
 abu_plots <- list()
+
+# set seed for selecting random observations to plot as dots within each tool and habitat 
 set.seed(2026)
 
 for(j in 1:length(EN)){
   
+  # calculate total number of observations per habitat, and per tools and habitat
   df_plot <- abundance_tool_sample %>%
     filter(tool %in% basic_tools) %>% 
     filter(habitat %in% EN[j]) %>% 
@@ -669,18 +602,20 @@ for(j in 1:length(EN)){
     mutate(N = n_distinct(sample),
            abundance = abundance)
   
+  # select the observations to plot as dots, keeping them below 1.5IQR for visualization
   df_jitter <- df_plot %>% 
     ungroup() %>%
     group_by(habitat, tool) %>% 
     filter(abundance < quantile(abundance, 0.75) + 1.5*IQR(abundance))
+  
+  # filter the limits for the tools and habitat 
   
   lims_abundance_max = lims_abundance %>%
     filter(habitat %in% EN[j]) %>%
     filter(tool %in% basic_tools) %>% 
     ungroup() %>% summarise(max(w2)) %>% pull()
   
-  
-  
+  # plot 
   abu_plots[[j]] <- lims_abundance %>%
     filter(habitat %in% EN[j]) %>%
     filter(tool %in% basic_tools) %>% 
@@ -708,20 +643,25 @@ for(j in 1:length(EN)){
           plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")) 
 }
 
+# plot figure 2 panel a in the paper
+
 main_abundance_left <- 
-  #(abu_plots[[1]] + theme(axis.text.x = element_blank(), strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5)) + xlab("") + ylab("") + ggtitle("a")) / 
   ((abu_plots[[1]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("") + ggtitle("a")) / 
   (abu_plots[[10]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") +  ylab("Relative abundance\n(aligned reads per million)")) /
   (abu_plots[[11]] + theme(strip.text.x = element_blank()) + xlab("") + ylab("")))  + patchwork::plot_layout(heights = c(1,1,1))
+
   
 main_abundance_right <- 
-  #(abu_plots[[9]] + theme(axis.text.x = element_blank(), strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5)) + xlab("") + ylab("")) / 
   ((abu_plots[[9]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
   (abu_plots[[12]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") +  ylab("")) /
   (abu_plots[[13]] + theme(strip.text.x = element_blank()) + xlab("") + ylab(""))) + patchwork::plot_layout(heights = c(1,1,1)) 
 
+# this is actually panel a
+
 left1 <- main_abundance_left | main_abundance_right
 
+# get the gene levels for human gut abundance to use as factors 
+# change names for plotting
 
 gene_levels <- levels(df_abundance_class_human$gene)
 gene_levels <- gsub(" beta-lactamase","", gene_levels)
@@ -729,6 +669,8 @@ gene_levels <- gsub("cell wall ","cell\nwall\n", gene_levels)
 gene_levels <- gsub("MFS efflux pump","MFS\nefflux", gene_levels)
 gene_levels <- gsub("efflux pump","efflux", gene_levels)
 
+
+# calculate the class "other" comprising all other classes not in top_abundance
 
 df_abundance_class_all <- abundance_class %>% 
   mutate(gene = ifelse(gene %in% top_abundance, gene, "other")) %>% 
@@ -741,6 +683,8 @@ df_abundance_class_all <- abundance_class %>%
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
          tools_db = factor(tools_db[tool], levels = tools_db[!duplicated(tools_db)]))
 
+# modify the name of the gene classes for plotting
+
 df_a0 <- df_abundance_class_all  %>% 
   mutate(gene = gsub(" beta-lactamase","", gene)) %>%
   mutate(gene = gsub("cell wall ","cell\nwall\n", gene)) %>%
@@ -748,10 +692,13 @@ df_a0 <- df_abundance_class_all  %>%
   mutate(gene = gsub("efflux pump","efflux", gene)) %>%
   mutate(gene = factor(gene, levels = gene_levels)) 
 
+# create a new palette using as guide tool_levels 
+
 pal_10_q_2 <- pal_10_q
 names(pal_10_q_2) <- tools_levels
 
 
+# plot panel b in figure 2
 
 a0 <- df_a0 %>% 
   filter(tool %in% basic_tools) %>% 
@@ -776,7 +723,9 @@ a0 <- df_a0 %>%
              labeller = labeller(
                gene = as_labeller(function(x) {
                  out <- ifelse(
-                   x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim", "vat", "mph", "qnr"),
+                   x %in% c("rpoB", "van", "fos", "erm", "cat", 
+                            "aph", "ant", "aac", "lnu", "nim", 
+                            "vat", "mph", "qnr"),
                    paste0("italic('", x, "')"),
                    ifelse(x == "abcF", "ABC-F",
                           paste0("'", x, "'"))
@@ -806,13 +755,18 @@ a0 <- df_a0 %>%
 
 #a0
 
-left_block <- (left1/patchwork::wrap_elements(full = g_legend(a0))) + patchwork::plot_layout(heights = c(15,1))
+# merge the figure 2 panel a with the appropriate legend
+left_block <- (left1/patchwork::wrap_elements(full = g_legend(a0))) + 
+  patchwork::plot_layout(heights = c(15,1))
+
+# merge all panels in figure 2 
+
 p30 <- (left_block | (a0 + theme(legend.position = "none"))) + patchwork::plot_layout(widths = c(4,1))
+
 ggsave("code_R_analysis/output_plots/fig2.svg", p30, width = 180, height = 130, unit = "mm")
 
 
-#a0_new <- (a0_van / (a0_not_van + theme(legend.position = "none"))) + patchwork::plot_layout(heights = c(1,9))
-
+# create the supplementary figure sup_abundance.svg abundance per class and habitat
 
 sup_abundance_left <- 
   (abu_plots[[2]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
@@ -837,13 +791,12 @@ ggsave("code_R_analysis/output_plots/sup_abundance.svg", sup_abundance, width = 
 
 ################################################################################################
 
-###################
-###################
-###################
+# create vector for shaping the geom_points in the core-resistome and pan-resistome plots
 
 shape_tools <- rep(21, length(tools_labels[tools_levels %in% basic_tools]))
 shape_tools[tools_levels[tools_levels %in% basic_tools] %in% tools_texture] <- 24
 
+# for the pan and core, define only one metric name for both and add the type of data (core or pan)
 
 pan_core_df_plot <- pan_core %>% 
   select(!c(md, sd)) %>% 
@@ -853,6 +806,7 @@ pan_core_df_plot <- pan_core %>%
   mutate(metric = factor(metric, levels = c("Pan-resistome", "Core-resistome"))) %>%
   filter(value > 0) 
 
+# plot the pan resistome
 
 p4a1 <- pan_core_df_plot %>% filter(metric %in% "Pan-resistome") %>% 
   filter(habitat %in% c("human gut", "pig gut", "wastewater", "marine", "freshwater", "soil")) %>% 
@@ -888,6 +842,8 @@ p4a1 <- pan_core_df_plot %>% filter(metric %in% "Pan-resistome") %>%
         plot.margin = margin(5, 0, 0, 0, unit = "pt")) +
   scale_x_reverse(labels = label_comma()) 
 
+# plot the core resistome
+
 p4a2 <- pan_core_df_plot %>% filter(!metric %in% "Pan-resistome") %>% 
   filter(habitat %in% c("human gut", "pig gut", "wastewater", "marine", "freshwater", "soil")) %>% 
   filter(tool %in% basic_tools) %>%
@@ -913,31 +869,7 @@ p4a2 <- pan_core_df_plot %>% filter(!metric %in% "Pan-resistome") %>%
         plot.margin = margin(5, 0, 0, 0, unit = "pt")) +
   scale_x_continuous(labels = label_comma()) 
 
-p4a1 | p4a2
-
-df_sumcore <- sumcore %>% filter(habitat %in% "human gut") %>% 
-  group_by(tool) %>% 
-  mutate(p = unigenes / sum(unigenes)) %>% 
-  mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
-  mutate(new_level = gsub("rifampin inactivation enzyme","RIF-inact. enz.", new_level)) %>%
-  mutate(new_level = gsub("inactivation enzyme","\ninact. enz.", new_level)) %>%
-  mutate(new_level = gsub("cell wall ","cell wall\n", new_level)) %>%
-  mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
-  mutate(new_level = gsub("efflux pump","efflux", new_level)) %>%
-  mutate(new_level = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", new_level)) %>%
-  mutate(new_level = gsub("target-modifying enzyme","target-modif.\nenzyme", new_level)) %>%
-  mutate(new_level = gsub("self-resistance","self-resistance", new_level)) %>% 
-  mutate(new_level = gsub("variant or","variant or\n", new_level)) 
-
-
-df_sumcore_levels <- df_sumcore %>% ungroup() %>% 
-  filter(tool %in% basic_tools) %>%
-  arrange(desc(p)) %>% 
-  group_by(new_level) %>%
-  filter(p == max(p)) %>% 
-  pull(new_level) 
-
-
+# merge pan and core resistome and add the legend of the plot 
 
 panel1 <- (p4a1 + theme(legend.position = "none") | p4a2) + patchwork::plot_layout(widths = c(1,1))
 p4 <- (panel1 / (g_legend(p4a1) )) + patchwork::plot_layout(heights = c(12,1))
@@ -945,14 +877,12 @@ p4 <- (panel1 / (g_legend(p4a1) )) + patchwork::plot_layout(heights = c(12,1))
 ggsave("code_R_analysis/output_plots/fig3.svg", p4, width = 120, height = 140, unit = "mm")
 
 #########
-#########
-#########
 
+# basic theme for the overlap plot 
 
 theme5 <- theme(
   legend.position = "none",
   legend.text = element_text(size = general_size ),
-  #panel.border = element_blank(),
   panel.grid.major.y = element_blank(),
   panel.grid.minor.y = element_blank(),
   panel.grid.minor.x = element_blank(),
@@ -969,6 +899,8 @@ theme5 <- theme(
   strip.background = element_blank(),
   panel.grid.major.x = element_line(colour = "black", linewidth = 0.1))
 
+
+# modify the recall_fnr object to add texture, change the tools' name 
 
 d1 <- recall_fnr %>% 
   mutate(tool_ref = factor(as.character(tool_ref), 
@@ -987,6 +919,8 @@ d1 <- recall_fnr %>%
   mutate(tools_labels_ref = factor(tools_labels[tool_ref], levels = tools_labels_factor))
 
 
+# change the name of some classes for plotting
+
 d1 <- d1 %>% 
   filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
   mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
@@ -996,6 +930,7 @@ d1 <- d1 %>%
   mutate(n_obs = paste0('n = ',n_obs))
  
   
+# plot the csc of top_cso classes
 
 cs11 <- d1 %>% 
   filter(new_level %in% top_cso) %>% 
@@ -1011,7 +946,8 @@ cs11 <- d1 %>%
              labeller = labeller(
                new_level = as_labeller(function(x) {
                  out <- ifelse(
-                   x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim", "vat", "mph", "qnr"),
+                   x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", 
+                            "aac", "lnu", "nim", "vat", "mph", "qnr"),
                    paste0("italic('", x, "')"),
                    ifelse(x == "abcF", "ABC-F",
                           paste0("'", x, "'"))
@@ -1030,7 +966,8 @@ cs11 <- d1 %>%
          panel.spacing = unit(5, "pt")) +
   scale_y_discrete(labels = function(x) {
     out <- ifelse(
-      x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
+      x %in% c("rpoB", "van", "fos", "erm", "cat", 
+               "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
       paste0("italic('", x, "')"),
       ifelse(x %in% "abcF", "ABC-F",
              paste0("'", x, "'"))
@@ -1038,40 +975,16 @@ cs11 <- d1 %>%
     parse(text = out)
   })
 
-cs11
+
+ggsave("code_R_analysis/output_plots/fig4.svg", cs11, width = 180, height = 100, unit = "mm")
 
 
-cs2 <- ggplot(d1 %>% 
-                filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
-                filter(tool_ref %in% c("RGI-DIAMOND", "fARGene","DeepARG")), #%>%
-              aes(x = recall*100, y = tools_labels_comp)) + 
-  geom_boxplot(aes(fill = tool_ref, pattern = texture),
-               position = position_dodge2(preserve = "single", width = 0, padding = 0), 
-               width = 0.5, color = "black", outliers = FALSE) +
-  facet_grid(tools_db_comp ~ tools_labels_ref, scales = "free_y", space = "free") +
-  scale_fill_manual(values = pal_10_q[match(c("DeepARG","fARGene", "RGI-DIAMOND"), tools_levels)]) +
-  scale_y_discrete(drop = T) +
-  xlab("%") +
-  ylab("Pipeline covered") +
-  theme_minimal() +
-  theme5 +
-  theme(panel.grid = element_blank(), 
-        plot.margin = margin(0, 10, 0, 0, unit = "pt"),
-        strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
-        strip.text.y = element_text(size = general_size, vjust = 0, hjust = 0))
+#######################################################################
+#######################################################################
 
-cs2
+# calculate the intra-tool overalap and the overlap between tools with the same database
 
-#p5 <- (cs2 + ggtitle("a")| cs11 + ggtitle("b")) + patchwork::plot_layout(widths = c(2, 1))
-p5 <-  cs11
-
-ggsave("code_R_analysis/output_plots/fig4.svg", p5, width = 180, height = 100, unit = "mm")
-
-
-
-########################################################################################################################
-########################################################################################################################
-
+# basic theme for the plots 
 
 theme_overlap <- theme_minimal() + 
   theme(legend.position = "bottom",
@@ -1090,21 +1003,27 @@ theme_overlap <- theme_minimal() +
         panel.grid.minor.x = element_blank(),
         axis.title = element_text(size = general_size , face = "bold"),
         panel.background = element_blank(),
-        #legend.title = element_text(size = general_size, angle = 90, vjust = 0.5),
-        #legend.text = element_text(size = general_size, angle = 90, vjust = 0.5),
         legend.text = element_text(size = general_size))
 
 
+# for RGI, the overlap is between amino acid and nucleotide and DIAMOND and BLAST
+
+# create the overlap for RGI
+
 rgi_query <- data.frame(gene = unique(c(lst$rgi.blast$query, lst$rgi.diamond$query, lst$rgi.diamond.prot$query)))
-rgi_query <- rgi_query %>% mutate(dataset = ifelse(gene %in% intersect(intersect(lst$rgi.blast$query, lst$rgi.diamond$query), lst$rgi.diamond.prot$query), "all setups",
-                                                   ifelse(gene %in% intersect(lst$rgi.blast$query, lst$rgi.diamond$query), "BLAST nt and DIAMOND (nt or aa)",
-                                                          ifelse(gene %in% intersect(lst$rgi.diamond.prot$query, lst$rgi.diamond$query), "only\nDIAMOND\nnt and/or aa",
-                                                                 ifelse(gene %in% intersect(lst$rgi.diamond.prot$query, lst$rgi.blast$query), "BLAST nt and DIAMOND (nt or aa)",
-                                                                        ifelse(gene %in% lst$rgi.diamond.prot$query, "only\nDIAMOND\nnt and/or aa",
-                                                                               ifelse(gene %in% lst$rgi.diamond$query, "only\nDIAMOND\nnt and/or aa",
-                                                                                      ifelse(gene %in% lst$rgi.blast$query, "only BLAST\nnt", NA)))))))) %>%
+rgi_query <- rgi_query %>% 
+  mutate(dataset = 
+           ifelse(gene %in% intersect(intersect(lst$rgi.blast$query, lst$rgi.diamond$query), lst$rgi.diamond.prot$query), "all setups",
+           ifelse(gene %in% intersect(lst$rgi.blast$query, lst$rgi.diamond$query), "BLAST nt and DIAMOND (nt or aa)",
+           ifelse(gene %in% intersect(lst$rgi.diamond.prot$query, lst$rgi.diamond$query), "only\nDIAMOND\nnt and/or aa",
+           ifelse(gene %in% intersect(lst$rgi.diamond.prot$query, lst$rgi.blast$query), "BLAST nt and DIAMOND (nt or aa)",
+           ifelse(gene %in% lst$rgi.diamond.prot$query, "only\nDIAMOND\nnt and/or aa",
+           ifelse(gene %in% lst$rgi.diamond$query, "only\nDIAMOND\nnt and/or aa",
+           ifelse(gene %in% lst$rgi.blast$query, "only BLAST\nnt", NA)))))))) %>%
   mutate(dataset = factor(dataset, levels = c("all setups", "only\nDIAMOND\nnt and/or aa", 
                                               "BLAST nt and DIAMOND (nt or aa)",  "only BLAST\nnt")))
+
+# modify to plot in the right order and with the right label 
 
 rgi_query2 <- rgi_query %>% 
   group_by(dataset) %>% summarise(n = n()) %>% mutate(p = n/sum(n)) %>% 
@@ -1112,6 +1031,8 @@ rgi_query2 <- rgi_query %>%
   arrange(max(as.numeric(dataset)) - as.numeric(dataset)) %>%
   mutate(N = cumsum(n)) %>%
   mutate(diff_by1 = (N - lag(N, n = 1, default = 0))/2)
+
+# plot the overlap for RGI 
 
 rgi_over <- rgi_query2%>%
   ggplot(aes(y = "RGI", x = n, fill = dataset)) + 
@@ -1133,6 +1054,7 @@ rgi_over <- rgi_query2%>%
   theme_overlap + 
   theme(plot.margin = margin(5, 5, 5, 5, unit = "pt"))
 
+# create a function for overlap between only two pipelines
 
 plot_overlaps <- function(x, y, nxy, nx, ny, nam=""){
   db_query <- data.frame(gene = unique(c(x, y)))
@@ -1146,8 +1068,6 @@ plot_overlaps <- function(x, y, nxy, nx, ny, nam=""){
     arrange(max(as.numeric(dataset)) - as.numeric(dataset)) %>%
     mutate(N = cumsum(n)) %>%
     mutate(diff_by1 = (N - lag(N, n = 1, default = 0))/2)
-  
-  #print(db_query2)
   
   db_query_plot <- db_query2 %>% 
     ggplot(aes(y = nam, x = n, fill = dataset)) + 
@@ -1170,15 +1090,20 @@ plot_overlaps <- function(x, y, nxy, nx, ny, nam=""){
   return(db_query_plot)
 }
 
-deeparg_query <- data.frame(gene = unique(c(lst$deeparg.norm$query, lst$deeparg.norm.prot$query)))
-deeparg_query <- deeparg_query %>% mutate(dataset = ifelse(gene %in% intersect(lst$deeparg.norm$query, lst$deeparg.norm.prot$query), "nt and aa",
-                                                           ifelse(gene %in% lst$deeparg.norm$query, "nt", "aa"))) %>% 
-  mutate(dataset = factor(dataset, levels = c("nt and aa", "nt", "aa")))
-
+# overlap for deeparg
 
 deeparg_over <- plot_overlaps(lst$deeparg.norm$query, lst$deeparg.norm.prot$query, "nt and aa", "only nt", "only aa", nam = "DeepARG")
+
+# overlap for fargene
+
 fargene_over <- plot_overlaps(lst$fargene$query, lst$fargene.prot$query, "nt and aa", "only nt", "only aa", nam = "fARGene")
+
+# overlap for amrfinder
+
 amrfinder_over <- plot_overlaps(lst$amrfinder.norm$query, lst$amrfinder.norm.prot$query, "nt and aa", "only nt", "only aa", nam = "AMRFinder-\nPlus")
+
+
+#  merge rgi, fargene, deeparg, amrfinder
 
 plot_overlaps_same_tool <- 
   ((rgi_over + xlab("") + ggtitle("a")) / 
@@ -1189,9 +1114,13 @@ plot_overlaps_same_tool <-
   theme(plot.margin = margin(5, 5, 5, 5, unit = "pt"))
 
 
+#  plot card, ncbi, resfinder
+
 card_over <- plot_overlaps(lst$rgi.diamond.prot$query, lst$abricate.card.norm$query, "RGI and\nABRicate", "only RGI", "only ABRicate", nam = "CARD")
 ncbi_over <- plot_overlaps(lst$amrfinder.norm.prot$query, lst$abricate.ncbi.norm$query, "AMRFinderPlus\nand ABRicate", "only AMRFinderPlus", "only ABRicate", nam = "NCBI")
 resfinder_over <- plot_overlaps(lst$resfinder.norm$query, lst$abricate.resfinder.norm$query, "ResFinder\nand ABRicate", "only ResFinder", "only ABRicate", nam = "ResFinder")
+
+#  merge
 
 plot_db <- 
   (card_over + ggtitle("b")) / 
@@ -1199,6 +1128,8 @@ plot_db <-
   resfinder_over + xlab("ARGs") & 
   theme(plot.margin = margin(5, 5, 5, 5, unit = "pt"))
 
+
+# plot for megares vs other abricate 
 
 other_abricate <- unique(c(lst$abricate.argannot.norm$query, lst$abricate.card.norm$query, 
 lst$abricate.ncbi.norm$query, lst$abricate.resfinder.norm$query))
@@ -1209,15 +1140,12 @@ abricate_query <- data.frame(rbind(lst$abricate.megares.norm[,c("tool", "query")
            lst$abricate.ncbi.norm[,c("tool", "query")], 
            lst$abricate.resfinder.norm[,c("tool", "query")]))
 
-ntools_abricate0 <- abricate_query %>% 
-  group_by(query) %>% 
-  summarise(n_tools = n_distinct(tool))
-
-
 ntools_abricate <- abricate_query %>% 
   group_by(query) %>% 
   summarise(n_tools = n_distinct(tool))
   
+# modify the labels for intercepts with megares 
+
 ntools_abricate <- ntools_abricate %>% mutate(s = ifelse(query %in% lst$abricate.megares.norm$query, "MEGARes","other"))
 ntools_abricate <- ntools_abricate %>% mutate(s = ifelse(n_tools == 2 & s == "MEGARes" & query %in% lst$abricate.argannot.norm$query, "MEGARes and\nARGANNOT", s))
 ntools_abricate <- ntools_abricate %>% mutate(s = ifelse(n_tools == 2 & s == "MEGARes" & query %in% lst$abricate.ncbi.norm$query, "MEGARes and\nNCBI", s))
@@ -1230,6 +1158,7 @@ ntools_abricate <- ntools_abricate %>% mutate(s = ifelse(s == "MEGARes", "only M
 
 ntools_abricate %>% ungroup %>% group_by(n_tools, s) %>% summarise(n = n())
 
+# factorize the labels 
 
 ntools_abricate1 <- ntools_abricate %>% mutate(s = factor(s, levels = 
 c("only MEGARes","MEGARes and\nCARD","MEGARes and\nResFinder",
@@ -1248,6 +1177,8 @@ abricate_p1 <- ntools_abricate2 %>% ungroup %>% group_by(s) %>%
   arrange(max(as.integer(s)) - as.integer(s)) %>%
   mutate(N = cumsum(n)) %>%
   mutate(diff_by1 = (N - lag(N, n = 1, default = 0))/2) 
+
+# abricate plot 
 
 abricate_plot <- abricate_p1 %>%
   ggplot(aes(y = "ABRicate", x = n, fill = s)) + 
@@ -1270,6 +1201,8 @@ abricate_plot <- abricate_p1 %>%
   theme_overlap + 
   theme(plot.margin = margin(5, 5, 5, 5, unit = "pt"))
 
+
+# megares plot 
 
 meg_plot_1 <- ntools_abricate1 %>% filter(grepl("MEGARes and", s)) %>% 
   ungroup %>% group_by(s) %>% 
@@ -1300,40 +1233,19 @@ megares_plot <- meg_plot_1 %>%
   theme_overlap + 
   theme(plot.margin = margin(5, 5, 5, 5, unit = "pt"))
 
+# merge megares and abricate plots
+
 plot_megares <- (abricate_plot + ggtitle("c")) / megares_plot
 
-#abricate_meg1 <- plot_overlaps(lst$abricate.resfinder.norm$query, lst$abricate.megares.norm$query, "Both", "Only\nResFinder", "Only\nMEGARes", nam = "ResFinder\nMEGARes")
-#abricate_meg2 <- plot_overlaps(lst$abricate.argannot.norm$query, lst$abricate.megares.norm$query, "Both", "Only\nARGANNOT", "Only\nMEGARes", nam = "ARGANNOT\nMEGARes")
-#abricate_meg3 <- plot_overlaps(lst$abricate.card.norm$query, lst$abricate.megares.norm$query, "Both", "Only\nCARD", "Only\nMEGARes", nam = "CARD\nMEGARes")
-#abricate_meg4 <- plot_overlaps(lst$abricate.ncbi.norm$query, lst$abricate.megares.norm$query, "Both", "Only\nNCBI", "Only\nMEGARes", nam = "NCBI\nMEGARes")
-
-#plot_megares <- 
-#  abricate_meg2 /
-#  abricate_meg3 /
-#  abricate_meg4 /
-#  abricate_meg1 + xlab("% of ARGs")
-
-  
-#overlap_all_plots <- (plot_overlaps_same_tool | 
-# plot_db ) +  patchwork::plot_layout(widths = c(1, 1)) / 
-#(((abricate_plot + ggtitle("d")) | megares_plot) + patchwork::plot_layout(widths = c(1, 1))) + 
-#  patchwork::plot_layout(heights = c(2, 1))
 
 overlap_all_plots <- (plot_overlaps_same_tool / abricate_plot + ggtitle("d")) + patchwork::plot_layout(heights = c(1,1,1,1,1)) |
 (plot_db / megares_plot + ggtitle("e")) + patchwork::plot_layout(heights = c(1,1,1,1))
 
-
-ggsave("code_R_analysis/output_plots/overlaps_tool.svg", plot_overlaps_same_tool, width = 100, height = 90, unit = "mm")
-ggsave("code_R_analysis/output_plots/overlaps_db.svg", plot_db, width = 100, height = 90, unit = "mm")
-ggsave("code_R_analysis/output_plots/overlaps_megares.svg", plot_megares, width = 100, height = 90, unit = "mm")
-
-
 ggsave("code_R_analysis/output_plots/overlaps_all_plots.svg", overlap_all_plots, width = 180, height = 180, unit = "mm")
 
 
-
-# supplementary pan and core 
-
+# plot the supplementary figures of the pan and core resistome
+# pan
 pan_core_supp <- pan_core_df_plot %>% filter(metric %in% "Pan-resistome") %>% 
   filter(!habitat %in% c("human gut", "pig gut", "wastewater", "marine", "freshwater", "soil")) %>% 
   filter(tool %in% basic_tools) %>%
@@ -1368,6 +1280,7 @@ pan_core_supp <- pan_core_df_plot %>% filter(metric %in% "Pan-resistome") %>%
         plot.margin = margin(5, 0, 0, 0, unit = "pt")) +
   scale_x_reverse(labels = label_comma()) 
 
+# core
 pan_core_supp2 <- pan_core_df_plot %>% filter(!metric %in% "Pan-resistome") %>% 
   filter(!habitat %in% c("human gut", "pig gut", "wastewater", "marine", "freshwater", "soil")) %>% 
   filter(tool %in% basic_tools) %>%
@@ -1392,7 +1305,10 @@ pan_core_supp2 <- pan_core_df_plot %>% filter(!metric %in% "Pan-resistome") %>%
         plot.margin = margin(5, 0, 0, 0, unit = "pt")) +
   scale_x_continuous(labels = label_comma()) 
 
+# merge 
 pan_core_supp | pan_core_supp2
+
+# merge labels 
 
 panel1_s <- (pan_core_supp + theme(legend.position = "none") | pan_core_supp2) + patchwork::plot_layout(widths = c(1,1))
 p4_S <- (panel1_s / (g_legend(p4a1) )) + patchwork::plot_layout(heights = c(12,1))
@@ -1403,6 +1319,7 @@ ggsave("code_R_analysis/output_plots/sup_pan_core.svg", p4_S, width = 120, heigh
 ####
 
 
+# create the plots of richness
 
 rich_plots <- list()
 set.seed(2026)
@@ -1454,6 +1371,8 @@ for(j in 1:length(EN)){
 }
 
 
+# create the three panels of the figures 
+
 sup_rich_left <- 
   ((rich_plots[[1]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
   (rich_plots[[2]] + theme(axis.text.x = element_blank(), strip.text.x = element_blank()) + xlab("") + ylab("")) / 
@@ -1480,6 +1399,7 @@ sup_rich_right <-
   patchwork::plot_layout(heights = c(1, 1, 1, 1, 1))
 
 
+# merge the three panels
 
 sup_rich <- sup_rich_left | sup_rich_mid | sup_rich_right 
 
@@ -1488,6 +1408,9 @@ ggsave("code_R_analysis/output_plots/sup_richness.svg", sup_rich, width = 180, h
 
 
 ###
+
+# create the plots of the abundance per class and pipeline for supplementary
+
 abu_class_plots <- list()
 df_class_summary_plots <- list()
 
@@ -1600,10 +1523,10 @@ for( j in 1:length(EN)){
   
 }
 
+# create the three figures
 
-
-
-sup_class_1 <- #(((abu_class_plots[[1]] +  xlab("")) |
+# human
+sup_class_1 <- 
 (((abu_class_plots[[2]] +  xlab("") + ylab("")) |
 (abu_class_plots[[3]] +   ylab("")) |  
 (abu_class_plots[[4]] +  xlab("") + ylab("")) |  
@@ -1617,6 +1540,7 @@ sup_class_1 <- #(((abu_class_plots[[1]] +  xlab("")) |
                       nrow = 2), pattern = "none"))))) + 
   patchwork::plot_layout(heights = c(10,1))
 
+# other hosts 
 
 sup_class_2 <- (((abu_class_plots[[6]] +  xlab("")) |
     (abu_class_plots[[7]] +  xlab("") + ylab("")) |
@@ -1631,6 +1555,8 @@ sup_class_2 <- (((abu_class_plots[[6]] +  xlab("")) |
                           nrow = 2), pattern = "none"))))) + 
   patchwork::plot_layout(heights = c(10,1))
 
+
+# external habitats 
 
 sup_class_3 <- (((abu_class_plots[[10]] +  xlab("")) |
                    (abu_class_plots[[11]] +  xlab("") + ylab("")) |
@@ -1652,6 +1578,7 @@ ggsave("code_R_analysis/output_plots/sup_abundance_class_external_env.svg", sup_
 
 
 
+# create the CSC for the supplement, gene classes not in the main results 
 
 d2 <- d1 %>% mutate(texture = unigenes$texture[match(tool_ref, unigenes$tool)])
 
@@ -1706,6 +1633,7 @@ ggsave("code_R_analysis/output_plots/fig_csc_sup_class.svg", cs11_sup, width = 1
 
 ### 
 
+# create the three panels of the composition of the human gut core+resistome
 
 core_class_human <- core %>% filter(cut == 0.5, cnt > 450, tool %in% basic_tools, habitat %in% "human gut") %>%
   ungroup() %>%
@@ -1812,6 +1740,7 @@ pcore3 <- ggplot(core_class_human %>% filter(r %in% "3"), aes(x = new_level, y =
     plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")) 
 
 
+# merge the ponels
 
 core_human_all <- ((pcore1)  / 
     (pcore2) /
@@ -1820,92 +1749,83 @@ core_human_all <- ((pcore1)  /
 
 ggsave("code_R_analysis/output_plots/fig_human_core.svg", core_human_all, width = 180, height = 180, unit = "mm")
 
+###  Supplementary tables 
+
+
+tools_core <- core %>%
+  ungroup() %>% 
+  filter(cut %in% 0.5 & cnt > 450) %>%
+  filter(tool %in% basic_tools, habitat %in% "human gut") %>% 
+  group_by(X, new_level) %>% 
+  summarise(
+    tools = paste(sort(unique(tool)), collapse = ", "),
+    number_tools = n_distinct(tool),
+    .groups = "drop"
+  ) %>% 
+  arrange(desc(number_tools), tools) %>% 
+  rename(unigene = X, gene_class = new_level)
+
+
+ARO <- ARO %>% rename(gene_class = new_level, ARO_Term_ID = Term_ID) %>% 
+  mutate(abbreviation = gene_class) %>% 
+  mutate(abbreviation = gsub(" beta-lactamase","", abbreviation)) %>%
+  mutate(abbreviation = gsub("rifampin inactivation enzyme","RIF-inact. enz.", abbreviation)) %>%
+  mutate(abbreviation = gsub("MFS efflux pump","MFS efflux", abbreviation)) %>%
+  mutate(abbreviation = gsub("efflux pump","efflux", abbreviation)) %>%
+  mutate(abbreviation = gsub("beta-lactam modulation resistance","beta-lactam mod.", abbreviation)) %>%
+  mutate(abbreviation = gsub("target-modifying enzyme","target-modif. enzyme", abbreviation)) %>%
+  mutate(abbreviation = gsub("abcF","ABC-F", abbreviation)) 
+
+write.csv(ARO, file = "code_R_analysis/output_plots/TableS2.csv") 
+write.csv(tools_core, file = "code_R_analysis/output_plots/TableS3.csv") 
+write.csv(metadata %>% select(sample_id, habitat) %>% rename(sample = sample_id), "code_R_analysis/output_plots/TableS1.csv")
 
 
 
-# tool_queries <- unigenes %>% filter(tool %in% basic_tools) %>% 
-#   distinct(tool, query)
-# 
-# 
-# tool_queries_summary <- unigenes %>%
-#   distinct(tool, new_level, query) %>%
-#   group_by(tool, new_level) %>%
-#   summarise(queries = list(query), .groups = "drop") %>%
-#   tidyr::crossing(tool2 = basic_tools) %>% 
-#   mutate(
-#     prop = mapply(function(q, t2) {
-#       other_q <- unigenes$query[unigenes$tool == t2]
-#       length(intersect(q, other_q)) / length(unique(other_q))
-#     }, queries, tool2))
-# 
-# 
-# 
-# tool_queries_summary
-# 
-# 
-# 
-# tool_queries_summary <- tool_queries_summary %>% 
-#   mutate(tool_ref = tool, tool_comp = tool2) %>% 
-#   mutate(tool_ref = factor(as.character(tool_ref), 
-#                            levels = tools_levels)) %>% 
-#   mutate(texture = ifelse(tool_comp %in% tools_texture, "yes", "no")) %>%
-#   mutate(texture2 = ifelse(tool_ref %in% tools_texture, "yes", "no")) %>%
-#   mutate(facet_var = gsub("-", "-\n", tool_ref)) %>%
-#   mutate(facet_var = gsub(" ", "\n", facet_var)) %>%
-#   mutate(facet_var = gsub("Plus", "\n Plus", facet_var)) %>%
-#   mutate(facet_var = fct_reorder(facet_var, as.numeric(tool_ref)))  %>% 
-#   mutate(val = prop, d = "csc") %>% 
-#   mutate(tools_labels_comp = factor(tools_labels[tool_comp], levels = tools_labels_factor),
-#          texture_comp = ifelse(tool_comp %in% tools_texture, "yes", "no"),
-#          tools_db_comp = factor(tools_db[tool_comp], levels = tools_db_factor)) %>% 
-#   mutate(tools_labels_comp = factor(gsub("-\n","",tools_labels_comp), levels = gsub("-\n","", levels(tools_labels_comp)))) %>%
-#   mutate(tools_labels_ref = factor(tools_labels[tool_ref], levels = tools_labels_factor))
-# 
-# 
-# 
-# 
-# cs12 <- ggplot(tool_queries_summary %>% 
-#                  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
-#                  filter(new_level %in% top_cso) %>%
-#                  mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
-#                  mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
-#                  mutate(new_level = gsub("efflux pump","efflux", new_level)), 
-#                aes(x = prop*100, y = 0)) + 
-#   geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture2),
-#                        position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
-#                        width = 1.3, pattern_color = "black", pattern_fill = "black", pattern_density = 0.000000001,
-#                        pattern_spacing = 0.2,
-#                        pattern_size =  0.3, color = "black", outliers = FALSE, outlier.shape = NA, linewidth = 0.15) +
-#   scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
-#   facet_grid(new_level ~ tools_labels_ref, scales = "free_y", space = "free",
-#              labeller = labeller(
-#                new_level = as_labeller(function(x) {
-#                  out <- ifelse(
-#                    x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim", "vat", "mph", "qnr"),
-#                    paste0("italic('", x, "')"),
-#                    ifelse(x == "abcF", "ABC-F",
-#                           paste0("'", x, "'"))
-#                  )
-#                  return(out)
-#                }, default = label_parsed)
-#              )) +
-#   scale_fill_manual(values = pal_10_q)  + 
-#   xlab("CSC %") +
-#   ylab("ARG class") + 
-#   theme_minimal() +
-#   theme5 +
-#   theme( panel.grid = element_blank(),
-#          strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5 , angle = 0),
-#          strip.text.y = element_text(size = general_size, vjust = 0, hjust = 0, angle = 0),
-#          panel.spacing = unit(5, "pt")) +
-#   scale_y_discrete(labels = function(x) {
-#     out <- ifelse(
-#       x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim","vat","mph","qnr"),
-#       paste0("italic('", x, "')"),
-#       ifelse(x %in% "abcF", "ABC-F",
-#              paste0("'", x, "'"))
-#     )
-#     parse(text = out)
-#   })
-# 
-# cs12
+
+## T-test deeparg and rgi vs all other pipelines
+ttests <- abundance_tool_sample %>% 
+  filter(tool %in% basic_tools) %>% 
+  group_by(sample, habitat) %>% 
+  mutate(
+    abu_rgi  = abundance[tool == "RGI-DIAMOND"],
+    abu_deep = abundance[tool == "DeepARG"]
+  ) %>% 
+  ungroup() %>% 
+  filter(!tool %in% c("DeepARG", "RGI-DIAMOND")) %>% 
+  group_by(tool, habitat) %>% 
+  summarise(
+    n = n(),
+    effect_rgi  = mean(abundance - abu_rgi, na.rm = TRUE),
+    effect_deep = mean(abundance - abu_deep, na.rm = TRUE),
+    t_rgi  = t.test(abundance, abu_rgi, paired = TRUE)$statistic,
+    p_rgi  = t.test(abundance, abu_rgi, paired = TRUE)$p.value,
+    t_deep = t.test(abundance, abu_deep, paired = TRUE)$statistic,
+    p_deep = t.test(abundance, abu_deep, paired = TRUE)$p.value,
+    .groups = "drop"
+  )
+
+ggplot(ttests, aes(x = effect_rgi, y = -log10(p_rgi))) +
+  geom_point(aes(color = habitat)) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = -log10(0.01), linetype = "dashed") +
+  labs(
+    x = "Mean abundance difference vs RGI",
+    y = "-log10(p-value)",
+    title = "Volcano plot: tools vs RGI"
+  ) +
+  theme1
+
+ggplot(ttests, aes(x = effect_deep, y = -log10(p_deep))) +
+  geom_point(aes(color = habitat), alpha = 0.8) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed") +
+  labs(
+    x = "Mean abundance difference vs DeepARG",
+    y = "-log10(p-value)",
+    title = "Volcano plot: tools vs DeepARG"
+  ) +
+  theme_minimal()
+
+
+
