@@ -8,35 +8,43 @@ responsive_css <- tags$head(
   tags$meta(name = "viewport", content = "width=device-width, initial-scale=1.0"),
   tags$style(HTML("
 
-    /* 1. Base */
     html, body {
       overflow-x: hidden;
       -webkit-text-size-adjust: 100%;
     }
 
+    .html-fill-item,
+    .html-fill-container {
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
     .card {
+      width: 100%;
       min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
       word-break: break-word;
       height: auto !important;
     }
     .card-body {
+      width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box;
       height: auto !important;
       overflow: visible !important;
     }
 
-    /* Plots scale to container width */
     .shiny-plot-output img,
     .shiny-plot-output canvas {
       max-width: 100% !important;
     }
 
-    /* Card images */
     .card-img, .card-img-top, .card-img-bottom {
       max-width: 100%;
       height: auto;
     }
 
-    /* pickerInput dropdowns */
     .bootstrap-select .dropdown-menu {
       max-width: 100%;
       min-width: 0;
@@ -44,14 +52,12 @@ responsive_css <- tags$head(
       white-space: normal;
     }
 
-    /* Sidebar text wrap */
     .sidebar .control-label,
     .sidebar .shiny-input-container {
       max-width: 100%;
       word-break: break-word;
     }
 
-    /* 2. Removing the height and fill lock*/
     .bslib-page-sidebar,
     .bslib-sidebar-layout,
     .bslib-sidebar-layout > .bslib-sidebar-main,
@@ -59,33 +65,43 @@ responsive_css <- tags$head(
     .tab-content,
     .tab-pane,
     .bslib-page-fill {
-      height: auto    !important;
+      height: auto !important;
       max-height: none !important;
       overflow: visible !important;
     }
 
-    /* 3. NAVBAR setup */
     .navbar-nav { flex-wrap: wrap; }
 
-    /* 4. For large screens (>= 1400 px) */
     @media (min-width: 1400px) {
+      .layout-column-wrap {
+        display: flex !important;
+        flex-direction: row !important;
+        width: 100% !important;
+      }
+      .layout-column-wrap > * {
+        flex: 0 0 50% !important;
+        width: 50% !important;
+        max-width: 50% !important;
+        min-width: 0 !important;
+      }
       .card-img { max-height: 900px; object-fit: contain; }
     }
 
-    /* 5. For tablets  (< 992 px) */
-    @media (max-width: 991px) {
-
-      /* Stacking layout_column_wrap (Introduction) */
+    @media (max-width: 1399px) {
       .layout-column-wrap {
+        display: flex !important;
         flex-direction: column !important;
-      }
-      .layout-column-wrap > * {
         width: 100% !important;
-        flex: 0 0 100% !important;
-        max-width: 100% !important;
       }
-
-      /* Sidebar stacking*/
+      .layout-column-wrap > *,
+      .layout-column-wrap > .html-fill-item {
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+      }
       .bslib-sidebar-layout {
         flex-direction: column !important;
       }
@@ -96,48 +112,38 @@ responsive_css <- tags$head(
         border-bottom: 1px solid #dee2e6;
         padding-bottom: .75rem;
       }
+      .card-img { max-height: 700px; object-fit: contain; }
+    }
 
+    @media (max-width: 991px) {
       .card-img { max-height: 600px; object-fit: contain; }
     }
 
-    /* 6. For large phones  (< 768 px) */
     @media (max-width: 767px) {
-
       .container-fluid {
-        padding-left:  .5rem !important;
+        padding-left: .5rem !important;
         padding-right: .5rem !important;
       }
-
       .navbar-nav { width: 100%; }
       .navbar-nav .nav-item { width: 100%; text-align: center; }
-
       .card-body   { padding: .6rem !important; }
       .card-header { padding: .5rem .75rem !important; font-size: .95rem; }
-      .card-footer { padding: .5rem .75rem !important; font-size: .8rem;  }
-
+      .card-footer { padding: .5rem .75rem !important; font-size: .8rem; }
       .bootstrap-select,
       .bootstrap-select > .dropdown-toggle { width: 100% !important; }
-
       .sidebar em { font-size: .8rem; }
-
       .card-img { max-height: 420px; object-fit: contain; }
-
       .card-body p,
       .card-body li { font-size: .9rem; line-height: 1.5; }
     }
 
-    /* 7. For small phones  (< 480 px) */
     @media (max-width: 479px) {
-
       .navbar-brand { font-size: 1rem; }
-
       .container-fluid {
-        padding-left:  .25rem !important;
+        padding-left: .25rem !important;
         padding-right: .25rem !important;
       }
-
       .card-img { max-height: 320px; }
-
       .card-body p,
       .card-body li { font-size: .85rem; }
     }
@@ -147,6 +153,13 @@ responsive_css <- tags$head(
 
 
 ps_intro <- fluidPage(
+  tags$style(HTML("
+    .card > .card-header { font-size: 1.3rem !important; font-weight: 600 !important;}
+    .card p { font-size: 0.95rem; line-height: 1.6; }
+    .card ul { font-size: 0.95rem; line-height: 1.8; }
+    .card-footer { font-size: 0.85rem; color: #666; }
+  ")),
+  
   layout_column_wrap( 
     width = 1/2,
     card(
@@ -169,8 +182,9 @@ ps_intro <- fluidPage(
         tags$li("Nucleotide sequences through:"),
         tags$ul(
           tags$li("ResFinder, and"), 
-          tags$li("ABRicate with the databases: CARD, ResFinder, NCBI, ARG-ANNOT, and MEGARES 2.0.;")
+          tags$li("ABRicate with the databases: CARD, ResFinder, NCBI, ARG-ANNOT, and MEGARES 2.0.")
         ),
+        
         tags$li("Amino acid sequences through:"),
         tags$ul(
           tags$li("DeepARG"),
