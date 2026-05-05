@@ -19,17 +19,17 @@ server <- function(input, output, session) {
       geom_col_pattern(position = position_dodge2(preserve = "single", width = 0.8), 
                        width = 0.8, pattern_color = "black", pattern_fill = pattern_fill, 
                        pattern_size = 0.12, color = "black") +
-      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe', 'y70' = 'circle', 'y80' = 'circle', 'y90' = 'circle')) +
+      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
       facet_grid(. ~ tools_db, scales = "free_x", space = "free") +
       scale_fill_manual(values = pal_7, drop = TRUE) +
       xlab("Pipelines") + ylab("Number of ARGs") + 
       scale_y_continuous(expand = c(0.01, 0.01), 
-                         #breaks = c(25000,50000,75000,100000,125000), 
+                         breaks = c(25000,50000,75000,100000,125000), 
                          labels = scales::comma) + 
-      #guides(fill = guide_legend(
-      #  override.aes = list(
-      #    pattern = rep("none", 7),
-      #    fill  = pal_7)), pattern = "none") +  
+      guides(fill = guide_legend(
+        override.aes = list(
+          pattern = rep("none", 7),
+          fill  = pal_7)), pattern = "none") +  
       theme1 +
       theme(panel.border = element_blank(),
             panel.grid.major.x = element_blank(),
@@ -358,8 +358,6 @@ server <- function(input, output, session) {
       geom_point_rast(aes(fill = tool2, shape = texture), color = "black", stroke = 0.3, size = 3) + 
       geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
       facet_grid(habitat ~ metric, scales = "free") +
-      geom_segment(aes(x = 0, xend = value, y = tool, yend = tool, color = tool), linewidth = 0.2, show.legend = F) +
-      scale_color_manual(values = scale_fill_pan) +
       scale_fill_pan + scale_shape_pan +
       scale_x_reverse(labels = label_comma()) +
       labs(y = "", x = "Number of ARGs", fill = "", title = "a") +
@@ -371,8 +369,6 @@ server <- function(input, output, session) {
       geom_point_rast(aes(fill = tool2, shape = texture), color = "black", stroke = 0.3, size = 3) + 
       geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
       facet_grid(habitat ~ metric, scales = "free") +
-      geom_segment(aes(x = 0, xend = value, y = tool, yend = tool, color = tool), linewidth = 0.2, show.legend = F) +
-      scale_color_manual(values = scale_fill_pan) +
       scale_fill_pan + scale_shape_pan +
       scale_x_continuous(labels = label_comma()) +
       labs(y = "", x = "Number of ARGs", fill = "", title = "b",
@@ -454,73 +450,15 @@ server <- function(input, output, session) {
       filter(new_level %in% input$overlap_genes)
   })
   
-  output$overlap <- renderPlot({
-    overlap_data <- filtered_overlap_data() %>%
-      group_by(tool_ref, tools_labels_ref, tools_db_comp) %>%
-      mutate(n_obs = n()) %>%
-      mutate(n_obs = paste0('n = ', n_obs)) %>%
-      ungroup()
-    
-    label_data <- overlap_data %>%
-      group_by(tool_ref, tools_labels_ref, tools_db_comp, tools_labels_comp) %>%
-      summarise(
-        n_obs = paste0("n = ", n()),
-        x_pos = max(csc * 100, na.rm = TRUE) + 3,  # just right of the whisker
-        .groups = "drop"
-      )
-    
-    ggplot(overlap_data,  
-           aes(x = csc*100, y = fct_rev(tools_labels_comp))) +
-      geom_boxplot(aes(fill = tool_ref, pattern = texture),
-                   position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
-                   width = 0.7, color = "black", outliers = FALSE) +
-      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe',
-                                      'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) +
-      geom_text(data = label_data, aes(x = x_pos, y = tools_labels_comp, label = n_obs), hjust = 0,
-                size = 3.5, inherit.aes = FALSE) +
-      facet_grid(tools_db_comp ~ tools_labels_ref, scales = "free_y", space = "free") +
-      scale_fill_manual(values = pal_10_q) +
-      scale_x_continuous(limits = c(0, 115), breaks = c(0, 25, 50, 75, 100)) +
-      scale_y_discrete(drop = T) +
-      xlab("Percentage (%)") +
-      ylab("Pipeline covered") +
-      theme_minimal() +
-      theme5 +
-      theme(panel.grid = element_blank(),
-            plot.margin = margin(0, 10, 0, 0, unit = "pt"),
-            strip.text.x = element_text(size = general_size, vjust = 0, hjust = 0.5),
-            strip.text.y = element_text(size = general_size, angle=90, vjust = 0.5, hjust = 0.5))
-    
-  }, height = 600, res = 96) %>% bindCache(input$tool_overlap, input$overlap_genes, input$tool_overlap_comp)
-  
-  output$download_overlap <- downloadHandler(
-    filename = function() paste0("overlap_csc_", Sys.Date(), ".csv"),
-    content = function(file) {
-      filtered_overlap_data() %>%
-        select (new_level, tool_ref, tool_comp, csc, ref_n_class, comp_n_class, ref_n_all, comp_n_all) %>%
-        rename (
-          "ARG Class" = new_level,
-          "Reference Tool" = tool_ref,
-          "Compared Tool" = tool_comp,
-          "Class-Specific Coverage" = csc,
-          "Reference N (Class)" = ref_n_class,
-          "Compared N (Class)" = comp_n_class,
-          "Reference N (All)" = ref_n_all,
-          "Compared N (All)" = comp_n_all
-        ) %>%
-        write.csv(file, row.names = FALSE)
-    }
-  )
-
   
   output$overlap_gene_class <- renderPlot({
-    
+
     overlap_gene <- filtered_overlap_data() %>%
       group_by(tool_ref, new_level) %>%
       mutate(n_obs = n_distinct(tool_comp)) %>%
       mutate(n_obs = paste0('n = ', n_obs)) %>%
       ungroup()
-    
+
     label_data <- overlap_gene %>%
       group_by(tool_ref, tools_labels_ref, new_level) %>%
       summarise(
@@ -529,8 +467,8 @@ server <- function(input, output, session) {
         #x_pos = 50,
         .groups = "drop"
       )
-    
-    ggplot(overlap_gene, aes(x = csc*100, y = new_level)) + 
+
+    ggplot(overlap_gene, aes(x = csc*100, y = new_level)) +
 
       geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture),
                            position = position_dodge2(preserve = "single", width = 0.3, padding = 0),
@@ -557,7 +495,7 @@ server <- function(input, output, session) {
                  )) +
       scale_fill_manual(values = pal_10_q)  +
       xlab("Percentage (%)") +
-      ylab("ARG class") + 
+      ylab("ARG class") +
       theme_minimal() +
       theme5 +
       theme( panel.grid = element_blank(),
@@ -565,9 +503,9 @@ server <- function(input, output, session) {
              strip.text.y = element_text(size = general_size, vjust = 0.5, hjust = 0, angle = 0),
              panel.spacing = unit(5, "pt"),
              axis.text.y = element_blank())
-      
-  }, height = 600, res = 96) %>% bindCache(input$tool_overlap, input$overlap_genes)
-  
+
+  }, height = 600, res = 96) %>% bindCache(input$tool_overlap, input$overlap_genes, input$tool_overlap_comp)
+
   output$download_overlap_gene_class <- downloadHandler(
     filename = function() paste0("overlap_gene_class_", Sys.Date(), ".csv"),
     content = function(file) {
@@ -581,8 +519,7 @@ server <- function(input, output, session) {
         write.csv(file, row.names = FALSE)
     }
   )
-  
-  
+
 }
 
 

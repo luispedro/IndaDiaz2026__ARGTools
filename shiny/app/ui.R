@@ -409,6 +409,10 @@ ps_pan_core <- page_sidebar(
     )
   )
 
+tool_choices_single <- setNames(
+  as.list(unlist(tool_choices)),
+  gsub("\n", " ", names(tool_choices))  # replace \n with space
+)
 
 ## Overlaps Tab
 ps_overlap <- page_sidebar(
@@ -418,27 +422,22 @@ ps_overlap <- page_sidebar(
     
     pickerInput(
       inputId = "tool_overlap",
-      label = "Pipelines to show:",
-      choices = tool_choices,
-      selected = c("DeepARG","fARGene", "RGI-DIAMOND"),
-      multiple = TRUE,
-      options = list(
-        `actions-box` = TRUE,           
-        `selected-text-format` = "count > 2",
-        `count-selected-text` = "{0} pipelines selected"
-      )
+      label = "Reference pipeline:",
+      choices = tool_choices_single,
+      selected = "DeepARG",
+      multiple = FALSE
     ),
     
     pickerInput(
-      inputId = "tool_overlap_comp",
-      label = "Pipelines to compare against:",
-      choices = tool_choices,
-      selected = basic_tools,
-      multiple = TRUE,
-      options = list(
-        `actions-box` = TRUE,           
-        `selected-text-format` = "count > 2",
-        `count-selected-text` = "{0} pipelines selected"
+      inputId  = "tool_overlap_comp",
+      label    = "Pipelines to compare against:",
+      choices  = tool_choices_single,
+      selected = c("fARGene", "RGI-DIAMOND"),
+      multiple = TRUE,                          # <-- changed
+      options  = list(
+        `actions-box`            = TRUE,
+        `selected-text-format`   = "count > 2",
+        `count-selected-text`    = "{0} pipelines selected"
       )
     ),
     
@@ -464,23 +463,10 @@ ps_overlap <- page_sidebar(
       width  = 1,
       #col_widths = breakpoints(xs = 12, xxl = 6),
         
-        #card(
-        #  card_header("Class-Specific Coverage by Pipeline"),
-        #  markdown(
-        #    "This tab examines **Class-Specific Coverage (CSC)**, showing the degree of overlap or agreement between different detection pipelines. In simple terms, this is it: *For a given ARG class g, the CSC of pipeline A with respect to 
-        #      pipeline B represents the proportion of ARGs identified by pipeline B that were also captured by pipeline A.*
-        #      
-        #      \n
-        #      This is the overall percentage of ARGs detected by a reference pipeline that were also successfully identified by the compared pipeline. A higher percentage indicates strong agreement between the pipelines."
-        #  ),
-        #  withSpinner(plotOutput("overlap", height = "550px"), type = 8, color = "#1b9e77"),
-        #  downloadButton("download_overlap", "Download Table")
-        #),
-        
         card(
           card_header("Class-Specific Coverage (CSC) by Gene Class"),
           markdown(
-            "This plot breaks down this overlap by gene classes based on specific resistance mechanisms. This reveals whether two pipelines might agree perfectly on certain gene classes (like tetracycline resistance) but completely miss each other on others."
+            "This plot breaks down this overlap by gene classes based on specific resistance mechanisms. This reveals whether two pipelines might agree perfectly on certain gene classes (like tetracycline resistance) but completely miss each other on others. The number of tools that also report the gene class is denoted by **n**. "
           ),
           withSpinner(plotOutput("overlap_gene_class", height = "550px"), type = 8, color = "#1b9e77"),
           downloadButton("download_overlap_gene_class", "Download Table")
