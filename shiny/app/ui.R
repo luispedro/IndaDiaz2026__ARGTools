@@ -262,7 +262,7 @@ ps_args <- page_sidebar(
              \n
              Note: we merged MFS efflux pumps with other efflux pumps."
           ),
-          withSpinner(plotOutput("plot_gene_class_proportion", height = "850px", fill = TRUE), type = 8, color = "#1b9e77"),
+          withSpinner(plotOutput("plot_gene_class_proportion", height = "1200px", fill = TRUE), type = 8, color = "#1b9e77"),
           downloadButton("download_gene_class_proportion", "Download Table")
         )
       )

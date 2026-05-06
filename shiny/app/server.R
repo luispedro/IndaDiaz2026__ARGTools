@@ -57,7 +57,14 @@ server <- function(input, output, session) {
     req(input$gene_classes_filter)
     plot_data <- unigenes_proportion %>%
       filter(tool %in% input$tools_unigenes) %>%
-      filter(new_level %in% input$gene_classes_filter)
+      filter(new_level %in% input$gene_classes_filter)%>%
+      mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
+      mutate(new_level = gsub("rifampin inactivation enzyme","RIF-inact. enz.", new_level)) %>%
+      mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
+      mutate(new_level = gsub("efflux pump","efflux", new_level)) %>%
+      mutate(new_level = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", new_level)) %>%
+      mutate(new_level = gsub("target-modifying enzyme","target-modif.\nenzyme", new_level)) %>%
+      mutate(new_level = gsub("self-resistance","self-resistance", new_level)) 
     
     req(nrow(plot_data) > 0)
     
@@ -67,8 +74,7 @@ server <- function(input, output, session) {
       scale_fill_gradientn(
         colors = brewer.pal(9, "YlOrBr"),
         labels = percent_format(accuracy = 1),
-        breaks = c(0.0001, 0.2, 0.4, 0.6)
-      ) +
+        breaks = c(0.0001, 0.2, 0.4, 0.6)) +
       facet_grid(. ~ tools_db, scales = "free_x", space = "free") +
       scale_y_discrete(labels = function(x) {
         out <- ifelse(
@@ -94,19 +100,19 @@ server <- function(input, output, session) {
         axis.title = element_text(size = general_size, face = "bold"),
         strip.text = element_text(size = general_size, angle = 0),
         panel.background = element_blank(),
-        axis.text.x = element_text(size = general_size, angle = 45, vjust = 1, hjust = 1),
-        axis.text.y = element_text(size = 9, hjust = 1),
-        plot.margin = margin(10, 20, 10, 10, unit = "pt"),
+        axis.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 1),
+        axis.text.y = element_text(size = general_size - 1),
+        plot.margin = margin(0, 0, 0, 20, unit = "pt"),
         legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
         legend.margin = margin(0, 0, 0, 0, unit = "pt"),
-        panel.spacing = unit(2, "pt"),
+        panel.spacing = unit(0, "pt"),
         legend.text = element_text(size = general_size),
         panel.grid.minor.y = element_blank(),
         legend.position = "bottom",
         panel.grid = element_blank(),
         panel.border = element_blank(),
         strip.background.x = element_blank(),
-        strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 0)
+        strip.text.x = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0)
       )
     
   }, height = 1000, res = 96) %>% bindCache(input$tools_unigenes, input$gene_classes_filter)
