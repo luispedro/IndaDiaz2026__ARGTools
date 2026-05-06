@@ -924,7 +924,7 @@ d1 <- recall_fnr %>%
 d1 <- d1 %>% 
   filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
   mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
-  mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
+  mutate(new_level = gsub("MFS efflux pump","efflux", new_level)) %>%
   mutate(new_level = gsub("efflux pump","efflux", new_level)) %>% 
   group_by(tool_ref,tools_labels_ref, new_level) %>% mutate(n_obs = n()) %>% 
   mutate(n_obs = paste0('n = ',n_obs))
@@ -933,7 +933,7 @@ d1 <- d1 %>%
 # plot the csc of top_cso classes
 
 cs11 <- d1 %>% 
-  filter(new_level %in% top_cso) %>% 
+  filter(new_level %in% c(top_cso,"class A", "class B", "class C", "class D", "efflux")) %>% 
   ggplot(aes(x = recall*100, y = 0)) + 
   geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture2),
                        position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
@@ -1326,6 +1326,7 @@ set.seed(2026)
 
 for(j in 1:length(EN)){
   
+  # get the number of samples per habitat
   df_plot <- abundance_tool_sample %>%
     filter(tool %in% basic_tools) %>% 
     filter(habitat %in% EN[j]) %>% 
@@ -1333,15 +1334,20 @@ for(j in 1:length(EN)){
     mutate(N = n_distinct(sample),
            richness = richness)
   
+  # get the limits for the jitter 
   df_jitter <- df_plot %>% 
     ungroup() %>%
     group_by(habitat, tool) %>% 
     filter(richness < quantile(richness, 0.75) + 1.5*IQR(richness))
   
+  # get the maximum for the limits of the plot
+  
   lims_richness_max = lims_richness %>%
     filter(habitat %in% EN[j]) %>%
     filter(tool %in% basic_tools) %>% 
     ungroup() %>% summarise(max(w2)) %>% pull()
+  
+  # plot
   
   rich_plots[[j]] <- lims_richness %>%
     mutate(habitat_label = paste0(habitat, "\n(n = ", scales::comma(df_plot$N[1]), ")")) %>%
@@ -1416,12 +1422,14 @@ df_class_summary_plots <- list()
 
 for( j in 1:length(EN)){
   
+  # get the most relevant gene classes
   all_top_abundance <- unique(
     levels_abundance_div %>% 
       filter(habitat %in% EN[j]) %>% 
       select(gene) %>% distinct() %>% slice_head(n=10) %>%
       ungroup() %>% pull())
   
+  # add the "other" class
   df_abundance_class_all_sup <- abundance_class %>% 
     filter(habitat %in% EN[j]) %>%
     mutate(gene = ifelse(gene %in% all_top_abundance, gene, "other")) %>% 
@@ -1434,6 +1442,7 @@ for( j in 1:length(EN)){
            texture = ifelse(tool %in% tools_texture, "yes", "no"),
            tools_db = factor(tools_db[tool], levels = tools_db[!duplicated(tools_db)]))
   
+  # change the name of the labels
   gene_levels_all <- all_top_abundance
   gene_levels_all <-  gsub(" beta-lactamase","", gene_levels_all)
   gene_levels_all <- gsub("cell wall ","cell\nwall\n", gene_levels_all)
@@ -1446,6 +1455,7 @@ for( j in 1:length(EN)){
   gene_levels_all <- gsub("rifampin inactivation enzyme","rifampin\n inactivation\n enzyme", gene_levels_all)
   gene_levels_all <- gsub("beta-lactam modulation resistance","beta-lactam\n modulation\n resistance", gene_levels_all)
   
+  # change the name of the labels
   df_abundance_class_all_sup <- df_abundance_class_all_sup  %>% 
     mutate(gene = gsub(" beta-lactamase","", gene)) %>%
     mutate(gene = gsub("cell wall ","cell\nwall\n", gene)) %>%
@@ -1459,7 +1469,7 @@ for( j in 1:length(EN)){
     mutate(gene = gsub("beta-lactam modulation resistance","beta-lactam\n modulation\n resistance", gene)) %>%
     mutate(gene = factor(gene, levels = c(gene_levels_all,"other"))) 
   
-  
+  # get the limits of the plots
   df_class_summary_plots[[j]] <- df_abundance_class_all_sup %>%
     ungroup() %>%
     group_by(tool, habitat, gene,texture, tools_labels, tools_db) %>% 
@@ -1473,6 +1483,7 @@ for( j in 1:length(EN)){
                   quantile(abundance, 0.75) + 1.5*IQR(abundance)),
       n = n_distinct(sample)) 
   
+  # plot
   abu_class_plots[[j]] <- df_class_summary_plots[[j]] %>% 
     filter(tool %in% basic_tools) %>% 
     mutate(habitat_label = paste0(habitat, "\n(n = ", scales::comma(n[1]), ")")) %>%
@@ -1752,6 +1763,7 @@ ggsave("code_R_analysis/output_plots/fig_human_core.svg", core_human_all, width 
 
 ###  Supplementary tables 
 
+# core-resistance genes human gut
 
 tools_core <- core %>%
   ungroup() %>% 
@@ -1767,6 +1779,7 @@ tools_core <- core %>%
   rename(unigene = X, gene_class = new_level)
 
 
+# ARO and gene classes
 ARO <- ARO %>% rename(gene_class = new_level, ARO_Term_ID = Term_ID) %>% 
   mutate(abbreviation = gene_class) %>% 
   mutate(abbreviation = gsub(" beta-lactamase","", abbreviation)) %>%
