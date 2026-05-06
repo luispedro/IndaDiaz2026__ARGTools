@@ -1,5 +1,3 @@
-
-
 server <- function(input, output, session) {
   
   
@@ -24,7 +22,6 @@ server <- function(input, output, session) {
       scale_fill_manual(values = pal_7, drop = TRUE) +
       xlab("Pipelines") + ylab("Number of ARGs") + 
       scale_y_continuous(expand = c(0.01, 0.01), 
-                         #breaks = c(25000,50000,75000,100000,125000), 
                          labels = scales::comma) + 
       guides(fill = guide_legend(
         override.aes = list(
@@ -112,7 +109,7 @@ server <- function(input, output, session) {
         panel.grid = element_blank(),
         panel.border = element_blank(),
         strip.background.x = element_blank(),
-        strip.text.x = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0)
+        strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5)
       )
     
   }, height = 1000, res = 96) %>% bindCache(input$tools_unigenes, input$gene_classes_filter)
@@ -150,6 +147,15 @@ server <- function(input, output, session) {
 
   })
   
+  filtered_abundance_jitter <- reactive({
+    filtered_abundance_data() %>%
+      ungroup() %>%
+      group_by(habitat, tool) %>%
+      filter(abundance < quantile(abundance, 0.75) + 1.5 * IQR(abundance)) %>%
+      group_modify(~ slice_sample(.x, n = min(100, nrow(.x)))) %>%
+      ungroup()
+  }) %>% bindCache(input$tool_abundance, input$environment_abundance)
+  
   filtered_class_abundance_data <- reactive({
     req(input$tool_abundance, input$environment_abundance, input$abundance_genes)
     
@@ -178,16 +184,12 @@ server <- function(input, output, session) {
                            linewidth = 0.15) +
       scale_x_discrete(expand = expansion(add = 1)) +
       
-      geom_jitter(data = filtered_abundance_data() %>% 
-                    ungroup() %>%
-                    group_by(habitat, tool) %>% 
-                    filter(abundance < quantile(abundance, 0.75) + 1.5*IQR(abundance)) %>%
-                    group_modify(~ dplyr::slice_sample(.x, n = min(100, nrow(.x)))), 
+      geom_jitter(data = filtered_abundance_jitter(),
                   width = 0.35, size = 0.4, alpha = 0.4) +
       facet_grid(habitat_label ~ tools_db, scales = "free") +
       scale_y_continuous(labels = scales::comma) + 
       scale_fill_manual(values = pal_7) +
-      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe', 'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) +
+      scale_pattern_shared +
       xlab("Pipelines") +
       ylab("Relative abundance\n(aligned reads per million)") +
       theme1 + 
@@ -231,15 +233,7 @@ server <- function(input, output, session) {
       scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe', 'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) +
       facet_grid(gene ~ habitat_label, scales = "free", space = "free",
                  labeller = labeller(
-                   gene = as_labeller(function(x) {
-                     out <- ifelse(
-                       x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "aac", "lnu", "nim", "vat", "mph", "qnr"),
-                       paste0("italic('", x, "')"),
-                       ifelse(x == "abcF", "ABC-F",
-                              paste0("'", x, "'"))
-                     )
-                     return(out)
-                   }, default = label_parsed)
+                   gene = gene_label_parser
                  )) +
       xlab("Relative abundance\n(aligned reads per million)") +
       ylab("") + 
@@ -256,16 +250,11 @@ server <- function(input, output, session) {
         panel.background = element_blank(),
         axis.text.x = element_text(size = general_size, angle = 90,
                                    vjust = 0.5, hjust = 1),
-        axis.text.y = element_text(size = general_size),
-        panel.border = element_rect(color =  "black"),
         plot.margin = margin(10, 10, 10, 10, unit = "pt"),
         legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
         legend.margin = margin(0, 0, 0, 0, unit = "pt"),
         panel.spacing = unit(10, "pt"),
         legend.text = element_text(size = general_size),
-        panel.grid.minor.y = element_blank()) +
-      theme(
-        legend.position = "none",
         strip.text.y = element_text(angle = 0),
         panel.grid.major.y = element_blank(),
         panel.grid.minor.y = element_blank(),
@@ -335,27 +324,6 @@ server <- function(input, output, session) {
     legend_fills  <- pal_10_q[present_tools]
     legend_shapes <- shape_tools[present_tools]
     legend_labels <- as.vector(tools_labels[present_tools])
-    
-    theme_pan_core <- theme_minimal() +
-      theme(
-        text          = element_text(size = 16, color = "black"),
-        title         = element_text(size = 16, face = "bold"),
-        axis.title    = element_text(size = 16, face = "bold"),
-        axis.text.x   = element_text(size = 16, angle = 90, vjust = 0.5, hjust = 1),
-        axis.text.y   = element_blank(),
-        strip.text.x  = element_text(size = 16, angle = 0, vjust = 0, hjust = 0.5),
-        panel.background = element_blank(),
-        panel.border     = element_blank(),
-        panel.spacing    = unit(0, "pt"),
-        panel.grid.major.y = element_blank(),
-        panel.grid.minor.y = element_blank(),
-        plot.margin      = margin(5, 5, 5, 5, unit = "pt"),
-        legend.position  = "none",
-        legend.text      = element_text(size = general_size),
-        legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
-        legend.margin    = margin(0, 0, 0, 0, unit = "pt")
-      )
-    
     scale_fill_pan  <- scale_fill_manual(values = pal_10_q_2[levels(droplevels(pan_core_df_plot$tool2))])
     scale_shape_pan <- scale_shape_manual(values = c("no" = 21, "yes" = 24, "y70" = 22, "y80" = 23, "y90" = 25))
     
@@ -470,7 +438,6 @@ server <- function(input, output, session) {
       summarise(
         n_obs  = paste0("n = ", n()),
         x_pos  = quantile(csc * 100, 0.75, na.rm = TRUE) + 3,
-        #x_pos = 50,
         .groups = "drop"
       )
 

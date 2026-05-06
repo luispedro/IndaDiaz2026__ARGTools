@@ -2,8 +2,6 @@ library(shiny)
 library(bslib)
 library(tidyverse)
 library(shinyWidgets)
-library(dplyr)
-library(ggplot2)
 library(gridExtra)
 library(RColorBrewer)
 library(ggpattern)
@@ -12,11 +10,9 @@ library(reactable)
 library(Cairo)
 library(ggalluvial)
 library(cowplot)
-library(scales)
-library(tidyr)
-library(magrittr)
 library(shinycssloaders)
 library(ggrastr)
+library(scales)
 library(ragg)
 library(patchwork)
 
@@ -28,6 +24,7 @@ options(shiny.useragg = TRUE)
 
 
 general_size <- 12
+pan_core_size <- 16
 
 pal_7 <- brewer.pal(8, "Dark2")
 pal_7 <- pal_7[-7]
@@ -65,17 +62,27 @@ tools_levels <- c(
 
 names(pal_10_q) <- basic_tools
 
-da <- rep(pal_10_q["DeepARG"],3)
-names(da) <- c("DeepARG70","DeepARG80","DeepARG90")
-rgi <- rep(pal_10_q["RGI-DIAMOND"],3)
-names(rgi) <- c("RGI-DIAMOND70","RGI-DIAMOND80","RGI-DIAMOND90")
-other <- c(pal_10_q["DeepARG"], pal_10_q["RGI-DIAMOND"],
-           pal_10_q["RGI-DIAMOND"],pal_10_q["fARGene"],pal_10_q["AMRFinderPlus"])
-names(other) <- c("DeepARG-aa", "RGI-BLAST", 
-                  "RGI-DIAMOND-aa", "fARGene-aa","AMRFinderPlus-nt")
+pal_10_q <- c(
+  pal_10_q,
+  setNames(rep(pal_10_q["DeepARG"],   3), c("DeepARG70","DeepARG80","DeepARG90")),
+  setNames(rep(pal_10_q["RGI-DIAMOND"],3), c("RGI-DIAMOND70","RGI-DIAMOND80","RGI-DIAMOND90")),
+  setNames(c(pal_10_q["DeepARG"], pal_10_q["RGI-DIAMOND"], pal_10_q["RGI-DIAMOND"],
+             pal_10_q["fARGene"], pal_10_q["AMRFinderPlus"]),
+           c("DeepARG-aa","RGI-BLAST","RGI-DIAMOND-aa","fARGene-aa","AMRFinderPlus-nt"))
+)
 
-pal_10_q <- c(pal_10_q, da, rgi, other)
-rm(da, rgi, other)
+add_texture <- function(df) {
+  df %>% mutate(texture = case_when(
+    tool %in% c("DeepARG70",   "RGI-DIAMOND70") ~ "y70",
+    tool %in% c("DeepARG80",   "RGI-DIAMOND80") ~ "y80",
+    tool %in% c("DeepARG90",   "RGI-DIAMOND90") ~ "y90",
+    TRUE ~ texture
+  ))
+}
+
+scale_pattern_shared <- scale_pattern_manual(
+  values = c('no'='none','yes'='stripe','y70'='crosshatch','y80'='crosshatch','y90'='crosshatch')
+)
 
 tools_labels <- c(
   "DeepARG", "fARGene", "ABRicate-\nARGANNOT", "ABRicate-\nMEGARes",
@@ -106,6 +113,13 @@ tools_db_factor <- c(" ", "  ", "   ", "    ",
 
 tools_texture <- c("ABRicate-CARD", "ABRicate-NCBI", "ABRicate-ResFinder")
 
+gene_label_parser <- as_labeller(function(x) {
+  italic_genes <- c("rpoB","van","fos","erm","cat","aph","ant","aac","lnu","nim","vat","mph","qnr")
+  out <- ifelse(x %in% italic_genes, paste0("italic('", x, "')"),
+                ifelse(x == "abcF", "ABC-F", paste0("`", x, "`")))
+  parse(text = out)
+}, default = label_parsed)
+
 lst_results <- readRDS(file.path(ROOT_DIR, "shiny", "app", "data.rds"))
 
 abundance_tool_sample <- lst_results$abundance_tool_sample
@@ -129,13 +143,17 @@ top_cso <- c("van", "efflux pump",  "tet RPG", "class A beta-lactamase",
 tool_choices <- c(basic_tools,"DeepARG70","DeepARG80","DeepARG90",
                   "RGI-DIAMOND70", "RGI-DIAMOND80", "RGI-DIAMOND90")
 
-
 tool_lab1 <- tools_db[match(tool_choices, names(tools_labels))]
 tool_lab2 <- as.vector(tools_labels[tool_choices])
 tool_lab1[!grepl("ABRicate", tool_lab2)] <- ""
 tool_lab1 <- gsub("-\n","",tool_lab1)
 tool_choices_label <- paste0(tool_lab2, tool_lab1)
 tool_choices <- as.list(setNames(tool_choices, tool_choices_label))
+
+tool_choices_single <- setNames(
+  as.list(unlist(tool_choices)),
+  gsub("\n", " ", names(tool_choices))  # replace \n with space
+)
 
 gene_classes <- unigenes %>% 
   ungroup() %>% 
@@ -173,23 +191,13 @@ names(shape_tools) <- tools_levels
 names(pal_7) <- tools_db_factor
 
 
-abundance_tool_sample <- 
-  abundance_tool_sample %>% 
-  mutate(texture = ifelse(tool %in% c("DeepARG70", "RGI-DIAMOND70"), "y70",
-                          ifelse(tool %in% c("DeepARG80", "RGI-DIAMOND80"), "y80",
-                                 ifelse(tool %in% c("DeepARG90", "RGI-DIAMOND90"), "y90", 
-                                        texture))))
+abundance_tool_sample <- add_texture(abundance_tool_sample)
 
 unigenes_proportion <- 
   unigenes_proportion %>% 
   mutate(texture = abundance_tool_sample$texture[match(tool, abundance_tool_sample$tool)])
 
-abundance_class_summary <- 
-  abundance_class_summary %>% 
-  mutate(texture = ifelse(tool %in% c("DeepARG70", "RGI-DIAMOND70"), "y70",
-                          ifelse(tool %in% c("DeepARG80", "RGI-DIAMOND80"), "y80",
-                                 ifelse(tool %in% c("DeepARG90", "RGI-DIAMOND90"), "y90", 
-                                        texture))))
+abundance_class_summary <- add_texture(abundance_class_summary)
 
 csc_fnr <- 
   csc_fnr %>% 
@@ -202,29 +210,15 @@ csc_fnr <-
          tool_ref2 = factor(tools_labels[tool_ref], levels = tools_labels_factor))
 
 
-unigenes <- 
-  unigenes %>% 
-  mutate(texture = ifelse(tool %in% c("DeepARG70", "RGI-DIAMOND70"), "y70",
-                          ifelse(tool %in% c("DeepARG80", "RGI-DIAMOND80"), "y80",
-                                 ifelse(tool %in% c("DeepARG90", "RGI-DIAMOND90"), "y90", 
-                                        texture))))
+unigenes <- add_texture(unigenes)
 
-sumcore <- sumcore %>% 
-  mutate(texture = ifelse(tool %in% c("DeepARG70", "RGI-DIAMOND70"), "y70",
-                          ifelse(tool %in% c("DeepARG80", "RGI-DIAMOND80"), "y80",
-                                 ifelse(tool %in% c("DeepARG90", "RGI-DIAMOND90"), "y90", 
-                                        texture))))
-
+sumcore <- add_texture(sumcore)
 sumcore2 <- sumcore %>% 
   group_by(tool, habitat, tools_labels, tools_db, texture, cnt, cut) %>% 
   summarise(core = sum(unigenes)) %>% 
   mutate(tool2 = factor(tools_labels[tool], levels = tools_labels_factor))
 
-sumpan2 <- sumpan2 %>% 
-  mutate(texture = ifelse(tool %in% c("DeepARG70", "RGI-DIAMOND70"), "y70",
-                          ifelse(tool %in% c("DeepARG80", "RGI-DIAMOND80"), "y80",
-                                 ifelse(tool %in% c("DeepARG90", "RGI-DIAMOND90"), "y90", 
-                                        texture)))) %>% 
+sumpan2 <- add_texture(sumpan2) %>%
   mutate(tool2 = factor(tools_labels[tool], levels = tools_labels_factor))
 
 g_legend <- function(a.gplot){
@@ -261,7 +255,6 @@ theme1 <- theme_minimal() +
 theme5 <- theme(
   legend.position = "none",
   legend.text = element_text(size = general_size ),
-  #panel.border = element_blank(),
   panel.grid.major.y = element_blank(),
   panel.grid.minor.y = element_blank(),
   panel.grid.minor.x = element_blank(),
@@ -278,7 +271,26 @@ theme5 <- theme(
   strip.background = element_blank(),
   panel.grid.major.x = element_line(colour = "black", linewidth = 0.1))
 
-pal_10_q
+theme_pan_core <- theme_minimal() +
+  theme(
+    text          = element_text(size = pan_core_size, color = "black"),
+    title         = element_text(size = pan_core_size, face = "bold"),
+    axis.title    = element_text(size = pan_core_size, face = "bold"),
+    axis.text.x   = element_text(size = pan_core_size, angle = 90, vjust = 0.5, hjust = 1),
+    axis.text.y   = element_blank(),
+    strip.text.x  = element_text(size = pan_core_size, angle = 0, vjust = 0, hjust = 0.5),
+    panel.background = element_blank(),
+    panel.border     = element_blank(),
+    panel.spacing    = unit(0, "pt"),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    plot.margin      = margin(5, 5, 5, 5, unit = "pt"),
+    legend.position  = "none",
+    legend.text      = element_text(size = general_size),
+    legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
+    legend.margin    = margin(0, 0, 0, 0, unit = "pt")
+  )
+
 pal_10_q_2 <- pal_10_q
 names(pal_10_q_2) <- as.vector(tools_labels[names(pal_10_q)])
 

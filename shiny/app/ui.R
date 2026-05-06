@@ -1,9 +1,3 @@
-library(shiny)
-library(bslib)
-library(shinyWidgets)
-library(shinycssloaders)
-
-# Responsive CSS 
 responsive_css <- tags$head(
   tags$meta(name = "viewport", content = "width=device-width, initial-scale=1.0"),
   tags$style(HTML("
@@ -423,10 +417,6 @@ ps_pan_core <- page_sidebar(
     )
   )
 
-tool_choices_single <- setNames(
-  as.list(unlist(tool_choices)),
-  gsub("\n", " ", names(tool_choices))  # replace \n with space
-)
 
 ## Overlaps Tab
 ps_overlap <- page_sidebar(
@@ -475,7 +465,6 @@ ps_overlap <- page_sidebar(
     "Class-Specific Coverage (CSC)",
     layout_columns(
       width  = 1,
-      #col_widths = breakpoints(xs = 12, xxl = 6),
         
         card(
           card_header("Class-Specific Coverage (CSC) by Gene Class"),
@@ -495,11 +484,11 @@ page_navbar(
   theme = "yeti",
   inverse = TRUE,
   header = responsive_css,
-  nav_panel(title = "Introduction", p(ps_intro)),
-  nav_panel(title = "ARGs", p(ps_args)),
-  nav_panel(title = "Abundance", p(ps_abundance)),
-  nav_panel(title = "Pan- and core-resistome", p(ps_pan_core)),
-  nav_panel(title = "Overlap", p(ps_overlap)),
+  nav_panel(title = "Introduction", ps_intro),
+  nav_panel(title = "ARGs", ps_args),
+  nav_panel(title = "Abundance", ps_abundance),
+  nav_panel(title = "Pan- and core-resistome", ps_pan_core),
+  nav_panel(title = "Overlap", ps_overlap),
   nav_spacer(),
   nav_menu(
     title = "Links",
