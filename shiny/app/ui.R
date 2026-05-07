@@ -437,7 +437,7 @@ ps_overlap <- page_sidebar(
       inputId  = "tool_overlap_comp",
       label    = "Pipelines to compare against:",
       choices  = tool_choices_single,
-      selected = c("fARGene", "RGI-DIAMOND"),
+      selected = basic_tools,
       multiple = TRUE,                        
       options  = list(
         `actions-box`            = TRUE,
