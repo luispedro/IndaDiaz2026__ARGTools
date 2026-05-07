@@ -601,7 +601,7 @@ ps_overlap <- page_sidebar(
             
             Here, we plot the distribution of CSC of a reference pipeline and gene class when compared to *n* more pipelines.
             
-            A distribution closer to 1 indicates that the reference pipeline reports most of the ARGs of that class that other pipelines report."
+            A distribution closer to 100% indicates that the reference pipeline reports most of the ARGs of that class that other pipelines report."
           ),
           withSpinner(plotOutput("overlap_gene_class", height = "550px"), type = 8, color = "#1b9e77"),
           downloadButton("download_overlap_gene_class", "Download Table")
