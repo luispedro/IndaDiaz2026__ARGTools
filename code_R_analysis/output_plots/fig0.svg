@@ -25,12 +25,12 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      inkscape:zoom="1.6587475"
-     inkscape:cx="458.77989"
-     inkscape:cy="185.9837"
-     inkscape:window-width="1760"
-     inkscape:window-height="956"
-     inkscape:window-x="2270"
-     inkscape:window-y="73"
+     inkscape:cx="339.41272"
+     inkscape:cy="135.34308"
+     inkscape:window-width="1472"
+     inkscape:window-height="890"
+     inkscape:window-x="0"
+     inkscape:window-y="38"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1"
      inkscape:connector-spacing="0"
@@ -4462,7 +4462,7 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-31-1);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan23">CARD</tspan></text><rect
+         id="tspan5">CARD</tspan></text><rect
        style="fill:#dfc27d;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"
        id="rect1-2"
        width="9.6012468"
@@ -4477,7 +4477,7 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-3-89);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan24">RGI</tspan></text><rect
+         id="tspan6">RGI</tspan></text><rect
        style="fill:#dfc27d;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"
        id="rect1-2-0"
        width="9.6012468"
@@ -4500,7 +4500,7 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-3-8-1-0);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan25">ABRicate</tspan></text><rect
+         id="tspan7">ABRicate</tspan></text><rect
        style="fill:#dfc27d;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"
        id="rect1-2-0-9-4"
        width="9.6012468"
@@ -4515,7 +4515,7 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-3-8-1-6-8);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan26">DeepARG</tspan></text><rect
+         id="tspan8">DeepARG</tspan></text><rect
        style="fill:#80cdc1;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"
        id="rect1-0"
        width="9.6012468"
@@ -4530,7 +4530,7 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-0-0);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan27">ResFinder</tspan></text><rect
+         id="tspan10">ResFinder</tspan></text><rect
        style="fill:#80cdc1;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"
        id="rect1-0-6"
        width="9.6012468"
@@ -4545,11 +4545,11 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-0-7-5);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan28">  ARG-
+         id="tspan11">  ARG-
 </tspan><tspan
          x="204.6875"
          y="285.44189"
-         id="tspan29">ANNOT</tspan></text><rect
+         id="tspan12">ANNOT</tspan></text><rect
        style="fill:#80cdc1;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"
        id="rect1-0-6-0"
        width="9.6012468"
@@ -4564,7 +4564,7 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-0-7-4-9);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan30">MEGARes</tspan></text><rect
+         id="tspan13">MEGARes</tspan></text><rect
        style="fill:#80cdc1;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"
        id="rect1-0-6-0-4"
        width="9.6012468"
@@ -4579,11 +4579,11 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-0-7-4-6-0);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan31">DeepARG-
+         id="tspan14">DeepARG-
 </tspan><tspan
          x="204.6875"
          y="285.44189"
-         id="tspan32">      DB</tspan></text><rect
+         id="tspan15">      DB</tspan></text><rect
        style="fill:#80cdc1;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"
        id="rect1-0-6-0-7"
        width="9.6012468"
@@ -4598,7 +4598,7 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-0-7-4-8-3);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan33">NCBI</tspan></text><rect
+         id="tspan16">NCBI</tspan></text><rect
        style="opacity:0.6;fill:#8c510a;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"
        id="rect1-0-6-0-7-0"
        width="9.6012468"
@@ -4613,11 +4613,11 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-0-7-4-8-7-5);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan34">AMRFinder-
+         id="tspan17">AMRFinder-
 </tspan><tspan
          x="204.6875"
          y="285.44189"
-         id="tspan35">      Plus</tspan></text><rect
+         id="tspan18">      Plus</tspan></text><rect
        style="opacity:0.6;fill:#01665e;fill-opacity:1;fill-rule:nonzero;stroke:#01665e;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"
        id="rect1-0-6-0-0"
        width="9.6012468"
@@ -4632,7 +4632,7 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-0-7-4-7-1);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan36">NCBI</tspan></text><rect
+         id="tspan19">NCBI</tspan></text><rect
        style="opacity:0.6;fill:#01665e;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"
        id="rect1-0-6-0-70"
        width="9.6012468"
@@ -5624,7 +5624,7 @@
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:6.66667px;font-family:Arial;-inkscape-font-specification:'Arial, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect2-3-8-7);display:inline;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:#ff3333;stroke-width:0;stroke-linejoin:round;stroke-opacity:1;paint-order:normal"><tspan
          x="204.6875"
          y="277.10855"
-         id="tspan37">ResFinder</tspan></text><image
+         id="tspan20">ResFinder</tspan></text><image
        width="19.961952"
        height="13.118553"
        preserveAspectRatio="none"
@@ -5664,7 +5664,7 @@
          id="tspan66"
          x="1.4932644"
          y="21.249855"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:1.973px;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;text-anchor:start;stroke-width:0">&gt; 300 million </tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:1.973px;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;text-anchor:start;stroke-width:0">&gt; 270 million </tspan><tspan
          sodipodi:role="line"
          x="1.4932644"
          y="23.716106"
@@ -5680,7 +5680,7 @@
          x="58.793015"
          y="13.851106"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:1.973px;font-family:Arial;-inkscape-font-specification:'Arial, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;text-anchor:start;stroke-width:0"
-         id="tspan1431">&gt; 13,000</tspan><tspan
+         id="tspan1431">&gt; 10,000</tspan><tspan
          sodipodi:role="line"
          x="58.793015"
          y="16.317356"

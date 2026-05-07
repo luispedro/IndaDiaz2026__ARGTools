@@ -156,50 +156,162 @@ ps_intro <- fluidPage(
   
   layout_column_wrap( 
     width = 1/2,
+    # card(
+    #   card_header("The elusive resistome: a global comparison reveals large discrepancies among detection pipelines"),
+    #   tags$p("This app replicates the main and supplementary figures for the manuscript with the same name, and allows to control different parameters."),
+    #   tags$p(tags$b("Analysis:")),
+    #   tags$p(tags$b("278,788,551 unigenes")),
+    #   tags$p("The unigenes are representative sequences after clustering 2.3 billion bacterial genes at 95% identity. The unigenes come from ",  tags$a(href="https://gmgc.embl.de/", "GMGC"),
+    #          "and are accessible", tags$a(href="https://gmgc.embl.de/download.cgi", "here.")),
+    #   tags$p(tags$b("11,538 metagenomic samples from 13 different habitats")),
+    #   tags$p("The metagenomic samples come from GMGC and are available ",
+    #          tags$a(href="https://gmgc.embl.de/downloads/v1.0/metadata/GMGC10.sample.meta.tsv.gz", "here"), ". In this app, we did not consider the habitats amplicon, isolate, and built-environment.",
+    #          "The abundance of each gene in the metagenomes can be accessed", tags$a(href="https://gmgc.embl.de/downloads/v1.0/GMGC10.sample-abundance.tsv.xz", "here"), ". The summary of metagenomic samples per habitat can be found in Supplementary Table S1 in the paper and here. We converted the abundance in GMGC from reads per 10 million to reads per million."),
+    #   tags$p(tags$b("ARG classes")),
+    #   tags$p("Ontology normalization was done with", tags$a(href="https://github.com/BigDataBiology/argNorm", "argNorm"), ". Gene classes were manually curated after. The gene classes used in this project can be found in Supplementary Table 2 in the paper and here."),
+    #   tags$p(tags$b("Pipelines")),
+    #   "We used full-sized gene in all pipelines. For each pipeline, we chose a single parameter:",
+    #   tags$ul(
+    #     tags$li("Nucleotide sequences through:"),
+    #     tags$ul(
+    #       tags$li("ResFinder, and"), 
+    #       tags$li("ABRicate with the databases: CARD, ResFinder, NCBI, ARG-ANNOT, and MEGARES 2.0.")
+    #     ),
+    #     
+    #     tags$li("Amino acid sequences through:"),
+    #     tags$ul(
+    #       tags$li("DeepARG"),
+    #       tags$li("fARGene"), 
+    #       tags$li("RGI with DIAMOND aligner"), 
+    #       tags$li("AMRFinderPlus.")
+    #     )
+    #   )
+    # ),
+    
     card(
-      card_header("Introduction"),
-      tags$p("This app replicates the main and supplementary figures for the manuscript:",
-             tags$b(tags$i("The elusive resistome: a global comparison reveals large discrepancies among detection pipelines")), 
-             "and allows to control different parameters."),
-      tags$p(tags$b("278,788,551 unigenes")),
-      tags$p("The unigenes are representative sequences after clustering 2.3 billion bacterial genes at 95% identity. The unigenes come from ",  tags$a(href="https://gmgc.embl.de/", "GMGC"),
-             "and are accessible", tags$a(href="https://gmgc.embl.de/download.cgi", "here.")),
-      tags$p(tags$b("11,538 metagenomic samples from 13 different habitats")),
-      tags$p("The metagenomic samples come from GMGC and are available ",
-             tags$a(href="https://gmgc.embl.de/downloads/v1.0/metadata/GMGC10.sample.meta.tsv.gz", "here"), ". In this app, we did not consider the habitats amplicon, isolate, and built-environment.",
-             "The abundance of each gene in the metagenomes can be accessed", tags$a(href="https://gmgc.embl.de/downloads/v1.0/GMGC10.sample-abundance.tsv.xz", "here"), ". The summary of metagenomic samples per habitat can be found in Supplementary Table S1 in the paper and here. We converted the abundance in GMGC from reads per 10 million to reads per million."),
-      tags$p(tags$b("ARG classes")),
-      tags$p("Ontology normalization was done with", tags$a(href="https://github.com/BigDataBiology/argNorm", "argNorm"), ". Gene classes were manually curated after. The gene classes used in this project can be found in Supplementary Table 2 in the paper and here."),
-      tags$p(tags$b("Pipelines")),
-      "We used full-sized gene in all pipelines. For each pipeline, we chose a single parameter:",
-      tags$ul(
-        tags$li("Nucleotide sequences through:"),
-        tags$ul(
-          tags$li("ResFinder, and"), 
-          tags$li("ABRicate with the databases: CARD, ResFinder, NCBI, ARG-ANNOT, and MEGARES 2.0.")
+      card_header(
+        h3(
+          "Antibiotic Resistance Gene Detection on the Global Microbial Gene Catalog v1.0 (",
+          tags$a(
+            "GMGC",
+            href = "https://gmgc.embl.de/",
+            target = "_blank"
+          ),
+          ") dataset"
+        )
+      ),
+      
+      card_body(
+        p(
+          "This dataset supports the manuscript ",
+          tags$b(em("The elusive resistome: a global comparison reveals large discrepancies among detection pipelines")),
+          "."
         ),
         
-        tags$li("Amino acid sequences through:"),
+        tags$hr(),
+        
+        h4("Unigenes and metagenomes"),
+        
         tags$ul(
-          tags$li("DeepARG"),
-          tags$li("fARGene"), 
-          tags$li("RGI with DIAMOND aligner"), 
-          tags$li("AMRFinderPlus.")
-        )
+          tags$li(
+              "ARG predictions were done on 278,788,551 unigenes"
+          ),
+          tags$li(
+            "The abundance and richness of the ARGs was estimated on 11,519 metagenomic samples"
+          ),
+          tags$li(
+            "The pan- and core-resistomes were estimated across 13 different habitats represented by the metagenomic samples"
+          )
+        ),
+
+        tags$hr(),
+        
+        h4("Detection Pipelines"),
+        
+        tags$ul(
+          tags$li(
+            tags$a(
+              "fARGene v0.1",
+              href = "https://github.com/fannyhb/fargene",
+              target = "_blank"
+            )
+          ),
+          tags$li(
+            tags$a(
+              "DeepARG v2",
+              href = "https://github.com/gaarangoa/deeparg",
+              target = "_blank"
+            )
+          ),
+          tags$li(
+            tags$a(
+              "AMRFinderPlus v4.0.15",
+              href = "https://github.com/ncbi/amr",
+              target = "_blank"
+            )
+          ),
+          tags$li(
+            tags$a(
+              "RGI v6.0.3 (CARD v4.0.0)",
+              href = "https://github.com/arpcard/rgi",
+              target = "_blank"
+            )
+          ),
+          tags$li(
+            tags$a(
+              "ResFinder v2.4.0",
+              href = "https://github.com/cadms/resfinder",
+              target = "_blank"
+            )
+          ),
+          tags$li(
+            tags$a(
+              "ABRicate v1.0.1",
+              href = "https://github.com/tseemann/abricate",
+              target = "_blank"
+            )
+          )
+        ),
+        
+        h4("Ontology harmonization"),
+        
+        tags$ul(
+          tags$li(
+            "Outputs from DeepARG, AMRFinderPlus, ABRicate, and ResFinder were standardized using",
+            tags$a(
+              "argNorm v1.0.0",
+              href = "https://github.com/BigDataBiology/argNorm",
+              target = "_blank"
+            ),
+            "."
+          )
+        ),
       )
-    ),
-    
+      ),
+        
     card(
       card_header("Pipeline"),
       card_image("../../code_R_analysis/output_plots/fig0_shiny.svg", height = "800px"),
-      card_footer("The GMGCv1 dataset is processed through multiple ARG detection pipelines to generate a comprehensive list of predicted ARGs. 
-      Resistome metrics, including abundance, richness, and pan- and core-resistome sizes, are estimated from unigene profiles and their respective copy numbers across metagenomic samples and habitats. 
-      Pan- and core-resistome analyses are employed to assess the intra- and inter-habitat dissemination of ARGs.
-      The GMGC dataset was analyzed in nucleotide and/or amino acid format by the ARG detection pipelines to obtain a list of putative resistance genes. We quantified the resistome (abundance, diversity, pan- and core-resistome) using the putative ARGs in host-associated and external habitats. The icons excess-weight-male-clothed, mouse-gray, pig-white, and dog in the abstract figure were adapted from Servier Medical Art (https://smart.servier.com) and are licensed under CC BY 3.0 Unported (https://creativecommons.org/licenses/by/3.0/).")
+      card_footer("We refer readers to the manuscript for details on the methods. The icons", 
+      em("excess-weight-male-clothed, mouse-gray, pig-white,"), 
+      "and", 
+      em("dog,"),
+      "in the abstract figure were adapted from",
+      tags$a(
+        "Servier Medical Art",
+        href = "https://smart.servier.com",
+        target = "_blank"
+      ),
+      "and are licensed under",
+      tags$a(
+        "CC BY 3.0 Unported",
+        href = "https://creativecommons.org/licenses/by/3.0/",
+        target = "_blank"
+      )
     )
-  )
 )
-
+)
+)
 
 # ARGs Tab
 ps_args <- page_sidebar(
@@ -239,10 +351,10 @@ ps_args <- page_sidebar(
         card(
           card_header("Number of ARGs"),
           markdown(
-            "This section highlights how different computational pipelines influence the detection of Antimicrobial Resistance Genes (ARGs) from the unigene dataset. 
+            "This section highlights the difference in number of Antimicrobial Resistance Genes (ARGs) reported by each pipeline.
           \n
-          A total of 178,107 unigenes from GMGCv1 were reported as antibiotic resistance genes (ARG) by at least one pipeline. 
-          The total ARG count varies across pipelines; for example, in the case of ABRicate-ResFinder and DeepARG, there is about a 45-fold difference in the count."
+          A total of 178,107 unigenes from GMGCv1 were reported as ARG by at least one pipeline.
+          The largest difference, 45-fold, was observed between ABRicate-ResFinder and DeepARG."
           ),
           withSpinner(plotOutput("plot_count_genes_tool", height = "550px"), type = 8, color = "#1b9e77"),
           downloadButton("download_count_genes", "Download Table")
@@ -250,11 +362,10 @@ ps_args <- page_sidebar(
         card(
           card_header("ARG Class Proportion"),
           markdown(
-            "A heatmap illustrating the proportion of ARG classes as reported by each pipeline. Also note that for 
-             this heatmap, only classes representing 5% of the total within at least one pipeline is shown. Despite the massive differences in absolute counts seen on the left, this plot reveals how the proportional 
-             makeup of gene classes shifts depending on the pipeline chosen.
+            "A heatmap illustrating the proportion of ARG classes as reported by each pipeline. Note that for 
+             this heatmap, only classes representing 5% of the pipeline's total have a label. 
              \n
-             Note: we merged MFS efflux pumps with other efflux pumps."
+             This plot reveals how the proportional makeup of gene classes shifts depending on the chosen pipeline."
           ),
           withSpinner(plotOutput("plot_gene_class_proportion", height = "900px", fill = TRUE), type = 8, color = "#1b9e77"),
           downloadButton("download_gene_class_proportion", "Download Table")
@@ -489,7 +600,7 @@ page_navbar(
   nav_panel(title = "ARGs", ps_args),
   nav_panel(title = "Abundance", ps_abundance),
   nav_panel(title = "Pan- and core-resistome", ps_pan_core),
-  nav_panel(title = "Overlap", ps_overlap),
+  nav_panel(title = "Class-specific Overlap", ps_overlap),
   nav_spacer(),
   nav_menu(
     title = "Links",
