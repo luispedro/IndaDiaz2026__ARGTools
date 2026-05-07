@@ -92,6 +92,7 @@ tools_labels <- c(
   "DeepARG-aa", "RGI/nBLAST", "RGI-aa", "fARGene-aa", "AMRFinder-\nPlus-nt")
 
 names(tools_labels) <- tools_levels
+tools_labels_lookup <- tools_labels
 
 tools_labels_factor <- c(
   "DeepARG", "fARGene", "ABRicate-\nARGANNOT", "ABRicate-\nMEGARes", 
@@ -219,13 +220,19 @@ csc_fnr <-
 unigenes <- add_texture(unigenes)
 
 sumcore <- add_texture(sumcore)
-sumcore2 <- sumcore %>% 
-  group_by(tool, habitat, tools_labels, tools_db, texture, cnt, cut) %>% 
-  summarise(core = sum(unigenes)) %>% 
-  mutate(tool2 = factor(tools_labels[tool], levels = tools_labels_factor))
+sumcore2 <- sumcore %>%
+  group_by(tool, habitat, tools_labels, tools_db, texture, cnt, cut) %>%
+  summarise(core = sum(unigenes)) %>%
+  mutate(tool2 = factor(
+    as.vector(tools_labels_lookup)[match(as.character(tool), names(tools_labels_lookup))],
+    levels = tools_labels_factor))
+
 
 sumpan2 <- add_texture(sumpan2) %>%
-  mutate(tool2 = factor(tools_labels[tool], levels = tools_labels_factor))
+  mutate(tool2 = factor(
+    as.vector(tools_labels_lookup)[match(as.character(tool), names(tools_labels_lookup))],
+    levels = tools_labels_factor))
+
 
 g_legend <- function(a.gplot){
   tmp <- ggplotGrob(a.gplot)

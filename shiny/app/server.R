@@ -327,14 +327,14 @@ server <- function(input, output, session) {
       )) %>%
       mutate(metric = factor(metric, levels = c("Pan-resistome", "Core-resistome"))) %>%
       filter(value > 0)
-  })
+  }) %>% bindCache(input$tool_pan_core, input$environment_pan_core, input$threshold_samples)
   
   
   output$pan_core <- renderPlot({
   
     
     pan_core_df_plot <- pan_core_reactive()
-      
+    
     req(nrow(pan_core_df_plot) > 0)
     
     present_tools <- tools_levels[tools_levels %in% unique(pan_core_df_plot$tool)]
