@@ -52,9 +52,11 @@ server <- function(input, output, session) {
     
     req(input$tools_unigenes)
     req(input$gene_classes_filter)
+    
     plot_data <- unigenes_proportion %>%
       filter(tool %in% input$tools_unigenes) %>%
       filter(new_level %in% input$gene_classes_filter)%>%
+      ungroup() %>%
       mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
       mutate(new_level = gsub("rifampin inactivation enzyme","RIF-inact. enz.", new_level)) %>%
       mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
@@ -144,8 +146,7 @@ server <- function(input, output, session) {
       mutate(N_samples = n_distinct(sample)) %>%
       ungroup() %>%
       mutate(habitat_label = paste0(habitat, "\n(n = ", scales::comma(N_samples), ")"))
-
-  })
+  }) %>% bindCache(input$tool_abundance, input$environment_abundance)
   
   filtered_abundance_jitter <- reactive({
     filtered_abundance_data() %>%
@@ -159,20 +160,26 @@ server <- function(input, output, session) {
   filtered_class_abundance_data <- reactive({
     req(input$tool_abundance, input$environment_abundance, input$abundance_genes)
     
+    dynamic_gene_levels <- input$abundance_genes
+    dynamic_gene_levels <- gsub(" beta-lactamase","", dynamic_gene_levels)
+    dynamic_gene_levels <- gsub("cell wall ","cell\nwall\n", dynamic_gene_levels)
+    dynamic_gene_levels <- gsub("MFS efflux pump","MFS\nefflux", dynamic_gene_levels)
+    dynamic_gene_levels <- gsub("efflux pump","efflux", dynamic_gene_levels)
+                                
     abundance_class_summary %>% 
       filter(tool %in% input$tool_abundance) %>% 
       filter(habitat %in% input$environment_abundance) %>% 
       filter(gene %in% input$abundance_genes) %>% 
+      mutate(gene = gsub(" beta-lactamase","", gene)) %>%
+      mutate(gene = gsub("cell wall ","cell\nwall\n", gene)) %>%
+      mutate(gene = gsub("MFS efflux pump","MFS\nefflux", gene)) %>%
+      mutate(gene = gsub("efflux pump","efflux", gene)) %>%
+      mutate(gene = factor(gene, levels = dynamic_gene_levels)) %>%
       ungroup() %>%
       mutate(tools_labels = droplevels(tools_labels)) %>%
-      left_join(
-        abundance_tool_sample %>%
-          group_by(habitat) %>%
-          summarise(N_samples = n_distinct(sample)),
-        by = "habitat"
-      ) %>%
-      mutate(habitat_label = paste0(habitat, "\n(n = ", scales::comma(N_samples), ")"))
-  })
+      left_join(habitat_n_samples, by = "habitat") %>%
+      mutate(habitat_label = paste0(habitat, "\n(n = ", scales::comma(N_samples), ")")) 
+  }) %>% bindCache(input$tool_abundance, input$environment_abundance, input$abundance_genes)
   
   output$plot_abundance <- renderPlot({
     
@@ -233,7 +240,17 @@ server <- function(input, output, session) {
       scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe', 'y70' = 'crosshatch', 'y80' = 'crosshatch',  'y90' = 'crosshatch')) +
       facet_grid(gene ~ habitat_label, scales = "free", space = "free",
                  labeller = labeller(
-                   gene = gene_label_parser
+                   gene = as_labeller(function(x) {
+                     out <- ifelse(
+                       x %in% c("rpoB", "van", "fos", "erm", "cat", 
+                                "aph", "ant", "aac", "lnu", "nim", 
+                                "vat", "mph", "qnr"),
+                       paste0("italic('", x, "')"),
+                       ifelse(x == "abcF", "ABC-F",
+                              paste0("'", x, "'"))
+                     )
+                     return(out)
+                   }, default = label_parsed)
                  )) +
       xlab("Relative abundance\n(aligned reads per million)") +
       ylab("") + 
@@ -332,6 +349,8 @@ server <- function(input, output, session) {
       geom_point_rast(aes(fill = tool2, shape = texture), color = "black", stroke = 0.3, size = 3) + 
       geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
       facet_grid(habitat ~ metric, scales = "free") +
+      geom_segment(aes(x = 0, xend = value, y = tool, yend = tool, color = tool), linewidth = 0.2, show.legend = F) +
+      scale_color_manual(values = scale_fill_pan) +
       scale_fill_pan + scale_shape_pan +
       scale_x_reverse(labels = label_comma()) +
       labs(y = "", x = "Number of ARGs", fill = "", title = "a") +
@@ -343,6 +362,8 @@ server <- function(input, output, session) {
       geom_point_rast(aes(fill = tool2, shape = texture), color = "black", stroke = 0.3, size = 3) + 
       geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
       facet_grid(habitat ~ metric, scales = "free") +
+      geom_segment(aes(x = 0, xend = value, y = tool, yend = tool, color = tool), linewidth = 0.2, show.legend = F) +
+      scale_color_manual(values = scale_fill_pan) +
       scale_fill_pan + scale_shape_pan +
       scale_x_continuous(labels = label_comma()) +
       labs(y = "", x = "Number of ARGs", fill = "", title = "b",
@@ -421,7 +442,14 @@ server <- function(input, output, session) {
     
     csc_fnr %>% 
       filter(tool_ref %in% input$tool_overlap, tool_comp %in% input$tool_overlap_comp) %>%
-      filter(new_level %in% input$overlap_genes)
+      filter(new_level %in% input$overlap_genes)%>%
+      mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
+      mutate(new_level = gsub("rifampin inactivation enzyme","RIF-inact. enz.", new_level)) %>%
+      mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
+      mutate(new_level = gsub("efflux pump","efflux", new_level)) %>%
+      mutate(new_level = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", new_level)) %>%
+      mutate(new_level = gsub("target-modifying enzyme","target-modif.\nenzyme", new_level)) %>%
+      mutate(new_level = gsub("self-resistance","self-resistance", new_level))
   })
   
   

@@ -223,7 +223,7 @@ ps_args <- page_sidebar(
       inputId = "gene_classes_filter",
       label = "Filter gene classes:",
       choices = gene_classes,
-      selected = gene_classes,
+      selected = gene_classes_default,
       multiple = TRUE,
       options = list(`actions-box` = TRUE)
     ),
@@ -256,7 +256,7 @@ ps_args <- page_sidebar(
              \n
              Note: we merged MFS efflux pumps with other efflux pumps."
           ),
-          withSpinner(plotOutput("plot_gene_class_proportion", height = "1200px", fill = TRUE), type = 8, color = "#1b9e77"),
+          withSpinner(plotOutput("plot_gene_class_proportion", height = "900px", fill = TRUE), type = 8, color = "#1b9e77"),
           downloadButton("download_gene_class_proportion", "Download Table")
         )
       )
@@ -264,7 +264,7 @@ ps_args <- page_sidebar(
   )
 
 
-## Abundance and Diversity Tab
+# Abundance and Diversity Tab
 
 ps_abundance <- page_sidebar(
   fillable = FALSE,
@@ -340,7 +340,7 @@ ps_abundance <- page_sidebar(
             \n
             *From the source file, we merged MFS efflux pumps with all other efflux pumps.*"
           ),
-          withSpinner(plotOutput("plot_abundance_gene_class", height = "550px"), type = 8, color = "#1b9e77"),
+          withSpinner(plotOutput("plot_abundance_gene_class", height = "700px"), type = 8, color = "#1b9e77"),
           downloadButton("download_class_abundance", "Download Table")
         )
       )
@@ -418,7 +418,7 @@ ps_pan_core <- page_sidebar(
   )
 
 
-## Overlaps Tab
+# Overlaps Tab
 ps_overlap <- page_sidebar(
   fillable = FALSE,
   sidebar = sidebar(
@@ -428,8 +428,9 @@ ps_overlap <- page_sidebar(
       inputId = "tool_overlap",
       label = "Reference pipeline:",
       choices = tool_choices_single,
-      selected = "DeepARG",
-      multiple = FALSE
+      selected = c("DeepARG", "RGI-DIAMOND", "fARGene", "AMRFinderPlus", "ResFinder"),
+      multiple = TRUE,
+      options = list(`actions-box` = TRUE)
     ),
     
     pickerInput(
@@ -437,7 +438,7 @@ ps_overlap <- page_sidebar(
       label    = "Pipelines to compare against:",
       choices  = tool_choices_single,
       selected = c("fARGene", "RGI-DIAMOND"),
-      multiple = TRUE,                          # <-- changed
+      multiple = TRUE,                        
       options  = list(
         `actions-box`            = TRUE,
         `selected-text-format`   = "count > 2",

@@ -113,12 +113,6 @@ tools_db_factor <- c(" ", "  ", "   ", "    ",
 
 tools_texture <- c("ABRicate-CARD", "ABRicate-NCBI", "ABRicate-ResFinder")
 
-gene_label_parser <- as_labeller(function(x) {
-  italic_genes <- c("rpoB","van","fos","erm","cat","aph","ant","aac","lnu","nim","vat","mph","qnr")
-  out <- ifelse(x %in% italic_genes, paste0("italic('", x, "')"),
-                ifelse(x == "abcF", "ABC-F", paste0("`", x, "`")))
-  parse(text = out)
-}, default = label_parsed)
 
 lst_results <- readRDS(file.path(ROOT_DIR, "shiny", "app", "data.rds"))
 
@@ -155,6 +149,12 @@ tool_choices_single <- setNames(
   gsub("\n", " ", names(tool_choices))  # replace \n with space
 )
 
+gene_levels <- c(top_abundance, "other")
+gene_levels <- gsub(" beta-lactamase", "", gene_levels)
+gene_levels <- gsub("cell wall ", "cell\nwall\n", gene_levels)
+gene_levels <- gsub("MFS efflux pump", "MFS\nefflux", gene_levels)
+gene_levels <- gsub("efflux pump", "efflux", gene_levels)
+
 gene_classes <- unigenes %>% 
   ungroup() %>% 
   group_by(query) %>% 
@@ -170,8 +170,14 @@ unigenes_proportion <- unigenes %>%
   group_by(tool, tools_labels, tools_db, new_level) %>% 
   summarise(n = n_distinct(query)) %>%      
   group_by(tool, tools_labels, tools_db) %>% 
-  mutate(p = n / sum(n))
+  mutate(p = n / sum(n)) %>%
+  ungroup()
 
+gene_classes_default <- unigenes_proportion %>%
+  group_by(new_level) %>%
+  filter(max(p) >= 0.05) %>%
+  pull(new_level) %>%
+  unique()
 
 sum_core_adjust <- function(core, cnt_subset = 900, threshold_samples = 0.5){
   return(core %>% 
@@ -303,6 +309,10 @@ unigenes <- unigenes %>%
 
 abundance_tool_sample <- abundance_tool_sample %>% 
   mutate(tool2 = factor(tools_labels[tool], levels = tools_labels_factor))
+
+habitat_n_samples <- abundance_tool_sample %>%
+  group_by(habitat) %>%
+  summarise(N_samples = n_distinct(sample))
 
 abundance_class_summary <- abundance_class_summary %>% 
   mutate(tool2 = factor(tools_labels[tool], levels = tools_labels_factor))
