@@ -23,10 +23,10 @@ server <- function(input, output, session) {
       xlab("Pipelines") + ylab("Number of ARGs") + 
       scale_y_continuous(expand = c(0.01, 0.01), 
                          labels = scales::comma) + 
-      guides(fill = guide_legend(
-        override.aes = list(
-          pattern = rep("none", 7),
-          fill  = pal_7)), pattern = "none") +  
+      #guides(fill = guide_legend(
+      #  override.aes = list(
+      #    pattern = rep("none", 7),
+      #    fill  = pal_7[names(pal_7) %in% count_genes_reactive()$tools_db])), pattern = "none") +  
       theme1 +
       theme(panel.border = element_blank(),
             panel.grid.major.x = element_blank(),
