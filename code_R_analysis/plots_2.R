@@ -10,9 +10,7 @@ library(cowplot)
 library(scales)
 library(ggbreak)
 
-#setwd("~/Documents/GitHub/arg_compare/code_R_analysis") 
 options(dplyr.summarise.inform = FALSE)
-# source("helper.R")
 source("code_R_analysis/helper.R")
 
 # Sourced gene classes 
@@ -25,12 +23,11 @@ lab_fn <- function(x) {
   x
 }
 
-# FORMAT PLOTS OLD COLORS
+# FORMAT PLOTS 
 pal_7 <- brewer.pal(8, "Dark2")
 pal_7 <- pal_7[-7]
 pal_7 <- pal_7[c(1,2,3,4,6,5,7)]
 
-#pal_7 <- pal_7[c(1,7,2,6,3,5,4)]
 
 pal_10_q <- pal_7[c(1,2,3,4,5,5,6,6,7,7)]
 pal_10_complete <- brewer.pal(7, "Dark2")
@@ -147,11 +144,11 @@ abundance <- readRDS("code_R_analysis/output_abundance_diversity_resistome/abund
 # convert MFS to efflux pump
 abundance <- abundance %>% mutate(gene = ifelse(gene == "MFS efflux pump", "efflux pump", gene))
 
-
 metadata0 <- metadata0 %>% left_join(abundance, by = "sample")
 
 # we add one class to avoid NA values and to be able to "complete" for all classes later
 # we add one tool to avoid NA values and to be able to "complete" for all tools later
+
 metadata0$gene[is.na(metadata0$gene)] <- "efflux pump"
 metadata0$tool[is.na(metadata0$tool)] <- "DeepARG"
 metadata0$abundance[is.na(metadata0$abundance)] <- 0
@@ -243,6 +240,7 @@ pan <- pan %>%
          tools_db = factor(tools_db[tool], levels = tools_db_factor))
 
 # calculate the total number of unigenes in the pan-resistome of each sample
+
 sumpan2 <- pan %>% ungroup() %>% 
   group_by(tool, habitat, epoch) %>% 
   summarise(s = sum(unigenes)) %>%
@@ -254,6 +252,7 @@ sumpan2 <- pan %>% ungroup() %>%
          tools_db = factor(tools_db[tool], levels = tools_db_factor))
 
 # merge the core and pan resistomes at the sample level
+
 pan_core <- sumpan2 %>% 
   left_join((sumcore %>% 
                ungroup() %>% 
@@ -285,7 +284,6 @@ recall_fnr <- create_class_overlaps(unigenes)
 
 # overlap by pipeline (without considering classes)
 JI_all <- return_overlap_tools(unigenes)
-
 
 # sort the gene classes by abundance and richness to decide which classes to
 # show in sup_abundance plots
@@ -326,7 +324,6 @@ df_abundance_class_human <- abundance_class %>%
 
 
 ################################################################################################
-# PLot 1 
 
 # vector to encode the texture of the bars - 
 # striped for abricate with card, ncbi, and resfinder

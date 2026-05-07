@@ -204,7 +204,15 @@ ps_intro <- fluidPage(
       card_body(
         p(
           "This dataset supports the manuscript ",
-          tags$b(em("The elusive resistome: a global comparison reveals large discrepancies among detection pipelines")),
+          tags$b(em("The elusive resistome: a global comparison reveals large discrepancies among detection pipelines.")),
+          tags$br(),
+          tags$br(),
+          "A full description of the datasets and access to them are available in",
+          tags$a(
+            "Zenodo",
+            href = "https://zenodo.org/records/19702877",
+            target = "_blank"
+          ),
           "."
         ),
         
@@ -272,6 +280,8 @@ ps_intro <- fluidPage(
             )
           )
         ),
+        
+        tags$hr(),
         
         h4("Ontology harmonization"),
         
@@ -433,11 +443,10 @@ ps_abundance <- page_sidebar(
         card(
             card_header("Relative abundance per Sample"),
             markdown(
-              "This section explores the **Relative Abundance** of Antimicrobial Resistance Genes (ARGs) across different host habitats, highlighting how the choice of pipeline impacts the estimation of the quantity of ARGs.
-              \n
-              This displays the total relative abundance of ARGs detected by each pipeline per sample across various habitats. For interpreting the boxplot, 
-              it would be helpful to note that the center line denotes the median while each box limits is the interquartile range (IQR) and the
-              whiskers extend to 1.5× IQR beyond the first and third quartiles."),
+              "
+              We show the distribution of the relative abundance of ARGs detected by each pipeline across habitats. The middle line 
+              denotes the median while each box limits represent the interquartile range and the
+              whiskers extend to 1.5×IQR beyond the first and third quartiles."),
             
             withSpinner(plotOutput("plot_abundance", height = "550px"), type = 8, color = "#1b9e77"),
             downloadButton("download_abundance", "Download Table")
@@ -446,10 +455,9 @@ ps_abundance <- page_sidebar(
         card(
           card_header("Relative Abundance per Gene Class"),
           markdown(
-            "This plots illustrates the relative abundance by gene classes based on their specific resistance mechanisms in different habitats.
-            For the gene classes, the groups 'class A' and 'tet RPG' represent Class A β-lactamases and tetracycline ribosomal protection genes, respectively.
-            \n
-            *From the source file, we merged MFS efflux pumps with all other efflux pumps.*"
+            "
+            We show the distribution of the relative abundance of ARG classes detected by each pipeline across habitats. The middle line 
+            denotes the median while each box limits represent the interquartile range. ARG class abbreviations are found in Table 2."
           ),
           withSpinner(plotOutput("plot_abundance_gene_class", height = "700px"), type = 8, color = "#1b9e77"),
           downloadButton("download_class_abundance", "Download Table")
@@ -515,11 +523,17 @@ ps_pan_core <- page_sidebar(
     card(
       card_header("Number of genes"),
       markdown(
-        "This section shows the **Pan-** and **Core** resistomes across different host habitats for each pipeline.
-        * **Pan-resistome (Left, Panel a):** This represents the *total pool* of unique ARGs found across all samples within a given habitat by the pipelines. It is also shown that these numbers vary depending on the pipelines use.
-        It also represents the diversity of resistance genes in the chosen habitat.
-        \n
-        * **Core-resistome (Right, Panel b):** This represents the ARGs that are persistently found across almost *all* samples within a habitat. Pipeline-specific detection influences which genes are considered ubiquitous."
+        "This section shows the size of the **Pan-** and **Core** resistomes across different habitats.
+        
+        For each pipeline and habitat, the core-resistome was estimated by randomly selecting 500 subsamples of 100 metagenomic samples. 
+        For each subsample, we recorded: 
+        1. the subsample core, i.e., the gene class of the centroids with a detection value ≥1 in at least *p=50%* of samples, grouped by habitat, 
+        2. the total number of ARGs with a detection value ≥1 in any sample, as a measure of richness. 
+        
+        The pan-resistome size for each habitat and ARG class was calculated as the mean richness across the 500 subsamples. 
+        The core-resistome corresponded to ARGs present in *≥n=90%* of the subsample cores.
+        
+        Alternative values for *p* and *n* can be selected in the menu on the left." 
       ),
       withSpinner(plotOutput("pan_core", height = "750px"), type = 8, color = "#1b9e77"),
       downloadButton("download_pan_resistome", "Download Pan-resistome"),
@@ -581,7 +595,13 @@ ps_overlap <- page_sidebar(
         card(
           card_header("Class-Specific Coverage (CSC) by Gene Class"),
           markdown(
-            "This plot breaks down this overlap by gene classes based on specific resistance mechanisms. This reveals whether two pipelines might agree perfectly on certain gene classes (like tetracycline resistance) but completely miss each other on others. The number of tools that also report the gene class is denoted by **n**. "
+            "For a given ARG class, the CSC of pipeline *A* (reference pipeline) with respect to pipeline *B* is the proportion of ARGs reported by pipeline *B* that were also reported by pipeline *A*. 
+            
+            While analogous to recall, we intentionally use the term 'coverage' to avoid implying that any single pipeline constitutes a ground truth. 
+            
+            Here, we plot the distribution of CSC of a reference pipeline and gene class when compared to *n* more pipelines.
+            
+            A distribution closer to 1 indicates that the reference pipeline reports most of the ARGs of that class that other pipelines report."
           ),
           withSpinner(plotOutput("overlap_gene_class", height = "550px"), type = 8, color = "#1b9e77"),
           downloadButton("download_overlap_gene_class", "Download Table")
