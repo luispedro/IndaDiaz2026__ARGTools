@@ -444,7 +444,7 @@ ps_abundance <- page_sidebar(
             markdown(
               "
             We show the distribution of the relative abundance of ARG classes detected by each pipeline across habitats. The middle line 
-            denotes the median while each box limits represent the interquartile range. ARG class abbreviations are found in Table 2."
+            denotes the median while each box limits represent the interquartile range. ARG class abbreviations are found in the supplementary tables."
             ),
             withSpinner(plotOutput("plot_abundance_gene_class", height = "700px"), type = 8, color = "#1b9e77"),
             downloadButton("download_class_abundance", "Download Table")
@@ -503,7 +503,7 @@ ps_pan_core <- page_sidebar(
     
     pickerInput(
       inputId = "threshold_samples",
-      label = "Minimum number of subsets the gene has to be part of the subsample core-resistome:",
+      label = "Minimum number of subsets the gene has to be part of the subsample core-resistome (n):",
       choices = list(
         ">= 200" = 200,
         ">= 250" = 250,
@@ -518,7 +518,7 @@ ps_pan_core <- page_sidebar(
     
     pickerInput(
       inputId = "threshold_proportion",
-      label = "Proportion of metagenomic samples where the gene appears in each core-subsample:",
+      label = "Proportion of metagenomic samples where the gene appears in each core-subsample (p):",
       choices = list(">= 30%" = 0.3, ">= 40%" = 0.4, ">= 50%" = 0.5, ">= 60%" = 0.6, ">= 70%" = 0.7, ">= 80%" = 0.8, ">= 90%" = 0.9),
       selected = 0.5,
       multiple = FALSE
@@ -619,6 +619,30 @@ ps_overlap <- page_sidebar(
     )
   )
 
+#SUPPLEMENTARY TABLES TAB
+ps_tables <- page_fillable(
+  navset_card_underline(
+    nav_panel(
+      "Sample Metadata",
+      card(
+        card_header("Metagenomic samples per habitat"),
+        markdown("Overview of all metagenomic samples and their associated habitats."),
+        reactableOutput("table_s1"),
+        downloadButton("download_table_s1", "Download Table")
+      )
+    ),
+    
+    nav_panel(
+      "ARG Classes",
+      card(
+        card_header("ARG Classes and Abbreviations"),
+        markdown("ARO term IDs, gene class names, and abbreviations used throughout the app."),
+        reactableOutput("table_s2"),
+        downloadButton("download_table_s2", "Download Table")
+      )
+    )
+  )
+)
 
 # Define UI for the argCompare application
 page_navbar(
@@ -630,6 +654,7 @@ page_navbar(
   nav_panel(title = "Abundance and Richness", ps_abundance),
   nav_panel(title = "Pan- and core-resistome", ps_pan_core),
   nav_panel(title = "Class-specific Overlap", ps_overlap),
+  nav_panel(title = "Supplementary Tables", ps_tables),
   nav_spacer(),
   nav_menu(
     title = "Links",

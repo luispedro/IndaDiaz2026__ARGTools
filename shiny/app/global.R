@@ -127,6 +127,24 @@ sumcore <- lst_results$sumcore
 JI_all_plot <- lst_results$JI_all_plot
 rm(lst_results)
 
+ARO <- read.csv(file.path(ROOT_DIR, "code_R_analysis/output_abundance_diversity_resistome/conversion_ARO_parent_new_level.csv"))
+
+table_s1 <- abundance_tool_sample %>%
+  select(sample, habitat) %>%
+  distinct() %>%
+  rename(Sample = sample, Habitat = habitat)
+
+table_s2 <- ARO %>%
+  rename(gene_class = new_level, ARO_Term_ID = Term_ID) %>%
+  mutate(abbreviation = gene_class) %>%
+  mutate(abbreviation = gsub(" beta-lactamase", "", abbreviation)) %>%
+  mutate(abbreviation = gsub("rifampin inactivation enzyme", "RIF-inact. enz.", abbreviation)) %>%
+  mutate(abbreviation = gsub("MFS efflux pump", "efflux", abbreviation)) %>%
+  mutate(abbreviation = gsub("efflux pump", "efflux", abbreviation)) %>%
+  mutate(abbreviation = gsub("beta-lactam modulation resistance", "beta-lactam mod.", abbreviation)) %>%
+  mutate(abbreviation = gsub("target-modifying enzyme", "target-modif. enzyme", abbreviation)) %>%
+  mutate(abbreviation = gsub("abcF", "ABC-F", abbreviation))
+
 top_abundance <- c("efflux pump", "van" , "class A beta-lactamase", 
                    "tet RPG",  "cell wall charge",
                    "rpoB", "erm")

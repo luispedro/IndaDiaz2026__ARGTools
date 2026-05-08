@@ -23,10 +23,6 @@ server <- function(input, output, session) {
       xlab("Pipelines") + ylab("Number of ARGs") + 
       scale_y_continuous(expand = c(0.01, 0.01), 
                          labels = scales::comma) + 
-      #guides(fill = guide_legend(
-      #  override.aes = list(
-      #    pattern = rep("none", 7),
-      #    fill  = pal_7[names(pal_7) %in% count_genes_reactive()$tools_db])), pattern = "none") +  
       theme1 +
       theme(panel.border = element_blank(),
             panel.grid.major.x = element_blank(),
@@ -93,21 +89,13 @@ server <- function(input, output, session) {
       labs(fill = "") +
       ylab("Proportion of ARG class") +
       xlab("Pipelines") +
+      theme1 +
       theme(
-        text = element_text(size = general_size, color = "black"),
-        title = element_text(size = general_size + 2, face = "bold"),
-        axis.title = element_text(size = general_size, face = "bold"),
-        strip.text = element_text(size = general_size, angle = 0),
-        panel.background = element_blank(),
-        axis.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 1),
         axis.text.y = element_text(size = general_size - 1),
         plot.margin = margin(0, 0, 0, 20, unit = "pt"),
-        legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
-        legend.margin = margin(0, 0, 0, 0, unit = "pt"),
-        panel.spacing = unit(0, "pt"),
-        legend.text = element_text(size = general_size),
-        panel.grid.minor.y = element_blank(),
         legend.position = "bottom",
+        legend.key.height = unit(0.6, "cm"),
+        legend.key.width  = unit(0.7, "cm"),
         panel.grid = element_blank(),
         panel.border = element_blank(),
         strip.background.x = element_blank(),
@@ -125,9 +113,9 @@ server <- function(input, output, session) {
         ungroup() %>%
         select(tool, new_level, n, p) %>%
         rename(
-          "Tool"                = tool,
-          "ARG Class"            = new_level,
-          "Number of ARGs"       = n,
+          "Tool" = tool,
+          "ARG Class" = new_level,
+          "Number of ARGs" = n,
           "ARG Class Proportion" = p
         ) %>%
         write.csv(file, row.names = FALSE)
@@ -143,7 +131,7 @@ server <- function(input, output, session) {
       scale_fill_gradientn(
         colors = brewer.pal(9, "YlOrBr"),
         labels = percent_format(accuracy = 1),
-        breaks = c(0, 0.2, 0.4, 0.6, 0.8)
+        breaks = c(0, 0.2, 0.4, 0.6, 0.8),
       ) +
       geom_text(
         data = JI_all_plot %>%
@@ -163,7 +151,9 @@ server <- function(input, output, session) {
       labs(fill = "") +
       xlab("") + ylab("") +
       theme1 +
-      theme(legend.position = "bottom", 
+      theme(legend.position = "bottom",
+            legend.key.height = unit(0.5, "cm"),
+            legend.key.width  = unit(0.7, "cm"),
             panel.grid = element_blank(),
             panel.border = element_blank(),
             plot.margin = margin(0, 0, 0, 10, unit = "pt"))
@@ -176,8 +166,8 @@ server <- function(input, output, session) {
         filter(as.numeric(tool_lab_ref) < as.numeric(tool_lab_comp)) %>%
         select(tool_ref, tool_comp, jaccard) %>%
         rename(
-          "Pipeline A"    = tool_ref,
-          "Pipeline B"    = tool_comp,
+          "Pipeline A" = tool_ref,
+          "Pipeline B" = tool_comp,
           "Jaccard Index" = jaccard
         ) %>%
         write.csv(file, row.names = FALSE)
@@ -251,7 +241,7 @@ server <- function(input, output, session) {
       ylab("Relative abundance\n(aligned reads per million)") +
       theme1 + 
       theme(panel.border = element_blank(),
-            strip.text.x = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0),
+            strip.text.x = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0.5),
             panel.grid.major.x = element_blank(),
             panel.grid.minor.x = element_blank(),
             plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt"))
@@ -264,7 +254,7 @@ server <- function(input, output, session) {
       filtered_abundance_data() %>%
         select (sample, tool, abundance, richness, habitat) %>%
         rename(
-          "Sample ID"    = sample,
+          "Sample ID" = sample,
           "Tool" = tool,
           "Abundance (aligned reads per million)" = abundance,
           "Richness" = richness,
@@ -337,12 +327,12 @@ server <- function(input, output, session) {
         ungroup() %>%
         select(tool, habitat, gene, q50, q25, q75, w1, w2) %>%
         rename(
-          "Tool"            = tool,
-          "Environment"      = habitat,
-          "ARG"              = gene,
-          "Median (q50)"     = q50,
-          "Q25"              = q25,
-          "Q75"              = q75,
+          "Tool" = tool,
+          "Environment" = habitat,
+          "ARG" = gene,
+          "Median (q50)" = q50,
+          "Q25" = q25,
+          "Q75" = q75,
           "Whisker Low (w1)" = w1,
           "Whisker High (w2)"= w2
         ) %>%
@@ -365,11 +355,11 @@ server <- function(input, output, session) {
       group_by(tool, habitat, habitat_label, tools_db, tools_labels, texture) %>%
       summarise(
         median = ifelse(quantile(richness, 0.5)  < 0, 0, quantile(richness, 0.5)),
-        q25    = ifelse(quantile(richness, 0.25) < 0, 0, quantile(richness, 0.25)),
-        q75    = ifelse(quantile(richness, 0.75) < 0, 0, quantile(richness, 0.75)),
-        w1     = ifelse(quantile(richness, 0.25) - 1.5*IQR(richness) < 0, 0,
+        q25 = ifelse(quantile(richness, 0.25) < 0, 0, quantile(richness, 0.25)),
+        q75 = ifelse(quantile(richness, 0.75) < 0, 0, quantile(richness, 0.75)),
+        w1 = ifelse(quantile(richness, 0.25) - 1.5*IQR(richness) < 0, 0,
                         quantile(richness, 0.25) - 1.5*IQR(richness)),
-        w2     = ifelse(quantile(richness, 0.75) + 1.5*IQR(richness) < 0, 0,
+        w2 = ifelse(quantile(richness, 0.75) + 1.5*IQR(richness) < 0, 0,
                         quantile(richness, 0.75) + 1.5*IQR(richness)),
         .groups = "drop"
       )
@@ -379,7 +369,6 @@ server <- function(input, output, session) {
   filtered_richness_jitter <- reactive({
     req(input$tool_abundance, input$environment_abundance)
     
-    # get habitat_labels from main data so they match exactly
     habitat_labels <- filtered_richness_data() %>%
       distinct(habitat, habitat_label)
     
@@ -413,20 +402,20 @@ server <- function(input, output, session) {
       geom_jitter(
         data = filtered_richness_jitter(),
         aes(y = richness),
-        width = 0.35, size = 0.4, alpha = 0.1
+        width = 0.35, size = 0.4, alpha = 0.4
       ) +
       facet_grid(habitat_label ~ tools_db, scales = "free", space = "free_x") +
       scale_y_continuous(labels = scales::comma) +
       scale_fill_manual(values = pal_7) +
-      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+      scale_pattern_shared +
       xlab("Pipelines") + ylab("Richness") +
       theme1 +
       theme(
-        panel.border       = element_blank(),
-        strip.text.x       = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0.5),
+        panel.border = element_blank(),
+        strip.text.x = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0.5),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
-        plot.margin        = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")
+        plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")
       )
     
   })
@@ -437,13 +426,13 @@ server <- function(input, output, session) {
       filtered_richness_data() %>%
         select(tool, habitat, median, q25, q75, w1, w2) %>%
         rename(
-          "Pipeline"      = tool,
-          "Habitat"       = habitat,
-          "Median"        = median,
-          "Q25"           = q25,
-          "Q75"           = q75,
-          "Whisker Low"   = w1,
-          "Whisker High"  = w2
+          "Pipeline" = tool,
+          "Habitat" = habitat,
+          "Median" = median,
+          "Q25" = q25,
+          "Q75" = q75,
+          "Whisker Low" = w1,
+          "Whisker High" = w2
         ) %>%
         write.csv(file, row.names = FALSE)
     }
@@ -542,7 +531,7 @@ server <- function(input, output, session) {
       labs(fill = "") +
       theme_minimal() +
       theme(legend.position = "bottom",
-            legend.text      = element_text(size = general_size),
+            legend.text = element_text(size = general_size),
             legend.key.height = unit(0.35, "cm"),
             legend.key.width  = unit(0.35, "cm"))
     
@@ -558,10 +547,10 @@ server <- function(input, output, session) {
         filter(metric == "Pan-resistome") %>%
         select(tool, habitat, prop, metric, value) %>%
         rename(
-          "Tool"        = tool,
+          "Tool"  = tool,
           "Environment" = habitat,
           "Proportion"  = prop,
-          "Metric"      = metric,
+          "Metric"  = metric,
           "Mean richness across the subsamples"  = value
         ) %>%
         write.csv(file, row.names = FALSE)
@@ -575,10 +564,10 @@ server <- function(input, output, session) {
         filter(metric == "Core-resistome") %>%
         select(tool, habitat, prop, metric, value) %>%
         rename(
-          "Tool"        = tool,
+          "Tool" = tool,
           "Environment" = habitat,
           "Proportion"  = prop,
-          "Metric"      = metric,
+          "Metric" = metric,
           "Number of ARGs in the subsample" = value
         ) %>%
         write.csv(file, row.names = FALSE)
@@ -669,6 +658,48 @@ server <- function(input, output, session) {
         ) %>%
         write.csv(file, row.names = FALSE)
     }
+  )
+  
+  #SUPPLEMENTARY TABLES TAB
+  output$table_s1 <- renderReactable({
+    reactable(
+      table_s1,
+      searchable = TRUE,
+      filterable = TRUE,
+      striped    = TRUE,
+      highlight  = TRUE,
+      defaultPageSize = 20,
+      columns = list(
+        Sample  = colDef(name = "Sample"),
+        Habitat = colDef(name = "Habitat")
+      )
+    )
+  })
+  
+  output$download_table_s1 <- downloadHandler(
+    filename = function() paste0("TableS1_samples_", Sys.Date(), ".csv"),
+    content  = function(file) write.csv(table_s1, file, row.names = FALSE)
+  )
+  
+  output$table_s2 <- renderReactable({
+    reactable(
+      table_s2,
+      searchable = TRUE,
+      filterable = TRUE,
+      striped    = TRUE,
+      highlight  = TRUE,
+      defaultPageSize = 20,
+      columns = list(
+        gene_class   = colDef(name = "Gene Class"),
+        ARO_Term_ID  = colDef(name = "ARO Term ID"),
+        abbreviation = colDef(name = "Abbreviation")
+      )
+    )
+  })
+  
+  output$download_table_s2 <- downloadHandler(
+    filename = function() paste0("TableS2_ARG_classes_", Sys.Date(), ".csv"),
+    content  = function(file) write.csv(table_s2, file, row.names = FALSE)
   )
 
 }
