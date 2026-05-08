@@ -134,6 +134,55 @@ server <- function(input, output, session) {
     }
   )
   
+  output$jaccard_plot <- renderPlot({
+    
+    JI_all_plot %>%
+      filter(as.numeric(tool_lab_ref) < as.numeric(tool_lab_comp)) %>%
+      ggplot(aes(x = tool_lab_ref, y = tool_lab_comp, fill = jaccard)) +
+      geom_tile(color = "grey") +
+      scale_fill_gradientn(
+        colors = brewer.pal(9, "YlOrBr"),
+        labels = percent_format(accuracy = 1),
+        breaks = c(0, 0.2, 0.4, 0.6, 0.8)
+      ) +
+      geom_text(
+        data = JI_all_plot %>%
+          filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools,
+                 as.numeric(tool_lab_ref) < as.numeric(tool_lab_comp),
+                 jaccard >= 0.05),
+        aes(label = scales::percent(jaccard, accuracy = 1),
+            color  = jaccard >= 0.50),
+        size = general_size / .pt, show.legend = FALSE
+      ) +
+      scale_color_manual(values = c("black", "white")) +
+      scale_y_discrete(labels = function(x) {
+        x <- gsub("ABRicate-\n", "ABRicate-", x)
+        x <- gsub("-\nPlus", "Plus", x)
+        x
+      }, expand = 0) +
+      labs(fill = "") +
+      xlab("") + ylab("") +
+      theme1 +
+      theme(legend.position = "bottom", 
+            panel.grid = element_blank(),
+            panel.border = element_blank(),
+            plot.margin = margin(0, 0, 0, 10, unit = "pt"))
+  })
+  
+  output$download_jaccard_plot <- downloadHandler(
+    filename = function() paste0("jaccard_index_", Sys.Date(), ".csv"),
+    content = function(file) {
+      JI_all_plot %>%
+        filter(as.numeric(tool_lab_ref) < as.numeric(tool_lab_comp)) %>%
+        select(tool_ref, tool_comp, jaccard) %>%
+        rename(
+          "Pipeline A"    = tool_ref,
+          "Pipeline B"    = tool_comp,
+          "Jaccard Index" = jaccard
+        ) %>%
+        write.csv(file, row.names = FALSE)
+    }
+  )
   
   #ABUNDANCE TAB
   filtered_abundance_data <- reactive({
@@ -179,6 +228,7 @@ server <- function(input, output, session) {
       mutate(tools_labels = droplevels(tools_labels)) %>%
       left_join(habitat_n_samples, by = "habitat") %>%
       mutate(habitat_label = paste0(habitat, "\n(n = ", scales::comma(N_samples), ")")) 
+    
   }) %>% bindCache(input$tool_abundance, input$environment_abundance, input$abundance_genes)
   
   output$plot_abundance <- renderPlot({
@@ -300,17 +350,117 @@ server <- function(input, output, session) {
     }
   )
   
+  #RICHNESS MENU
+  filtered_richness_data <- reactive({
+    req(input$tool_abundance, input$environment_abundance)
+    
+    abundance_tool_sample %>%
+      filter(tool %in% input$tool_abundance) %>%
+      filter(habitat %in% input$environment_abundance) %>%
+      group_by(habitat) %>%
+      mutate(N_samples = n_distinct(sample)) %>%
+      ungroup() %>%
+      mutate(habitat = as.character(habitat)) %>%
+      mutate(habitat_label = paste0(habitat, "\n(n = ", scales::comma(N_samples), ")")) %>%
+      group_by(tool, habitat, habitat_label, tools_db, tools_labels, texture) %>%
+      summarise(
+        median = ifelse(quantile(richness, 0.5)  < 0, 0, quantile(richness, 0.5)),
+        q25    = ifelse(quantile(richness, 0.25) < 0, 0, quantile(richness, 0.25)),
+        q75    = ifelse(quantile(richness, 0.75) < 0, 0, quantile(richness, 0.75)),
+        w1     = ifelse(quantile(richness, 0.25) - 1.5*IQR(richness) < 0, 0,
+                        quantile(richness, 0.25) - 1.5*IQR(richness)),
+        w2     = ifelse(quantile(richness, 0.75) + 1.5*IQR(richness) < 0, 0,
+                        quantile(richness, 0.75) + 1.5*IQR(richness)),
+        .groups = "drop"
+      )
+    
+  }) %>% bindCache(input$tool_abundance, input$environment_abundance)
+  
+  filtered_richness_jitter <- reactive({
+    req(input$tool_abundance, input$environment_abundance)
+    
+    # get habitat_labels from main data so they match exactly
+    habitat_labels <- filtered_richness_data() %>%
+      distinct(habitat, habitat_label)
+    
+    abundance_tool_sample %>%
+      filter(tool %in% input$tool_abundance) %>%
+      filter(habitat %in% input$environment_abundance) %>%
+      mutate(habitat = as.character(habitat)) %>%
+      group_by(habitat, tool) %>%
+      filter(richness < quantile(richness, 0.75) + 1.5 * IQR(richness)) %>%
+      ungroup() %>%
+      group_by(habitat, tool) %>%
+      slice_sample(n = 100) %>%
+      ungroup() %>%
+      left_join(habitat_labels, by = "habitat")
+    
+  }) %>% bindCache(input$tool_abundance, input$environment_abundance)
+  
+  output$plot_richness <- renderPlot({
+    
+    ggplot(filtered_richness_data(), aes(x = tools_labels, y = median, fill = tools_db)) +
+      geom_boxplot_pattern(
+        aes(ymin = w1, lower = q25, middle = median, upper = q75, ymax = w2, pattern = texture),
+        stat = "identity",
+        position = position_dodge2(preserve = "single", padding = 0),
+        pattern_color = "black", pattern_fill = "black",
+        pattern_density = 0.000000001, pattern_spacing = 0.2,
+        pattern_size = 0.3, color = "black", outliers = FALSE,
+        outlier.shape = NA, linewidth = 0.15
+      ) +
+      scale_x_discrete(expand = expansion(add = 1)) +
+      geom_jitter(
+        data = filtered_richness_jitter(),
+        aes(y = richness),
+        width = 0.35, size = 0.4, alpha = 0.1
+      ) +
+      facet_grid(habitat_label ~ tools_db, scales = "free", space = "free_x") +
+      scale_y_continuous(labels = scales::comma) +
+      scale_fill_manual(values = pal_7) +
+      scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
+      xlab("Pipelines") + ylab("Richness") +
+      theme1 +
+      theme(
+        panel.border       = element_blank(),
+        strip.text.x       = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 0.5),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        plot.margin        = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")
+      )
+    
+  })
+  
+  output$download_richness <- downloadHandler(
+    filename = function() paste0("richness_", Sys.Date(), ".csv"),
+    content = function(file) {
+      filtered_richness_data() %>%
+        select(tool, habitat, median, q25, q75, w1, w2) %>%
+        rename(
+          "Pipeline"      = tool,
+          "Habitat"       = habitat,
+          "Median"        = median,
+          "Q25"           = q25,
+          "Q75"           = q75,
+          "Whisker Low"   = w1,
+          "Whisker High"  = w2
+        ) %>%
+        write.csv(file, row.names = FALSE)
+    }
+  )
+    
+  
   
   #PAN- & CORE- RESISTOME TAB
   pan_core_reactive <- reactive({
-    req(input$tool_pan_core, input$environment_pan_core, input$threshold_samples)
+    req(input$tool_pan_core, input$environment_pan_core, input$threshold_samples, input$threshold_proportion)
     
     pan_core <- sumpan2 %>% 
       filter(tool %in% input$tool_pan_core,
              habitat %in% input$environment_pan_core) %>% 
       left_join((sumcore2 %>% filter(tool %in% input$tool_pan_core,
                                      cnt %in% input$threshold_samples, 
-                                     cut == 0.5,
+                                     cut %in% input$threshold_proportion,
                                      habitat %in% input$environment_pan_core) %>%
                    ungroup() %>%
                    select(-c(cut, cnt, tools_labels, tools_db, texture))), by = c("tool", "habitat", "tool2")) %>%
@@ -327,7 +477,8 @@ server <- function(input, output, session) {
       )) %>%
       mutate(metric = factor(metric, levels = c("Pan-resistome", "Core-resistome"))) %>%
       filter(value > 0)
-  }) %>% bindCache(input$tool_pan_core, input$environment_pan_core, input$threshold_samples)
+    
+  }) %>% bindCache(input$tool_pan_core, input$environment_pan_core, input$threshold_samples, input$threshold_proportion)
   
   
   output$pan_core <- renderPlot({
@@ -366,8 +517,7 @@ server <- function(input, output, session) {
       scale_color_manual(values = scale_fill_pan) +
       scale_fill_pan + scale_shape_pan +
       scale_x_continuous(labels = label_comma()) +
-      labs(y = "", x = "Number of ARGs", fill = "", title = "b",
-     subtitle = paste0("Core-resistome threshold: >", input$threshold_samples, " subsamples")) +
+      labs(y = "", x = "Number of ARGs", fill = "", title = "b") +
       theme_pan_core +
       theme(strip.text.y = element_blank())
     

@@ -156,38 +156,7 @@ ps_intro <- fluidPage(
   
   layout_column_wrap( 
     width = 1/2,
-    # card(
-    #   card_header("The elusive resistome: a global comparison reveals large discrepancies among detection pipelines"),
-    #   tags$p("This app replicates the main and supplementary figures for the manuscript with the same name, and allows to control different parameters."),
-    #   tags$p(tags$b("Analysis:")),
-    #   tags$p(tags$b("278,788,551 unigenes")),
-    #   tags$p("The unigenes are representative sequences after clustering 2.3 billion bacterial genes at 95% identity. The unigenes come from ",  tags$a(href="https://gmgc.embl.de/", "GMGC"),
-    #          "and are accessible", tags$a(href="https://gmgc.embl.de/download.cgi", "here.")),
-    #   tags$p(tags$b("11,538 metagenomic samples from 13 different habitats")),
-    #   tags$p("The metagenomic samples come from GMGC and are available ",
-    #          tags$a(href="https://gmgc.embl.de/downloads/v1.0/metadata/GMGC10.sample.meta.tsv.gz", "here"), ". In this app, we did not consider the habitats amplicon, isolate, and built-environment.",
-    #          "The abundance of each gene in the metagenomes can be accessed", tags$a(href="https://gmgc.embl.de/downloads/v1.0/GMGC10.sample-abundance.tsv.xz", "here"), ". The summary of metagenomic samples per habitat can be found in Supplementary Table S1 in the paper and here. We converted the abundance in GMGC from reads per 10 million to reads per million."),
-    #   tags$p(tags$b("ARG classes")),
-    #   tags$p("Ontology normalization was done with", tags$a(href="https://github.com/BigDataBiology/argNorm", "argNorm"), ". Gene classes were manually curated after. The gene classes used in this project can be found in Supplementary Table 2 in the paper and here."),
-    #   tags$p(tags$b("Pipelines")),
-    #   "We used full-sized gene in all pipelines. For each pipeline, we chose a single parameter:",
-    #   tags$ul(
-    #     tags$li("Nucleotide sequences through:"),
-    #     tags$ul(
-    #       tags$li("ResFinder, and"), 
-    #       tags$li("ABRicate with the databases: CARD, ResFinder, NCBI, ARG-ANNOT, and MEGARES 2.0.")
-    #     ),
-    #     
-    #     tags$li("Amino acid sequences through:"),
-    #     tags$ul(
-    #       tags$li("DeepARG"),
-    #       tags$li("fARGene"), 
-    #       tags$li("RGI with DIAMOND aligner"), 
-    #       tags$li("AMRFinderPlus.")
-    #     )
-    #   )
-    # ),
-    
+
     card(
       card_header(
         h3(
@@ -358,6 +327,9 @@ ps_args <- page_sidebar(
       layout_columns(
         col_widths = breakpoints(xs = 12, xxl = 6),
         
+      layout_columns(
+        col_widths = 12,
+        
         card(
           card_header("Number of ARGs"),
           markdown(
@@ -366,9 +338,22 @@ ps_args <- page_sidebar(
           A total of 178,107 unigenes from GMGCv1 were reported as ARG by at least one pipeline.
           The largest difference, 45-fold, was observed between ABRicate-ResFinder and DeepARG."
           ),
-          withSpinner(plotOutput("plot_count_genes_tool", height = "550px"), type = 8, color = "#1b9e77"),
+          withSpinner(plotOutput("plot_count_genes_tool", height = "500px"), type = 8, color = "#1b9e77"),
           downloadButton("download_count_genes", "Download Table")
         ),
+        
+        card(
+          card_header("Jaccard Index"),
+          markdown(
+            "This is the Pairwise Jaccard index showing the mean overlap in ARGs detected between pipelines.
+            \n
+            Higher values indicate greater agreement between two pipelines in the set of genes they identify as ARGs."
+          ),
+          withSpinner(plotOutput("jaccard_plot", height = "500px"), type = 8, color = "#1b9e77"),
+          downloadButton("download_jaccard_plot", "Download Table")
+        )
+      ),
+      
         card(
           card_header("ARG Class Proportion"),
           markdown(
@@ -435,37 +420,53 @@ ps_abundance <- page_sidebar(
     markdown("*Use this sidebar to filter specific pipelines, habitats, or focus on particular gene classes to observe these shifts/difference in abundance of genes estimation.*")
   ),
   
-  nav_panel(
-    "Relative Abundance per Sample and Gene Class",
-    layout_columns(
-      col_widths = breakpoints(xs = 12, xxl = 6),
+
+  navset_card_underline(
+    nav_panel(
+      "Relative Abundance per Sample and Gene Class",
+      layout_columns(
+        col_widths = breakpoints(xs = 12, xxl = 6),
       
-        card(
-            card_header("Relative abundance per Sample"),
+          card(
+              card_header("Relative abundance per Sample"),
+              markdown(
+                "
+                We show the distribution of the relative abundance of ARGs detected by each pipeline across habitats. The middle line 
+                denotes the median while each box limits represent the interquartile range and the
+                whiskers extend to 1.5×IQR beyond the first and third quartiles."),
+              
+              withSpinner(plotOutput("plot_abundance", height = "700px"), type = 8, color = "#1b9e77"),
+              downloadButton("download_abundance", "Download Table")
+            ),
+          
+          card(
+            card_header("Relative Abundance per Gene Class"),
             markdown(
               "
-              We show the distribution of the relative abundance of ARGs detected by each pipeline across habitats. The middle line 
-              denotes the median while each box limits represent the interquartile range and the
-              whiskers extend to 1.5×IQR beyond the first and third quartiles."),
-            
-            withSpinner(plotOutput("plot_abundance", height = "550px"), type = 8, color = "#1b9e77"),
-            downloadButton("download_abundance", "Download Table")
-          ),
-        
-        card(
-          card_header("Relative Abundance per Gene Class"),
-          markdown(
-            "
             We show the distribution of the relative abundance of ARG classes detected by each pipeline across habitats. The middle line 
             denotes the median while each box limits represent the interquartile range. ARG class abbreviations are found in Table 2."
-          ),
-          withSpinner(plotOutput("plot_abundance_gene_class", height = "700px"), type = 8, color = "#1b9e77"),
-          downloadButton("download_class_abundance", "Download Table")
+            ),
+            withSpinner(plotOutput("plot_abundance_gene_class", height = "700px"), type = 8, color = "#1b9e77"),
+            downloadButton("download_class_abundance", "Download Table")
+          )
+        )
+    ),
+    
+    nav_panel(
+      "Richness",
+      layout_column_wrap( 
+        width = 1,
+        card(
+          
+          card_header("Richness"),
+          markdown("This plot shows the **Richness** of ARGs detected by each pipeline per sample across habitats."),
+          withSpinner(plotOutput("plot_richness", height = "700px"), type = 8, color = "#1b9e77"),
+          downloadButton("download_richness", "Download Table")
         )
       )
     )
   )
-
+)
 
 # Pan- and Core-resistome Tab
 ps_pan_core <- page_sidebar(
@@ -514,6 +515,14 @@ ps_pan_core <- page_sidebar(
       selected = 450,
       multiple = FALSE
     ),
+    
+    pickerInput(
+      inputId = "threshold_proportion",
+      label = "Proportion of metagenomic samples where the gene appears in each core-subsample:",
+      choices = list(">= 30%" = 0.3, ">= 40%" = 0.4, ">= 50%" = 0.5, ">= 60%" = 0.6, ">= 70%" = 0.7, ">= 80%" = 0.8, ">= 90%" = 0.9),
+      selected = 0.5,
+      multiple = FALSE
+    ),
  
     markdown("*Use the sidebar to compare specific pipelines, select different habitats, or adjust the strictness of the core-resistome threshold.*")
   ),
@@ -536,8 +545,8 @@ ps_pan_core <- page_sidebar(
         Alternative values for *p* and *n* can be selected in the menu on the left." 
       ),
       withSpinner(plotOutput("pan_core", height = "750px"), type = 8, color = "#1b9e77"),
-      downloadButton("download_pan_resistome", "Download Pan-resistome"),
-      downloadButton("download_core_resistome", "Download Core-resistome")
+      downloadButton("download_pan_resistome", "Download Pan-resistome Table"),
+      downloadButton("download_core_resistome", "Download Core-resistome Table")
       )
     )
   )
@@ -618,7 +627,7 @@ page_navbar(
   header = responsive_css,
   nav_panel(title = "Introduction", ps_intro),
   nav_panel(title = "ARGs", ps_args),
-  nav_panel(title = "Abundance", ps_abundance),
+  nav_panel(title = "Abundance and Richness", ps_abundance),
   nav_panel(title = "Pan- and core-resistome", ps_pan_core),
   nav_panel(title = "Class-specific Overlap", ps_overlap),
   nav_spacer(),

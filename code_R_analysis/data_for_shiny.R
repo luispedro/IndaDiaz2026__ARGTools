@@ -94,13 +94,20 @@ lst <- readRDS("code_R_analysis/output_abundance_diversity_resistome/results_too
 
 metadata <- read.delim("data/metadata_GMGC10.sample.meta.tsv")
 metadata <- metadata %>% filter(!habitat %in% c("amplicon", "isolate", "built-environment"))
+
+# metadata0 will be merged with abundance
 metadata0 <- metadata %>% select(sample_id, habitat) %>% rename(sample = sample_id)
 
 abundance <- readRDS("code_R_analysis/output_abundance_diversity_resistome/abundance_diversity.rds")
 
+# convert MFS to efflux pump
 abundance <- abundance %>% mutate(gene = ifelse(gene == "MFS efflux pump", "efflux pump", gene))
 
 metadata0 <- metadata0 %>% left_join(abundance, by = "sample")
+
+# we add one class to avoid NA values and to be able to "complete" for all classes later
+# we add one tool to avoid NA values and to be able to "complete" for all tools later
+
 metadata0$gene[is.na(metadata0$gene)] <- "efflux pump"
 metadata0$tool[is.na(metadata0$tool)] <- "DeepARG"
 metadata0$abundance[is.na(metadata0$abundance)] <- 0
@@ -226,6 +233,29 @@ unigenes <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome
 # per class and tool
 csc_fnr <- create_class_overlaps(unigenes) 
 
+# Pairwise Jaccard index between pipelines
+JI_all <- return_overlap_tools(unigenes)
+
+mat <- JI_all %>%
+  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
+  select(tool_ref, tool_comp, jaccard) %>%
+  pivot_wider(names_from = tool_comp, values_from = jaccard)
+
+mat_matrix         <- as.matrix(mat[, -1])
+rownames(mat_matrix) <- mat$tool_ref
+dist_mat           <- as.dist(1 - mat_matrix)
+hc                 <- hclust(dist_mat)
+ordered_tools      <- hc$labels[hc$order]
+
+JI_all_plot <- JI_all %>%
+  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
+  mutate(
+    tool_lab_ref  = factor(tools_labels[tool_ref],  levels = tools_labels[ordered_tools]),
+    tool_lab_comp = factor(tools_labels[tool_comp], levels = tools_labels[ordered_tools])
+  )
+
+rm(mat, mat_matrix, dist_mat, hc, ordered_tools)
+
 lims_abundance <- abundance_tool_sample %>%
   group_by(tool, habitat,tools_db, tools_labels) %>% 
   summarise(
@@ -266,6 +296,6 @@ abundance_class_summary <- abundance_class %>%
 lst_results <- list(abundance_tool_sample=abundance_tool_sample, 
      core=core, sumpan2=sumpan2, unigenes=unigenes, 
      csc_fnr=csc_fnr, abundance_class_summary=abundance_class_summary,
-     sumcore = sumcore)
+     sumcore = sumcore, JI_all_plot=JI_all_plot)
 
 saveRDS(lst_results, file = "shiny/app/data.rds", compress = TRUE)

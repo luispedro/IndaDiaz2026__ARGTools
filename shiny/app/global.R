@@ -124,6 +124,7 @@ unigenes <- lst_results$unigenes
 csc_fnr <- lst_results$csc_fnr
 abundance_class_summary <- lst_results$abundance_class_summary
 sumcore <- lst_results$sumcore
+JI_all_plot <- lst_results$JI_all_plot
 rm(lst_results)
 
 top_abundance <- c("efflux pump", "van" , "class A beta-lactamase", 
@@ -320,6 +321,19 @@ abundance_tool_sample <- abundance_tool_sample %>%
 habitat_n_samples <- abundance_tool_sample %>%
   group_by(habitat) %>%
   summarise(N_samples = n_distinct(sample))
+
+lims_richness <- abundance_tool_sample %>%
+  group_by(tool, habitat, tools_db, tools_labels, texture) %>%
+  summarise(
+    median = ifelse(quantile(richness, 0.5)  < 0, 0, quantile(richness, 0.5)),
+    q25    = ifelse(quantile(richness, 0.25) < 0, 0, quantile(richness, 0.25)),
+    q75    = ifelse(quantile(richness, 0.75) < 0, 0, quantile(richness, 0.75)),
+    w1     = ifelse(quantile(richness, 0.25) - 1.5*IQR(richness) < 0, 0,
+                    quantile(richness, 0.25) - 1.5*IQR(richness)),
+    w2     = ifelse(quantile(richness, 0.75) + 1.5*IQR(richness) < 0, 0,
+                    quantile(richness, 0.75) + 1.5*IQR(richness))
+  ) %>%
+  ungroup()
 
 abundance_class_summary <- abundance_class_summary %>% 
   mutate(tool2 = factor(tools_labels[tool], levels = tools_labels_factor))
