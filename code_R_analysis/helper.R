@@ -1,3 +1,5 @@
+
+# function to extract the legend from ggplots
 g_legend <- function(a.gplot){
   tmp <- ggplotGrob(a.gplot)
   leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
@@ -5,14 +7,19 @@ g_legend <- function(a.gplot){
   return(legend)
 }
 
+# function to extract the core resistome based on:
+# minimum proportion of metagenomic samples in a subsample needed to count an ARG as subsample core, and
+# minimum number of subsample cores an ARG needs to be in to be. counted in the core-resistome
+
 sum_core_adjust <- function(core, cnt_subset = 900, threshold_samples = 0.5){
   return(core %>% 
            filter(cut %in% threshold_samples & cnt > cnt_subset) %>% 
            ungroup() %>% 
-           group_by(new_level, tool, habitat) %>% 
+           group_by(gene_class, tool, habitat) %>% 
            summarise(unigenes = n_distinct(X)))
 }
 
+# gene classes
 
 gene_classes = data.frame(rbind(
   c("glycopeptide resistance (van)" , "van"), 
@@ -69,6 +76,7 @@ gene_classes = data.frame(rbind(
 colnames(gene_classes) <- c("old", "new")
 
 #  gene_classes0 and gene_classes_list are the labels for the genes in the plots 
+# conversion of gene classes
 gene_classes0 <- gene_classes
 gene_classes0 <- gene_classes0 %>% mutate(new = ifelse(new %in% "class A beta-lactamase", "A beta-lactamase", new)) %>% 
   mutate(new = ifelse(new %in% "class B beta-lactamase", "B beta-lactamase", new)) %>% 
@@ -76,12 +84,19 @@ gene_classes0 <- gene_classes0 %>% mutate(new = ifelse(new %in% "class A beta-la
   mutate(new = ifelse(new %in% "class D beta-lactamase", "D beta-lactamase", new)) %>%
   mutate(new = ifelse(new %in% "beta-lactam modulation resistance", "beta-lactam modulation", new))
 
+
 gene_classes_list <- gene_classes0$new
 rm(gene_classes0)
 names(gene_classes_list) <- gene_classes$new
 
+# gene class vector
 gene_classes <- setNames(as.list(gene_classes$new), gene_classes$old)
 
+# function to calculate the CSC 
+# qc_ref genes reported in the gene class by the reference tool 
+# q_ref all genes reported by the reference tool 
+# qc_comp genes reported in the gene class by the tool we are comparing against
+# q_comp all genes reported by the tool we are comparing against 
 new_intersect_lists <- function(qc_ref, q_ref, qc_comp, q_comp){
   A <- unlist(qc_ref)
   B <- unlist(q_ref)
@@ -99,6 +114,7 @@ new_intersect_lists <- function(qc_ref, q_ref, qc_comp, q_comp){
   return(r)
 }
 
+# Calculate the CSC  for all tools and gene classes in unigenes 
 create_class_overlaps <- function(unigenes){
   tools_per_unigene <- unigenes %>% ungroup()  %>% 
     arrange(query) %>% 
@@ -111,18 +127,18 @@ create_class_overlaps <- function(unigenes){
     summarise(query = list(query), .groups = "drop")
   
   sets1 <- tools_per_unigene %>%
-    group_by(new_level, tool) %>%
+    group_by(gene_class, tool) %>%
     summarise(query = list(query), .groups = "drop")  
   
   pairwise <- sets1 %>%
-    group_by(new_level) %>%
+    group_by(gene_class) %>%
     summarise(pairs = list(expand_grid(tool_ref = tool, tool_comp = tool)), .groups = "drop") %>%
     unnest(pairs)
   
   JI_class_other <- pairwise %>%
-    left_join(sets1, by = c("new_level", "tool_ref" = "tool")) %>%
+    left_join(sets1, by = c("gene_class", "tool_ref" = "tool")) %>%
     rename(qc_ref = query) %>%
-    left_join(sets1, by = c("new_level", "tool_comp" = "tool")) %>%
+    left_join(sets1, by = c("gene_class", "tool_comp" = "tool")) %>%
     rename(qc_comp = query) %>%
     left_join(sets0, by = c( "tool_ref" = "tool")) %>%
     rename(q_ref = query) %>% 
@@ -140,6 +156,7 @@ create_class_overlaps <- function(unigenes){
   return(JI_class_other)
 }
 
+# calculates the Jaccard Index for all tools in unigenes
 return_overlap_tools <- function(unigenes) { 
   sets <- unigenes %>% ungroup()  %>% 
     arrange(query) %>% 
@@ -163,6 +180,7 @@ return_overlap_tools <- function(unigenes) {
 }
 
 
+# calculates the CSC without assigning gene classes from reference tool to the tool we compare against 
 create_class_overlaps_no_shuffling <- function(unigenes){
   tools_per_unigene <- unigenes %>% ungroup()  %>% 
     arrange(query) %>% 
@@ -175,18 +193,18 @@ create_class_overlaps_no_shuffling <- function(unigenes){
     summarise(query = list(query), .groups = "drop")
   
   sets1 <- tools_per_unigene %>%
-    group_by(new_level, tool) %>%
+    group_by(gene_class, tool) %>%
     summarise(query = list(query), .groups = "drop")  
   
   pairwise <- sets1 %>%
-    group_by(new_level) %>%
+    group_by(gene_class) %>%
     summarise(pairs = list(expand_grid(tool_ref = tool, tool_comp = tool)), .groups = "drop") %>%
     unnest(pairs)
   
   JI_class_other <- pairwise %>%
-    left_join(sets1, by = c("new_level", "tool_ref" = "tool")) %>%
+    left_join(sets1, by = c("gene_class", "tool_ref" = "tool")) %>%
     rename(qc_ref = query) %>%
-    left_join(sets1, by = c("new_level", "tool_comp" = "tool")) %>%
+    left_join(sets1, by = c("gene_class", "tool_comp" = "tool")) %>%
     rename(qc_comp = query) %>%
     left_join(sets0, by = c( "tool_ref" = "tool")) %>%
     rename(q_ref = query) %>% 

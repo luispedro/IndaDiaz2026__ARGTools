@@ -517,14 +517,15 @@ resfinder.norm <- read.delim("dna/resfinder_table.norm.tsv", skip = 1) %>%
   mutate(tool = "ResFinder", id = Identity)  
 
 
+# 220 repeated unigenes
+# 109 have the same gene 
+## 113 have different gene 
 # resfinder.norm  %>% group_by(query) %>% mutate(n = n()) %>% filter(n>1) 
 # resfinder.norm  %>% group_by(query) %>% mutate(n = n()) %>% filter(n>1) %>% select(query) %>% distinct()
 # resfinder.norm  %>% group_by(query, gene) %>% mutate(n = n()) %>% filter(n>1)
 # resfinder.norm  %>% group_by(query, gene) %>% mutate(n = n()) %>% filter(n>1) %>% select(query) %>% distinct()
 
-# 220 repeated unigenes
-# 109 have the same gene 
-## 113 have different gene 
+
 
 resfinder.norm <- resfinder.norm %>% 
   group_by(query, gene) %>% 
@@ -612,7 +613,6 @@ card_gene_aro <- card_gene_aro %>% bind_rows(manually_curated)
 
 # add the ARO to abricate.card.norm
 abricate.card.norm <- abricate.card.norm %>% mutate(ARO = card_gene_aro$aro[match(V6, card_gene_aro$gene)])
-# sum(abricate.card.norm$ARO == "")
 
 ################################################################################################################################################
 
@@ -624,7 +624,6 @@ abricate.argannot.norm <- abricate.argannot.norm %>%
   mutate(ARO = ifelse(V6 %in% "(Ntmdz)nimj_Nitroimidazole_Gene", "ARO:3007112", 
                       ifelse(V6 %in% "(Bla)blaACT-16", "ARO:3001827", ARO)))
 
-# sum(abricate.argannot.norm$ARO == "")
 
 ################################################################################################################################################
 # ARO for abricate.resfinder.norm
@@ -655,7 +654,7 @@ others <- cbind(c("mdf(A)_1", "mcr-9_1", "blaCTX-M-63_1", "blaCARB-4_1", "dfrA19
 
 abricate.resfinder.norm <- abricate.resfinder.norm %>% mutate(ARO = ifelse(V6 %in% others[,1], others[match(V6, others[,1]),2], ARO))
 # 30 unigenes left - 5 genes "mdf(A)"      "mcr-9"       "blaCTX-M-63" "blaCARB-4"   "dfrA19"
-#sum(abricate.resfinder.norm$ARO == "")
+
 
 
 ################################################################################################################################################
@@ -683,7 +682,7 @@ colistin <- cbind(c("mcr-3.38", "mcr-3.36", "mcr-8.2", "mcr-3.33", "mcr-10.2"),
       c("ARO:3007251", "ARO:3007257", "ARO:3007229", "ARO:3007248", "ARO:3007277"))
 
 resfinder.norm <- resfinder.norm %>% mutate(ARO = ifelse(gene %in% colistin[,1], colistin[match(gene, colistin[,1]),2], ARO))
-#sum(resfinder.norm$ARO == "")
+
 
 
 ################################################################################################################################################
@@ -698,8 +697,6 @@ d[d=="ARO:NA"] <- ""
 abricate.megares.norm$ARO[j] <- d
 
 j <- which(abricate.megares.norm$ARO == "")
-#unique(abricate.megares.norm[j,"V6"])
-#unique(abricate.megares.norm[j,"V13"])
 
 abricate_annotation <- read.delim("check_missing_annot/abricate_annotation_megares.tsv")
 abricate_annotation <- abricate_annotation[,-c(19,20,21)]
@@ -710,9 +707,6 @@ abricate.megares.norm$ARO[j] <- paste0("ARO:", abricate_annotation$ARO[match(abr
 abricate.megares.norm$ARO[abricate.megares.norm$ARO == "ARO:NA"] <- ""
 
 j <- which(abricate.megares.norm$ARO == "")
-#unique(abricate.megares.norm[j,"V6"])
-#unique(abricate.megares.norm[j,"V13"])
-#unique(abricate.megares.norm[j,"V14"])$V14
 
 abricate.megares.norm <- abricate.megares.norm %>% mutate(code_gene = sapply(strsplit(V14, split = ":"), function(x) x[length(x)]))
 missing <- unique(abricate.megares.norm$V14[j])
@@ -729,8 +723,6 @@ new_code[grepl("SMR", missing)] <- "ARO:0010003"
 
 abricate.megares.norm$ARO[j] <- new_code[match(abricate.megares.norm$V14[j], missing)]
 
-
-# to debug arg_norm
 
 rm(j, abricate_annotation, megares_annotation, new_code, missing)
 
@@ -750,7 +742,6 @@ d <- paste0("ARO:", ncbi_annotation$ARO[match(abricate.ncbi.norm$V6[j], ncbi_ann
 d[d=="ARO:NA"] <- ""
 abricate.ncbi.norm$ARO[j] <- d
 
-#  
 j <- abricate.ncbi.norm$ARO ==""
 d <- paste0("ARO:", ncbi_annotation$ARO[match(abricate.ncbi.norm$V6[j], ncbi_annotation$genename2)])
 d[d=="ARO:NA"] <- ""
@@ -761,7 +752,6 @@ j <- abricate.ncbi.norm$ARO ==""
 d <- paste0("ARO:", ncbi_annotation$ARO[match(abricate.ncbi.norm$V13[j], ncbi_annotation$ref)])
 d[d=="ARO:NA"] <- ""
 abricate.ncbi.norm$ARO[j] <- d
-
 
 ncbi_annotation <- read.delim("check_missing_annot/ncbi_curation.tsv")
 ncbi_annotation <- ncbi_annotation %>% mutate(ref = sapply(strsplit(ncbi_annotation$Original.ID, split = "\\|"), function(x) x[2]))
@@ -815,8 +805,6 @@ rm(others.ncbi, others, abricate_annotation, x2, x3, j)
 rm(d, ncbi_annotation)
 
 ### AMRFINDER
-# 
-# 
 
 ncbi_annotation <- read.delim("check_missing_annot/ncbi_ARO_mapping.tsv")
 ncbi_annotation <- ncbi_annotation %>% mutate(ref = sapply(strsplit(ncbi_annotation$Original.ID, split = "\\|"), function(x) x[2]))
@@ -826,13 +814,8 @@ d <- paste0("ARO:", ncbi_annotation$ARO[match(amrfinder.norm.prot$Closest.refere
 d[d=="ARO:NA"] <- ""
 amrfinder.norm.prot$ARO[j] <- d
 
-# to debug arg_norm
-
 rm(j, d, ncbi_annotation)
 
-
-################################################################################################################################################
-################################################################################################################################################
 ################################################################################################################################################
 ### AROs
 
@@ -1029,8 +1012,6 @@ fargene.prot <- fargene.prot %>% mutate(manual.parent = df2$Parent_ID[match(manu
 
 
 ################################################################################################################################################
-################################################################################################################################################
-################################################################################################################################################
 ### Complement tools 
 
 lst <- list(deeparg.norm = deeparg.norm, deeparg.norm.prot = deeparg.norm.prot, 
@@ -1078,9 +1059,7 @@ lst$fargene.prot <- lst$fargene.prot %>%
          parent_description = ifelse(coalesce(as.character(new_level), "NA") != coalesce(as.character(manual.new_level), "NA"), manual.parent_description, parent_description)) %>% 
   mutate(new_level = ifelse(coalesce(as.character(new_level), "NA") != coalesce(as.character(manual.new_level), "NA"), manual.new_level, new_level))
 
-
 rm(list = setdiff(ls(), "lst"))
-
 
 lst$deeparg.norm.id70 <- lst$deeparg.norm[lst$deeparg.norm$id>=70,]
 lst$deeparg.norm.id70$tool <- "DeepARG70"
@@ -1107,11 +1086,6 @@ lst$rgi.diamond.id70 <- NULL
 lst$rgi.diamond.id80 <- NULL
 lst$rgi.diamond.id90 <- NULL
 
-
-################################################################################################################################################
-################################################################################################################################################
-################################################################################################################################################
-################################################################################################################################################
 ################################################################################################################################################
 # ABUNDANCES 
 # The abundances for each unigene had already been filterd with the file genes_prot_dna.csv
@@ -1158,7 +1132,6 @@ args_abundances <- args_abundances %>%
 
 metadata <- metadata %>% filter(!habitat %in% c("amplicon", "isolate", "built-environment"))
 
-
 set.seed(2025)
 
 rarefaction <- function(X, raw, inserts, depth = 5e6, seed = 2025){
@@ -1191,8 +1164,6 @@ rarefaction_fast <- function(X, raw, inserts, depth = 5e6, seed = 2025){
   sampled <- rmultinom(1, size = depth, prob = probs)
   return(sampled[,1])
 }
-
-# do the rarefaction across samples
 
 # rarefied_counts <- args_abundances %>% filter(raw > 0) %>% ungroup() %>% group_by(sample) %>%
 #   summarise(
@@ -1238,6 +1209,8 @@ lst$rgi.diamond.id80$tool <- "RGI-DIAMOND80"
 lst$rgi.diamond.id90 <- lst$rgi.diamond[lst$rgi.diamond$id>=90,]
 lst$rgi.diamond.id90$tool <- "RGI-DIAMOND90"
 
+# function to aggregate teh abundance to the class level
+
 abundance_parent <- function(abund_df, d){
   d <- d %>% filter(!is.na(parent)) 
   Y <- abund_df %>% filter(X %in% d$query)
@@ -1259,7 +1232,6 @@ abundance_parent <- function(abund_df, d){
            distinct_unigenes_rarefied, 
            distinct_unigenes_raw)
   
-#  Y_aro <- Y_aro %>% bind_rows(Y_new_level)
   return(Y_new_level)
 }
 
@@ -1280,11 +1252,6 @@ unigenes <- unigenes %>% filter(query %in% genes_right_habitat)
 rownames(unigenes) <- NULL
 unigenes <- unigenes %>% select(c("query", "tool","new_level", "id"))
 
-
-# higher habitat classification for abundance
-# lst_abundance_diversity <- lst_abundance_diversity %>% 
-#  mutate(habitat2 = SO[lst_abundance_diversity$habitat])
-
 # save abundance and diversity
 lst_abundance_diversity <- lst_abundance_diversity %>% mutate(abundance = normed10m/10) %>% 
   rename(richness = distinct_unigenes_rarefied, richness_no_rarified = distinct_unigenes_raw) %>% 
@@ -1294,12 +1261,6 @@ saveRDS(lst_abundance_diversity, file = "code_R_analysis/output_abundance_divers
 write.csv(lst_abundance_diversity, file = gzfile("code_R_analysis/output_abundance_diversity_resistome/abundance_diversity.csv.gz"), row.names = F)
 saveRDS(unigenes, file = "code_R_analysis/output_abundance_diversity_resistome/unigenes_per_tool.rds", compress = T)
 write.csv(unigenes, file = gzfile("code_R_analysis/output_abundance_diversity_resistome/unigenes_per_tool.csv.gz"), row.names = F)
-
-# save the results per tool
-#for(j in 1:length(lst)){
-#  write.csv(lst[[j]], file = paste0("code_R_analysis/output_abundance_diversity_resistome/processed_tool.",names(lst)[j],".csv"), row.names = F)
-#}
-
 
 #### CORE AND PAN 
 ## load the unigenes clusterd at 90% with vsearch
@@ -1337,14 +1298,6 @@ lst2 <- lapply(lst, function(x) x %>% ungroup() %>% select(-c(centroid, n, new_l
 
 # save the result of all tools
 saveRDS(lst2,  file = "code_R_analysis/output_abundance_diversity_resistome/results_tools.rds", compress = T)
-
-# double_level <- lapply(lst, function(x) x %>%          
-#      filter(n>1) %>% arrange(centroid, desc(n)) %>% 
-#      ungroup %>%
-#      group_by(centroid, new_level) %>%
-#      slice_head(n = 1) %>%
-#      select(tool, query, centroid, new_level, new_level_centroid, new_level_majority))
-
 
 # functions for core resistome
 
@@ -1424,6 +1377,9 @@ for(j in 1:length(seeds)){
 saveRDS(df, file = "code_R_analysis/output_abundance_diversity_resistome/core_resistome.rds", compress = T)
 write.csv(df, file = gzfile("code_R_analysis/output_abundance_diversity_resistome/core_resistome.csv.gz"), row.names = F)
 
+# functions for pan-resistome 
+
+# aggregate 
 
 filter_samples_pan <- function(args_abundances_pan, d, j){
 
@@ -1439,6 +1395,8 @@ filter_samples_pan <- function(args_abundances_pan, d, j){
   
   return(Y_new_level)
 }
+
+# functions for pan-resistome per habitat and tool
 
 pan_resistome <- function(df, samples_to_collect, sed, lst, mx_sample_size, j) {
   set.seed(seed = sed)
@@ -1456,6 +1414,8 @@ pan_resistome <- function(df, samples_to_collect, sed, lst, mx_sample_size, j) {
 args_abundances_rarified <- args_abundances %>% filter(rarified_count > 0)
 
 df.pan.list <- vector("list", length(seeds))
+
+# subsamples for pan-resistome
 
 for(j in seq_along(seeds)){
   print(j)

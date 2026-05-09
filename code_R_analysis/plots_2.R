@@ -203,10 +203,10 @@ abundance_class <- abundance %>%
 core <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/core_resistome.rds")
 
 # convert MFS to efflux pump
-core <- core %>% mutate(new_level_centroid = ifelse(new_level_centroid == "MFS efflux pump", "efflux pump", new_level_centroid))
+core <- core %>% mutate(gene_class_centroid = ifelse(new_level_centroid == "MFS efflux pump", "efflux pump", new_level_centroid))
 
 core <- core %>% 
-  rename(new_level = new_level_centroid, 
+  rename(gene_class = gene_class_centroid, 
          X = centroid) %>% 
   filter(tool %in% tools_levels) %>% 
   mutate(habitat = factor(habitat, levels = EN), 
@@ -271,7 +271,7 @@ pan_core <- sumpan2 %>%
 
 unigenes <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/unigenes_per_tool.rds") %>% 
   # convert MFS to efflux pump
-  mutate(new_level = ifelse(new_level == "MFS efflux pump", "efflux pump", new_level)) %>%  
+  mutate(gene_class = ifelse(new_level == "MFS efflux pump", "efflux pump", new_level)) %>%  
   mutate(tool = factor(tool, levels = tools_levels)) %>%
   mutate(tools_labels = factor(tools_labels[tool], levels = tools_labels_factor),
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
@@ -433,26 +433,26 @@ id_plot <- id_plot_data %>%
 
 df_plot <- unigenes %>% 
   filter(tool %in% basic_tools) %>% 
-  group_by(tool, tools_labels, tools_db, new_level) %>% 
+  group_by(tool, tools_labels, tools_db, gene_class) %>% 
   summarise(n = n()) %>% 
   mutate(p = n / sum(n)) %>% 
   ungroup() %>% 
-  group_by(new_level) %>%
+  group_by(gene_class) %>%
   filter(max(p, na.rm = TRUE) >= 0.03) %>%  
   ungroup() %>%
   # change the name of gene classes to fit in the plot
-  mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
-  mutate(new_level = gsub("rifampin inactivation enzyme","RIF-inact. enz.", new_level)) %>%
-  mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
-  mutate(new_level = gsub("efflux pump","efflux", new_level)) %>%
-  mutate(new_level = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", new_level)) %>%
-  mutate(new_level = gsub("target-modifying enzyme","target-modif.\nenzyme", new_level)) %>%
-  mutate(new_level = gsub("self-resistance","self-resistance", new_level)) 
+  mutate(gene_class = gsub(" beta-lactamase","", gene_class)) %>%
+  mutate(gene_class = gsub("rifampin inactivation enzyme","RIF-inact. enz.", gene_class)) %>%
+  mutate(gene_class = gsub("MFS efflux pump","MFS efflux", gene_class)) %>%
+  mutate(gene_class = gsub("efflux pump","efflux", gene_class)) %>%
+  mutate(gene_class = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", gene_class)) %>%
+  mutate(gene_class = gsub("target-modifying enzyme","target-modif.\nenzyme", gene_class)) %>%
+  mutate(gene_class = gsub("self-resistance","self-resistance", gene_class)) 
 
 # plot the heatmap of the proportion of each gene class by tool
 df_plot1 <-  df_plot %>% 
   filter(tool %in% basic_tools) %>% 
-  ggplot(aes(x = tools_labels, y = new_level, fill = p)) + 
+  ggplot(aes(x = tools_labels, y = gene_class, fill = p)) + 
   geom_tile(color = "grey") + 
   scale_fill_gradientn( colors = brewer.pal(9, "YlOrBr"),
                         labels = percent_format(accuracy = 1),
@@ -496,7 +496,7 @@ dist_mat <- as.dist(1 - mat_matrix)
 
 # hierarchical clustering to order the matrix
 hc <- hclust(dist_mat)  # or "ward.D2"
-plot(hc)
+#plot(hc)
 ordered_tools <- hc$labels[hc$order]
 
 # filter the tools and rearrange the data
@@ -551,7 +551,7 @@ p2_1 <- ((p2a + ggtitle("a")) /
   patchwork::plot_layout(widths = c(1,1))
 
 
-ggsave("code_R_analysis/output_plots/fig1.svg", p2_1, width = 180, height = 180, unit = "mm")
+ggsave("code_R_analysis/output_plots/fig2.svg", p2_1, width = 180, height = 180, unit = "mm")
 
 
 # tools 
@@ -760,7 +760,7 @@ left_block <- (left1/patchwork::wrap_elements(full = g_legend(a0))) +
 
 p30 <- (left_block | (a0 + theme(legend.position = "none"))) + patchwork::plot_layout(widths = c(4,1))
 
-ggsave("code_R_analysis/output_plots/fig2.svg", p30, width = 180, height = 130, unit = "mm")
+ggsave("code_R_analysis/output_plots/fig3.svg", p30, width = 180, height = 130, unit = "mm")
 
 
 # create the supplementary figure sup_abundance.svg abundance per class and habitat
@@ -871,7 +871,7 @@ p4a2 <- pan_core_df_plot %>% filter(!metric %in% "Pan-resistome") %>%
 panel1 <- (p4a1 + theme(legend.position = "none") | p4a2) + patchwork::plot_layout(widths = c(1,1))
 p4 <- (panel1 / (g_legend(p4a1) )) + patchwork::plot_layout(heights = c(12,1))
 
-ggsave("code_R_analysis/output_plots/fig3.svg", p4, width = 120, height = 140, unit = "mm")
+ggsave("code_R_analysis/output_plots/fig4.svg", p4, width = 120, height = 140, unit = "mm")
 
 #########
 
@@ -908,7 +908,7 @@ d1 <- recall_fnr %>%
   mutate(facet_var = gsub(" ", "\n", facet_var)) %>%
   mutate(facet_var = gsub("Plus", "\n Plus", facet_var)) %>%
   mutate(facet_var = fct_reorder(facet_var, as.numeric(tool_ref)))  %>% 
-  mutate(val = recall, d = "csc") %>% 
+  mutate(val = csc, d = "csc") %>% 
   mutate(tools_labels_comp = factor(tools_labels[tool_comp], levels = tools_labels_factor),
          texture_comp = ifelse(tool_comp %in% tools_texture, "yes", "no"),
          tools_db_comp = factor(tools_db[tool_comp], levels = tools_db_factor)) %>% 
@@ -920,18 +920,18 @@ d1 <- recall_fnr %>%
 
 d1 <- d1 %>% 
   filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>%
-  mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
-  mutate(new_level = gsub("MFS efflux pump","efflux", new_level)) %>%
-  mutate(new_level = gsub("efflux pump","efflux", new_level)) %>% 
-  group_by(tool_ref,tools_labels_ref, new_level) %>% mutate(n_obs = n()) %>% 
+  mutate(gene_class = gsub(" beta-lactamase","", gene_class)) %>%
+  mutate(gene_class = gsub("MFS efflux pump","efflux", gene_class)) %>%
+  mutate(gene_class = gsub("efflux pump","efflux", gene_class)) %>% 
+  group_by(tool_ref,tools_labels_ref, gene_class) %>% mutate(n_obs = n()) %>% 
   mutate(n_obs = paste0('n = ',n_obs))
 
 
 # plot the csc of top_cso classes
 
 cs11 <- d1 %>% 
-  filter(new_level %in% c(top_cso,"class A", "class B", "class C", "class D", "efflux")) %>% 
-  ggplot(aes(x = recall*100, y = 0)) + 
+  filter(gene_class %in% c(top_cso,"class A", "class B", "class C", "class D", "efflux")) %>% 
+  ggplot(aes(x = csc*100, y = 0)) + 
   geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture2),
                        position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
                        width = 1.3, pattern_color = "black", pattern_fill = "black", pattern_density = 0.000000001,
@@ -939,9 +939,9 @@ cs11 <- d1 %>%
                        pattern_size =  0.3, color = "black", outliers = FALSE, outlier.shape = NA, linewidth = 0.15) +
   scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
   geom_text(aes(x = 50, y = 0.9, label = n_obs), size = general_size / .pt) + 
-  facet_grid(new_level ~ tools_labels_ref, scales = "free_y", space = "free",
+  facet_grid(gene_class ~ tools_labels_ref, scales = "free_y", space = "free",
              labeller = labeller(
-               new_level = as_labeller(function(x) {
+               gene_class = as_labeller(function(x) {
                  out <- ifelse(
                    x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", 
                             "aac", "lnu", "nim", "vat", "mph", "qnr"),
@@ -973,7 +973,7 @@ cs11 <- d1 %>%
   })
 
 
-ggsave("code_R_analysis/output_plots/fig4.svg", cs11, width = 180, height = 100, unit = "mm")
+ggsave("code_R_analysis/output_plots/fig5.svg", cs11, width = 180, height = 100, unit = "mm")
 
 
 #######################################################################
@@ -1303,7 +1303,7 @@ pan_core_supp2 <- pan_core_df_plot %>% filter(!metric %in% "Pan-resistome") %>%
   scale_x_continuous(labels = label_comma()) 
 
 # merge 
-pan_core_supp | pan_core_supp2
+# pan_core_supp | pan_core_supp2
 
 # merge labels 
 
@@ -1591,9 +1591,9 @@ ggsave("code_R_analysis/output_plots/sup_abundance_class_external_env.svg", sup_
 d2 <- d1 %>% mutate(texture = unigenes$texture[match(tool_ref, unigenes$tool)])
 
 cs11_sup <- d1 %>% 
-  filter(!new_level %in% top_cso) %>%
-  filter(!new_level %in% c("efflux", "class A", "class B", "class C", "class D")) %>%
-  ggplot(aes(x = recall*100, y = 0)) + 
+  filter(!gene_class %in% top_cso) %>%
+  filter(!gene_class %in% c("efflux", "class A", "class B", "class C", "class D")) %>%
+  ggplot(aes(x = csc*100, y = 0)) + 
   geom_boxplot_pattern(aes(fill = tool_ref, pattern = texture2),
                        position = position_dodge2(preserve = "single", width = 0.3, padding = 0), 
                        width = 1.3, pattern_color = "black", pattern_fill = "black", pattern_density = 0.000000001,
@@ -1601,9 +1601,9 @@ cs11_sup <- d1 %>%
                        pattern_size =  0.3, color = "black", outliers = FALSE, outlier.shape = NA, linewidth = 0.15) +
   scale_pattern_manual(values = c('no' = 'none', 'yes' = 'stripe')) +
   geom_text(aes(x = 50, y = 0.8, label = n_obs), size = general_size / .pt) + 
-  facet_grid(new_level ~ tools_labels_ref, scales = "free_y", space = "free",
+  facet_grid(gene_class ~ tools_labels_ref, scales = "free_y", space = "free",
              labeller = labeller(
-               new_level = as_labeller(function(x) {
+               gene_class = as_labeller(function(x) {
                  out <- ifelse(
                    x %in% c("rpoB", "van", "fos", "erm", "cat", "aph", "ant", "bah", "cpa", 
                             "cpt", "dfr", "fai", "mel", "mgt","sat","sul","vph",
@@ -1647,21 +1647,21 @@ core_class_human <- core %>% filter(cut == 0.5, cnt > 450, tool %in% basic_tools
   ungroup() %>%
   group_by(X) %>% mutate(n_tool = ifelse(n_distinct(tool)==1,"Exclusive to the pipeline", "Found also in other pipelines")) %>% 
   ungroup() %>% 
-  group_by(tool, n_tool, new_level) %>% 
+  group_by(tool, n_tool, gene_class) %>% 
   summarise(n = n()) %>% 
   mutate(tools_labels = factor(tools_labels[tool], levels =tools_labels_factor)) %>% 
   mutate(r = ifelse(tool %in% basic_tools[c(2,3,4,6)], "1",
                     ifelse(tool %in% basic_tools[c(7,8,9,10)], "2", "3"))) %>% 
-  mutate(new_level = gsub(" beta-lactamase","", new_level)) %>%
-  mutate(new_level = gsub("rifampin inactivation enzyme","RIF-inact. enz.", new_level)) %>%
-  #mutate(new_level = gsub("cell wall ","cell wall\n", new_level)) %>%
-  mutate(new_level = gsub("MFS efflux pump","MFS efflux", new_level)) %>%
-  mutate(new_level = gsub("efflux pump","efflux", new_level)) %>%
-  mutate(new_level = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", new_level)) %>%
-  mutate(new_level = gsub("target-modifying enzyme","target-modif.\nenzyme", new_level)) %>%
-  mutate(new_level = gsub("self-resistance","self-resistance", new_level)) 
+  mutate(gene_class = gsub(" beta-lactamase","", gene_class)) %>%
+  mutate(gene_class = gsub("rifampin inactivation enzyme","RIF-inact. enz.", gene_class)) %>%
+  #mutate(gene_class = gsub("cell wall ","cell wall\n", gene_class)) %>%
+  mutate(gene_class = gsub("MFS efflux pump","MFS efflux", gene_class)) %>%
+  mutate(gene_class = gsub("efflux pump","efflux", gene_class)) %>%
+  mutate(gene_class = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", gene_class)) %>%
+  mutate(gene_class = gsub("target-modifying enzyme","target-modif.\nenzyme", gene_class)) %>%
+  mutate(gene_class = gsub("self-resistance","self-resistance", gene_class)) 
 
-pcore1 <- ggplot(core_class_human %>% filter(r %in% "1"), aes(x = new_level, y = n, fill=n_tool)) +
+pcore1 <- ggplot(core_class_human %>% filter(r %in% "1"), aes(x = gene_class, y = n, fill=n_tool)) +
   geom_bar(stat = "identity", width = 0.8) +
   facet_grid(r~tools_labels, scales = "free_x") +
   scale_y_continuous(breaks = scales::pretty_breaks()) +
@@ -1690,7 +1690,7 @@ pcore1 <- ggplot(core_class_human %>% filter(r %in% "1"), aes(x = new_level, y =
     plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")) 
 
 
-pcore2 <- ggplot(core_class_human %>% filter(r %in% "2"), aes(x = new_level, y = n, fill=n_tool)) +
+pcore2 <- ggplot(core_class_human %>% filter(r %in% "2"), aes(x = gene_class, y = n, fill=n_tool)) +
   geom_bar(stat = "identity", width = 0.8) +
   facet_grid(r~tools_labels, scales = "free_x") +
   scale_y_continuous(breaks = scales::pretty_breaks()) +
@@ -1719,7 +1719,7 @@ pcore2 <- ggplot(core_class_human %>% filter(r %in% "2"), aes(x = new_level, y =
     plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")) 
 
 
-pcore3 <- ggplot(core_class_human %>% filter(r %in% "3"), aes(x = new_level, y = n, fill=n_tool)) +
+pcore3 <- ggplot(core_class_human %>% filter(r %in% "3"), aes(x = gene_class, y = n, fill=n_tool)) +
   geom_bar(stat = "identity", width = 0.8) +
   facet_grid(r~tools_labels, scales = "free_x") +
   scale_y_continuous(breaks = scales::pretty_breaks()) +
@@ -1766,14 +1766,14 @@ tools_core <- core %>%
   ungroup() %>% 
   filter(cut %in% 0.5 & cnt > 450) %>%
   filter(tool %in% basic_tools, habitat %in% "human gut") %>% 
-  group_by(X, new_level) %>% 
+  group_by(X, gene_class) %>% 
   summarise(
     tools = paste(sort(unique(tool)), collapse = ", "),
     number_tools = n_distinct(tool),
     .groups = "drop"
   ) %>% 
   arrange(desc(number_tools), tools) %>% 
-  rename(unigene = X, gene_class = new_level)
+  rename(unigene = X)
 
 
 # ARO and gene classes
