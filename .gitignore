@@ -71,3 +71,7 @@ update_abricate/abricate-ncbi.norm.tsv
 update_abricate/abricate-resfinder.norm.tsv
 
 .pixi/
+__pycache__/
+short_reads/jugfile.jugdata/
+short_reads/output/
+short_reads/fargene_analysis.log
