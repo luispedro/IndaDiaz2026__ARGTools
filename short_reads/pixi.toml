@@ -64,8 +64,8 @@ jug = "*"
 # are deliberately *not* exposed as pixi tasks: tasks always run from the
 # workspace root, while every tool here runs from a per-invocation scratch
 # directory (`rgi ... --local`, in particular, resolves localDB/ from its cwd).
-# --keep-going: one sample/tool/class failing (e.g. a missing localDB) must
-# not stop unrelated, independent tasks from running; --keep-failed is
+# --keep-going: one sample/tool failing (e.g. a missing localDB) must not
+# stop unrelated, independent tasks from running; --keep-failed is
 # deliberately omitted so a fixed prerequisite gets retried on the next run
 # instead of staying locked as permanently failed.
 jug-execute = "jug execute jugfile.py --keep-going"

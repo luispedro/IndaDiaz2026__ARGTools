@@ -10,8 +10,7 @@ hashes change).
 
 Each tool lives in its own pixi environment (see pixi.toml) with its own
 binary -- this process (the 'jug' environment) only needs jug itself and
-shells out via `pixi run -e <env> ...` for the actual work, the same way the
-old run_all_tools.sh / prepare_rgi_db.sh did.
+shells out via `pixi run -e <env> ...` for the actual work.
 
 Every tool invocation gets a scratch directory of its own (under
 config.TMP_DIR), laid out as
@@ -57,8 +56,6 @@ FARGENE_MODELS = {
     "aac6p_1": "aminoglycoside_model_d", "aac6p_2": "aminoglycoside_model_e", "aac6p_3": "aminoglycoside_model_f",
     "tet_efflux": "tet_efflux", "qnr": "qnr",
 }
-
-VALID_TOOLS = {"fargene", "rgi", "deeparg"}
 
 # Basename handed to preprocess.ngl; ngless turns it into <base>.pair.1.<ext>,
 # <base>.pair.2.<ext> and (only for samples that carry unpaired reads)
@@ -111,11 +108,11 @@ def tool_scratch(sample_dir, tool, compressed):
     the directory it should be told to write to (copied out by
     publish_results), and the two mate files. `compressed` picks the output
     extension -- fargene cannot read gzipped FastQ, so it asks for plain .fq
-    and lets ngless do the decompression that the pipeline used to do by hand.
+    and lets ngless decompress on the way out.
 
-    The whole tree is removed on the way out, including on failure: jug is
-    configured without --keep-failed, so a failed task is retried from scratch
-    anyway and there is nothing here worth keeping.
+    The whole tree is removed on the way out, including on failure: jug runs
+    without --keep-failed, so a failed task is retried from scratch anyway and
+    there is nothing here worth keeping.
     """
     if not os.path.isdir(sample_dir):
         raise RuntimeError(f"no read directory for this sample: {sample_dir}")
@@ -162,7 +159,7 @@ def tool_scratch(sample_dir, tool, compressed):
 
 
 @TaskGenerator
-def run_fargene(sample_dir, outdir, threads):
+def run_fargene(sample_dir, outdir):
     with tool_scratch(sample_dir, "fargene", compressed=False) as (scratch, out_dir, r1, r2):
         for class_name, model in FARGENE_MODELS.items():
             pixi_run("fargene", [
@@ -171,7 +168,7 @@ def run_fargene(sample_dir, outdir, threads):
                 "--hmm-model", model,
                 "--meta",
                 "-o", os.path.join(out_dir, class_name),
-                "-p", str(threads),
+                "-p", str(config.THREADS),
                 "--force",
             ], cwd=scratch)
         # fargene appends to a fargene_analysis.log in its working directory
@@ -191,7 +188,7 @@ def prepare_rgi_db(work_dir, card_json, card_version):
     os.makedirs(work_dir, exist_ok=True)
     localdb = os.path.join(work_dir, "localDB")
     if os.path.isdir(localdb):
-        # Already built, e.g. by a pre-jug run -- nothing to do.
+        # Already built -- nothing to do.
         return work_dir
 
     if card_json:
@@ -246,7 +243,7 @@ def prepare_rgi_db(work_dir, card_json, card_version):
 
 
 @TaskGenerator
-def run_rgi(sample_dir, outdir, rgi_work_dir, threads):
+def run_rgi(sample_dir, outdir, rgi_work_dir):
     with tool_scratch(sample_dir, "rgi", compressed=True) as (scratch, out_dir, r1, r2):
         # `rgi ... --local` resolves its database as localDB/ under the
         # working directory, so point one there. A symlink (rather than a
@@ -259,13 +256,14 @@ def run_rgi(sample_dir, outdir, rgi_work_dir, threads):
             "--read_two", r2,
             "--output_file", os.path.join(out_dir, "sample.bwt"),
             "--local",
-            "--threads", str(threads),
+            "--threads", str(config.THREADS),
         ], cwd=scratch)
         return publish_results(out_dir, os.path.join(outdir, "rgi"))
 
 
 @TaskGenerator
-def run_deeparg(sample_dir, outdir, hf_dir):
+def run_deeparg(sample_dir, outdir):
+    hf_dir = os.path.abspath(config.DEEPARG_HF_DIR)
     with tool_scratch(sample_dir, "deeparg", compressed=True) as (scratch, out_dir, r1, r2):
         args = [
             "deeparg", "short_reads_pipeline",
@@ -297,27 +295,22 @@ if len(config.SAMPLES) == 0:
 if len(config.SAMPLES) != len(set(config.SAMPLES)):
     raise RuntimeError(f"duplicate sample names in config.SAMPLES: {config.SAMPLES}")
 
-bad_tools = set(config.TOOLS) - VALID_TOOLS
-if bad_tools:
-    raise RuntimeError(f"config.TOOLS has unknown entries {bad_tools}, must be a subset of {VALID_TOOLS}")
+# Built once, ahead of the samples; every run_rgi task takes it as an argument
+# and so waits for it.
+rgi_work_dir = prepare_rgi_db(os.path.abspath(config.RGI_LOCALDB_DIR),
+                              config.CARD_JSON, config.CARD_VERSION)
 
 metagenomes_dir = os.path.abspath(config.METAGENOMES_DIR)
+output_dir = os.path.abspath(config.OUTPUT_DIR)
 
+# Adding a fourth tool is a run_<tool> task above plus one line here: jug
+# schedules the new tasks and leaves every result already on disk untouched.
 for sample in config.SAMPLES:
-    # Absolute, and passed as a task argument rather than looked up inside the
-    # task, so that moving METAGENOMES_DIR invalidates the affected tasks.
+    # Absolute, and passed as task arguments rather than looked up inside the
+    # tasks, so that moving METAGENOMES_DIR invalidates the affected tasks.
     sample_dir = os.path.join(metagenomes_dir, sample)
-    outdir = os.path.join(os.path.abspath(config.OUTPUT_DIR), sample)
+    outdir = os.path.join(output_dir, sample)
 
-    if "fargene" in config.TOOLS:
-        run_fargene(sample_dir, outdir, config.THREADS)
-
-    if "rgi" in config.TOOLS:
-        # Same (work_dir, card_json, card_version) across all samples -- jug
-        # de-duplicates identical calls, so this only actually builds once.
-        rgi_work_dir = prepare_rgi_db(os.path.abspath(config.RGI_LOCALDB_DIR),
-                                      config.CARD_JSON, config.CARD_VERSION)
-        run_rgi(sample_dir, outdir, rgi_work_dir, config.THREADS)
-
-    if "deeparg" in config.TOOLS:
-        run_deeparg(sample_dir, outdir, os.path.abspath(config.DEEPARG_HF_DIR))
+    run_fargene(sample_dir, outdir)
+    run_rgi(sample_dir, outdir, rgi_work_dir)
+    run_deeparg(sample_dir, outdir)

@@ -16,7 +16,6 @@ OUTPUT_DIR = "output"
 TMP_DIR = None
 
 THREADS = 4
-TOOLS = ["fargene", "rgi", "deeparg"]
 
 # `rgi --local` resolves its database as localDB/ relative to the directory it
 # is run from; jugfile.py builds it once here and symlinks it into each run's
