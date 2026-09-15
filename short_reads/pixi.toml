@@ -41,6 +41,15 @@ deeparg-modern = { git = "https://github.com/gaarangoa/deeparg.git", tag = "v2.0
 # comes from deeparg-modern's deps), never under the jug environment below.
 download-deeparg-db = "python download_deeparg_db.py"
 
+[feature.ngless]
+channels = ["conda-forge", "bioconda"]
+
+[feature.ngless.dependencies]
+# Runs preprocess.ngl to quality-trim each sample's reads into the scratch
+# directory that the tool then runs in (see jugfile.py). 1.6 is what the
+# `ngless "1.6"` header in preprocess.ngl requires.
+ngless = "1.6.*"
+
 [feature.jug]
 channels = ["conda-forge"]
 
@@ -49,11 +58,12 @@ python = ">=3.10"
 jug = "*"
 
 [feature.jug.tasks]
-# jugfile.py orchestrates fargene/rgi/deeparg by shelling out to each tool's
-# own pixi environment (`pixi run -e <tool> <tool> ...`) -- it never imports
-# their packages directly, so this environment only needs jug itself. The
-# tools are deliberately *not* exposed as pixi tasks: tasks always run from
-# the workspace root, and `rgi ... --local` needs its own cwd.
+# jugfile.py orchestrates ngless/fargene/rgi/deeparg by shelling out to each
+# one's own pixi environment (`pixi run -e <env> ...`) -- it never imports
+# their packages directly, so this environment only needs jug itself. They
+# are deliberately *not* exposed as pixi tasks: tasks always run from the
+# workspace root, while every tool here runs from a per-invocation scratch
+# directory (`rgi ... --local`, in particular, resolves localDB/ from its cwd).
 # --keep-going: one sample/tool/class failing (e.g. a missing localDB) must
 # not stop unrelated, independent tasks from running; --keep-failed is
 # deliberately omitted so a fixed prerequisite gets retried on the next run
@@ -65,6 +75,7 @@ jug-status = "jug status jugfile.py"
 fargene = { features = ["fargene"], no-default-feature = true }
 rgi = { features = ["rgi"], no-default-feature = true }
 deeparg = { features = ["deeparg"], no-default-feature = true }
+ngless = { features = ["ngless"], no-default-feature = true }
 jug = { features = ["jug"], no-default-feature = true }
 
 # Usage:
