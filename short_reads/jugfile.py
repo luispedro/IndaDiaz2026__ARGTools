@@ -10,8 +10,8 @@ hashes change).
 
 Each tool lives in its own pixi environment (see pixi.toml) with its own
 binary -- this process (the 'jug' environment) only needs jug itself and
-shells out to .pixi/envs/<tool>/bin/<tool> for the actual work, the same way
-the old run_all_tools.sh / prepare_rgi_db.sh did.
+shells out via `pixi run -e <tool> <tool> ...` for the actual work, the same
+way the old run_all_tools.sh / prepare_rgi_db.sh did.
 """
 import glob
 import gzip
@@ -27,10 +27,6 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 import config
 
-FARGENE_BIN = os.path.join(SCRIPT_DIR, ".pixi/envs/fargene/bin/fargene")
-RGI_BIN = os.path.join(SCRIPT_DIR, ".pixi/envs/rgi/bin/rgi")
-DEEPARG_BIN = os.path.join(SCRIPT_DIR, ".pixi/envs/deeparg/bin/deeparg")
-
 FARGENE_MODELS = {
     "class_a": "class_a", "class_b1_b2": "class_b_1_2", "class_b3": "class_b_3",
     "class_c": "class_c", "class_d1": "class_d_1", "class_d2": "class_d_2",
@@ -45,21 +41,23 @@ FARGENE_MODELS = {
 VALID_TOOLS = {"fargene", "rgi", "deeparg"}
 
 
-def check_bin(path, env):
-    if not os.path.isfile(path) or not os.access(path, os.X_OK):
-        raise RuntimeError(f"{path} not found -- run 'pixi install' (env: {env})")
+def pixi_run(tool, args, **kwargs):
+    """Run <tool> inside its own pixi environment, installing it if needed.
 
+    This process runs under the 'jug' environment, so it can't see the tools;
+    `pixi run -e <tool>` activates theirs, which also lets fargene/rgi/deeparg
+    find the sibling binaries they shell out to (deeparg -> trimmomatic, rgi
+    -> bamtools). <tool> is passed as a plain command rather than as a pixi
+    task because tasks always run from the workspace root, while a plain
+    command keeps the cwd -- which `rgi ... --local` needs, as it looks for
+    localDB/ there.
 
-def tool_env(tool):
-    # This process runs under the 'jug' pixi environment, so PATH doesn't
-    # include <tool>'s own env/bin -- fargene/rgi/deeparg all shell out to
-    # sibling tools there themselves (e.g. deeparg -> trimmomatic, rgi ->
-    # bamtools), so prepend it for them, same as `pixi run -e <tool> ...`
-    # would.
-    env = os.environ.copy()
-    bin_dir = os.path.join(SCRIPT_DIR, ".pixi", "envs", tool, "bin")
-    env["PATH"] = bin_dir + os.pathsep + env.get("PATH", "")
-    return env
+    pixi locates pixi.toml by searching up from the cwd, so every directory a
+    tool is run from has to sit inside the workspace -- that is why
+    config.RGI_LOCALDB_DIR defaults to rgi_db/ right here (gitignored).
+    """
+    return subprocess.run(["pixi", "run", "-e", tool, tool, *args],
+                          check=True, **kwargs)
 
 
 def is_gzip(path):
@@ -95,18 +93,16 @@ def prepare_fastq_pair(r1, r2, outdir):
 
 @TaskGenerator
 def run_fargene_class(fastq_pair, outdir, class_name, model, threads):
-    check_bin(FARGENE_BIN, "fargene")
     r1_plain, r2_plain = fastq_pair
     class_outdir = os.path.join(outdir, "fargene", class_name)
-    subprocess.run([
-        FARGENE_BIN,
+    pixi_run("fargene", [
         "-i", r1_plain, r2_plain,
         "--hmm-model", model,
         "--meta",
         "-o", class_outdir,
         "-p", str(threads),
         "--force",
-    ], env=tool_env("fargene"), check=True)
+    ])
     return class_outdir
 
 
@@ -115,7 +111,6 @@ def prepare_rgi_db(work_dir, card_json, card_version):
     # Returns work_dir itself (not work_dir/localDB) -- `rgi ... --local`
     # expects to be run with a localDB/ subdirectory *under* its cwd, so
     # run_rgi below needs to cd into work_dir, one level above localDB/.
-    check_bin(RGI_BIN, "rgi")
     os.makedirs(work_dir, exist_ok=True)
     localdb = os.path.join(work_dir, "localDB")
     if os.path.isdir(localdb):
@@ -133,11 +128,10 @@ def prepare_rgi_db(work_dir, card_json, card_version):
         subprocess.run(["tar", "xjf", os.path.basename(tarball), "./card.json"], cwd=work_dir, check=True)
         os.remove(tarball)
 
-    rgi_env = tool_env("rgi")
     log_path = os.path.join(work_dir, "card_annotation.log")
     with open(log_path, "wb") as log:
-        subprocess.run([RGI_BIN, "card_annotation", "-i", "card.json"],
-                        cwd=work_dir, env=rgi_env, check=True, stdout=log, stderr=subprocess.STDOUT)
+        pixi_run("rgi", ["card_annotation", "-i", "card.json"],
+                 cwd=work_dir, stdout=log, stderr=subprocess.STDOUT)
 
     pattern = re.compile(r"^card_database_v(.+)\.fasta$")
     versions = sorted({
@@ -150,22 +144,22 @@ def prepare_rgi_db(work_dir, card_json, card_version):
             f"found {len(versions)} -- see {log_path}")
     ver = versions[0]
 
-    subprocess.run([RGI_BIN, "clean", "--local"], cwd=work_dir, env=rgi_env, check=True)
-    subprocess.run([
-        RGI_BIN, "load",
+    pixi_run("rgi", ["clean", "--local"], cwd=work_dir)
+    pixi_run("rgi", [
+        "load",
         "--card_json", "card.json",
         "--card_annotation", f"card_database_v{ver}.fasta",
         "--card_annotation_all_models", f"card_database_v{ver}_all.fasta",
         "--local",
-    ], cwd=work_dir, env=rgi_env, check=True)
+    ], cwd=work_dir)
 
     seed_fna = os.path.join(work_dir, "_seed.fna")
     with open(seed_fna, "w") as fh:
         fh.write(">seed\nATGAAACGCATTAGCACCACCATTACCACCACCATCACCATTACCACAGGT\n")
-    subprocess.run([
-        RGI_BIN, "main", "-a", "DIAMOND", "-i", "_seed.fna",
+    pixi_run("rgi", [
+        "main", "-a", "DIAMOND", "-i", "_seed.fna",
         "-o", "_seed_out", "--local", "--clean", "-t", "contig", "-n", "1",
-    ], cwd=work_dir, env=rgi_env, check=True)
+    ], cwd=work_dir)
     for fn in os.listdir(work_dir):
         if fn.startswith("_seed"):
             p = os.path.join(work_dir, fn)
@@ -176,23 +170,21 @@ def prepare_rgi_db(work_dir, card_json, card_version):
 
 @TaskGenerator
 def run_rgi(r1, r2, outdir, rgi_work_dir, threads):
-    check_bin(RGI_BIN, "rgi")
     rgi_outdir = os.path.join(outdir, "rgi")
     os.makedirs(rgi_outdir, exist_ok=True)
-    subprocess.run([
-        RGI_BIN, "bwt",
+    pixi_run("rgi", [
+        "bwt",
         "--read_one", r1,
         "--read_two", r2,
         "--output_file", os.path.join(rgi_outdir, "sample.bwt"),
         "--local",
         "--threads", str(threads),
-    ], cwd=rgi_work_dir, env=tool_env("rgi"), check=True)
+    ], cwd=rgi_work_dir)
     return rgi_outdir
 
 
 @TaskGenerator
 def run_deeparg(r1, r2, outdir, hf_dir):
-    check_bin(DEEPARG_BIN, "deeparg")
     deeparg_outdir = os.path.join(outdir, "deeparg")
     os.makedirs(deeparg_outdir, exist_ok=True)
 
@@ -209,19 +201,19 @@ def run_deeparg(r1, r2, outdir, hf_dir):
                 os.remove(link)
             os.symlink(src, link)
 
-        cmd = [
-            DEEPARG_BIN, "short_reads_pipeline",
+        args = [
+            "short_reads_pipeline",
             "--forward_pe_file", r1_link,
             "--reverse_pe_file", r2_link,
             "--output_file", os.path.join(deeparg_outdir, "sample"),
         ]
         if os.path.isdir(hf_dir):
-            cmd += ["--hf-model-path", hf_dir]
+            args += ["--hf-model-path", hf_dir]
         else:
             print(f"warning: DEEPARG_HF_DIR={hf_dir!r} doesn't exist yet -- run "
                   f"'pixi run download-deeparg-db {hf_dir}'; falling back to a "
                   "live Hugging Face download instead.", file=sys.stderr)
-        subprocess.run(cmd, env=tool_env("deeparg"), check=True)
+        pixi_run("deeparg", args)
     finally:
         for pattern in ("*.paired", "*.unpaired", "*.merged", "*.unmerged"):
             for p in glob.glob(os.path.join(deeparg_outdir, pattern)):
@@ -247,7 +239,7 @@ if bad_tools:
 for sample in config.SAMPLES:
     r1 = os.path.abspath(sample["r1"])
     r2 = os.path.abspath(sample["r2"])
-    outdir = os.path.join(config.OUTPUT_DIR, sample["name"])
+    outdir = os.path.join(os.path.abspath(config.OUTPUT_DIR), sample["name"])
 
     if "fargene" in config.TOOLS:
         fastq_pair = prepare_fastq_pair(r1, r2, outdir)
@@ -257,8 +249,9 @@ for sample in config.SAMPLES:
     if "rgi" in config.TOOLS:
         # Same (work_dir, card_json, card_version) across all samples -- jug
         # de-duplicates identical calls, so this only actually builds once.
-        rgi_work_dir = prepare_rgi_db(config.RGI_LOCALDB_DIR, config.CARD_JSON, config.CARD_VERSION)
+        rgi_work_dir = prepare_rgi_db(os.path.abspath(config.RGI_LOCALDB_DIR),
+                                      config.CARD_JSON, config.CARD_VERSION)
         run_rgi(r1, r2, outdir, rgi_work_dir, config.THREADS)
 
     if "deeparg" in config.TOOLS:
-        run_deeparg(r1, r2, outdir, config.DEEPARG_HF_DIR)
+        run_deeparg(r1, r2, outdir, os.path.abspath(config.DEEPARG_HF_DIR))

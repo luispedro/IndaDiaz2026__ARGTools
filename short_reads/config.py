@@ -5,7 +5,10 @@ SAMPLES = [
 OUTPUT_DIR = "/tmp/jugtest/output"
 THREADS = 4
 TOOLS = ["fargene", "rgi", "deeparg"]
-RGI_LOCALDB_DIR = "/tmp/jugtest/rgi_db"
+# Kept inside the workspace (and gitignored): `rgi --local` resolves its
+# database as localDB/ relative to the cwd it is run from, and pixi needs
+# to find pixi.toml by searching up from that same directory.
+RGI_LOCALDB_DIR = "rgi_db"
 CARD_JSON = None
 CARD_VERSION = "4.0.0"
-DEEPARG_HF_DIR = "/tmp/jugtest/deeparg_hf"
+DEEPARG_HF_DIR = "deeparg_hf"
