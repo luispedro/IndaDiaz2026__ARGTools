@@ -49,7 +49,7 @@ def main():
     args = parser.parse_args()
 
     dest = download(args.dir)
-    print(f">>> done -- set DEEPARG_HF_DIR = {dest!r} in config.py")
+    print(f">>> done -- set DEEPARG_HF_DIR = {dest!r} at the top of jugfile.py")
 
 
 if __name__ == "__main__":

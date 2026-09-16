@@ -83,9 +83,9 @@ jug = { features = ["jug"], no-default-feature = true }
 
 # Usage:
 #   pixi install
-#   Edit config.py (samples + shared settings), then:
+#   Edit the settings at the top of jugfile.py (samples + shared settings), then:
 #   pixi run jug-status                  # what's done / pending
-#   pixi run jug-execute                 # run everything config.py asks for
+#   pixi run jug-execute                 # run everything jugfile.py asks for
 # jugfile.py is safe to re-run: jug skips work it already finished. The
 # one-time database setup (CARD localDB, DeepARG model bundle) is part of the
 # graph, so jug-execute does it on the first run; to stage the DeepARG bundle

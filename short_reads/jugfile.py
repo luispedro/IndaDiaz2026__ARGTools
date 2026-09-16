@@ -1,8 +1,8 @@
 """
-Runs fargene/rgi/deeparg over the samples listed in config.py.
+Runs fargene/rgi/deeparg over the samples listed in the settings below.
 
-    pixi run jug-status     # what's done / pending
-    pixi run jug-execute    # run everything config.py asks for
+    pixi run jug-status
+    pixi run jug-execute
 
 Safe to re-run: jug skips tasks it already finished, even if you add new
 samples or edit shared settings in between runs (only the affected tasks'
@@ -17,7 +17,7 @@ CARD's localDB and prepare_deeparg_db downloads the DeepARG model bundle,
 each once, with the run_* tasks that need them waiting on the result.
 
 Every tool invocation gets a scratch directory of its own (under
-config.TMP_DIR), laid out as
+TMPDIR), laid out as
 
     <scratch>/reads/preproc.pair.{1,2}.fq[.gz]   quality-trimmed reads
     <scratch>/out/                               what the tool is told to write
@@ -39,17 +39,43 @@ import os
 import shutil
 import re
 import subprocess
-import sys
 import tempfile
 
 from jug import TaskGenerator
+
+# One entry per sample. Reads are picked up from METAGENOMES_DIR/<name>/ by
+# ngless' load_fastq_directory, which accepts .fq/.fastq (optionally .gz/.bz2/
+# .xz) and pairs them up on a .1/.2 or _1/_2 suffix, e.g.
+#     data/metagenomes/s1/s1.pair.1.fq.gz
+#     data/metagenomes/s1/s1.pair.2.fq.gz
+SAMPLES = ["s1", "s2"]
+METAGENOMES_DIR = "data/metagenomes"
+
+OUTPUT_DIR = "output"
+
+# Parent directory for the per-invocation scratch directories, which hold the
+# preprocessed reads plus whatever the tool scribbles next to them. None means
+# tempfile's default ($TMPDIR, else /tmp). On a cluster, point this at
+# node-local scratch: every byte written here is thrown away once the tool's
+# results have been copied into OUTPUT_DIR.
+TMPDIR = None
+
+THREADS = 4
+
+# `rgi --local` resolves its database as localDB/ relative to the directory it
+# is run from; jugfile.py builds it once here and symlinks it into each run's
+# scratch directory. Gitignored.
+RGI_LOCALDB_DIR = "rgi_db"
+CARD_JSON = None
+CARD_VERSION = "4.0.0"
+DEEPARG_HF_DIR = "deeparg_hf"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PIXI_MANIFEST = os.path.join(SCRIPT_DIR, "pixi.toml")
 PREPROCESS_NGL = os.path.join(SCRIPT_DIR, "preprocess.ngl")
 DOWNLOAD_DEEPARG_DB = os.path.join(SCRIPT_DIR, "download_deeparg_db.py")
-sys.path.insert(0, SCRIPT_DIR)
-import config
+
+
 # Only for the stamp-file name; the script's huggingface_hub import lives
 # inside its own function, so importing it here (under 'jug') is fine. It is
 # *run* below via `pixi run -e deeparg`, never called from this process.
@@ -127,7 +153,7 @@ def tool_scratch(sample_dir, tool, compressed):
     """
     if not os.path.isdir(sample_dir):
         raise RuntimeError(f"no read directory for this sample: {sample_dir}")
-    tmp_parent = os.path.abspath(config.TMP_DIR) if config.TMP_DIR else None
+    tmp_parent = os.path.abspath(TMPDIR) if TMPDIR else None
     if tmp_parent:
         os.makedirs(tmp_parent, exist_ok=True)
     with tempfile.TemporaryDirectory(
@@ -141,7 +167,7 @@ def tool_scratch(sample_dir, tool, compressed):
         ext = ".fq.gz" if compressed else ".fq"
         pixi_run("ngless", [
             "ngless",
-            "--jobs", str(config.THREADS),
+            "--jobs", str(THREADS),
             # Keep ngless' own scratch inside ours, and its QC report inside
             # out/ so it gets copied out next to the tool's results (the
             # default would be a single preprocess.ngl.output_ngless/ next to
@@ -177,7 +203,7 @@ def run_fargene(sample_dir, outdir):
                 "--hmm-model", model,
                 "--meta",
                 "-o", os.path.join(out_dir, class_name),
-                "-p", str(config.THREADS),
+                "-p", str(THREADS),
                 "--force",
             ], cwd=scratch)
         # fargene appends to a fargene_analysis.log in its working directory
@@ -265,7 +291,7 @@ def run_rgi(sample_dir, outdir, rgi_work_dir):
             "--read_two", r2,
             "--output_file", os.path.join(out_dir, "sample.bwt"),
             "--local",
-            "--threads", str(config.THREADS),
+            "--threads", str(THREADS),
         ], cwd=scratch)
         return publish_results(out_dir, os.path.join(outdir, "rgi"))
 
@@ -317,24 +343,18 @@ def run_deeparg(sample_dir, outdir, hf_dir):
         return publish_results(out_dir, os.path.join(outdir, "deeparg"))
 
 
-if len(config.SAMPLES) == 0:
-    raise RuntimeError("config.SAMPLES is empty -- add at least one sample")
-
-if len(config.SAMPLES) != len(set(config.SAMPLES)):
-    raise RuntimeError(f"duplicate sample names in config.SAMPLES: {config.SAMPLES}")
-
 # Prepared once, ahead of the samples; every run_rgi/run_deeparg task takes
 # the corresponding directory as an argument and so waits for it.
-rgi_work_dir = prepare_rgi_db(os.path.abspath(config.RGI_LOCALDB_DIR),
-                              config.CARD_JSON, config.CARD_VERSION)
-deeparg_hf_dir = prepare_deeparg_db(os.path.abspath(config.DEEPARG_HF_DIR))
+rgi_work_dir = prepare_rgi_db(os.path.abspath(RGI_LOCALDB_DIR),
+                              CARD_JSON, CARD_VERSION)
+deeparg_hf_dir = prepare_deeparg_db(os.path.abspath(DEEPARG_HF_DIR))
 
-metagenomes_dir = os.path.abspath(config.METAGENOMES_DIR)
-output_dir = os.path.abspath(config.OUTPUT_DIR)
+metagenomes_dir = os.path.abspath(METAGENOMES_DIR)
+output_dir = os.path.abspath(OUTPUT_DIR)
 
 # Adding a fourth tool is a run_<tool> task above plus one line here: jug
 # schedules the new tasks and leaves every result already on disk untouched.
-for sample in config.SAMPLES:
+for sample in SAMPLES:
     # Absolute, and passed as task arguments rather than looked up inside the
     # tasks, so that moving METAGENOMES_DIR invalidates the affected tasks.
     sample_dir = os.path.join(metagenomes_dir, sample)
