@@ -12,6 +12,10 @@ Each tool lives in its own pixi environment (see pixi.toml) with its own
 binary -- this process (the 'jug' environment) only needs jug itself and
 shells out via `pixi run -e <env> ...` for the actual work.
 
+The one-time database setup is part of the graph too: prepare_rgi_db builds
+CARD's localDB and prepare_deeparg_db downloads the DeepARG model bundle,
+each once, with the run_* tasks that need them waiting on the result.
+
 Every tool invocation gets a scratch directory of its own (under
 config.TMP_DIR), laid out as
 
@@ -43,8 +47,13 @@ from jug import TaskGenerator
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PIXI_MANIFEST = os.path.join(SCRIPT_DIR, "pixi.toml")
 PREPROCESS_NGL = os.path.join(SCRIPT_DIR, "preprocess.ngl")
+DOWNLOAD_DEEPARG_DB = os.path.join(SCRIPT_DIR, "download_deeparg_db.py")
 sys.path.insert(0, SCRIPT_DIR)
 import config
+# Only for the stamp-file name; the script's huggingface_hub import lives
+# inside its own function, so importing it here (under 'jug') is fine. It is
+# *run* below via `pixi run -e deeparg`, never called from this process.
+from download_deeparg_db import STAMP_FILE as DEEPARG_DB_STAMP
 
 FARGENE_MODELS = {
     "class_a": "class_a", "class_b1_b2": "class_b_1_2", "class_b3": "class_b_3",
@@ -262,22 +271,41 @@ def run_rgi(sample_dir, outdir, rgi_work_dir):
 
 
 @TaskGenerator
-def run_deeparg(sample_dir, outdir):
-    hf_dir = os.path.abspath(config.DEEPARG_HF_DIR)
+def prepare_deeparg_db(hf_dir):
+    """Fetch the DeepARG model+database bundle into `hf_dir`; returns it.
+
+    The download is a separate script run under the 'deeparg' environment
+    because it needs huggingface_hub, which this process (the 'jug'
+    environment) doesn't have -- see download_deeparg_db.py, which `pixi run
+    download-deeparg-db <dir>` runs by hand in exactly the same way.
+
+    A directory carrying the stamp file is taken as already downloaded and
+    left alone, so a bundle staged by hand (or by an earlier, since
+    invalidated, run of this task) is not re-fetched.
+    """
+    if os.path.isfile(os.path.join(hf_dir, DEEPARG_DB_STAMP)):
+        return hf_dir
+
+    pixi_run("deeparg", ["python", DOWNLOAD_DEEPARG_DB, hf_dir])
+    if not os.path.isfile(os.path.join(hf_dir, DEEPARG_DB_STAMP)):
+        raise RuntimeError(
+            f"{DOWNLOAD_DEEPARG_DB} exited successfully but left no "
+            f"{DEEPARG_DB_STAMP} in {hf_dir}")
+    return hf_dir
+
+
+@TaskGenerator
+def run_deeparg(sample_dir, outdir, hf_dir):
     with tool_scratch(sample_dir, "deeparg", compressed=True) as (scratch, out_dir, r1, r2):
-        args = [
+        pixi_run("deeparg", [
             "deeparg", "short_reads_pipeline",
             "--forward_pe_file", r1,
             "--reverse_pe_file", r2,
             "--output_file", os.path.join(out_dir, "sample"),
-        ]
-        if os.path.isdir(hf_dir):
-            args += ["--hf-model-path", hf_dir]
-        else:
-            print(f"warning: DEEPARG_HF_DIR={hf_dir!r} doesn't exist yet -- run "
-                  f"'pixi run download-deeparg-db {hf_dir}'; falling back to a "
-                  "live Hugging Face download instead.", file=sys.stderr)
-        pixi_run("deeparg", args, cwd=scratch)
+            # Without this deeparg downloads the bundle itself, once per run;
+            # prepare_deeparg_db has already put it here.
+            "--hf-model-path", hf_dir,
+        ], cwd=scratch)
 
         # deeparg builds its trimmomatic/vsearch intermediates by appending
         # suffixes to the paths it is handed. The ones derived from the reads
@@ -295,10 +323,11 @@ if len(config.SAMPLES) == 0:
 if len(config.SAMPLES) != len(set(config.SAMPLES)):
     raise RuntimeError(f"duplicate sample names in config.SAMPLES: {config.SAMPLES}")
 
-# Built once, ahead of the samples; every run_rgi task takes it as an argument
-# and so waits for it.
+# Prepared once, ahead of the samples; every run_rgi/run_deeparg task takes
+# the corresponding directory as an argument and so waits for it.
 rgi_work_dir = prepare_rgi_db(os.path.abspath(config.RGI_LOCALDB_DIR),
                               config.CARD_JSON, config.CARD_VERSION)
+deeparg_hf_dir = prepare_deeparg_db(os.path.abspath(config.DEEPARG_HF_DIR))
 
 metagenomes_dir = os.path.abspath(config.METAGENOMES_DIR)
 output_dir = os.path.abspath(config.OUTPUT_DIR)
@@ -313,4 +342,4 @@ for sample in config.SAMPLES:
 
     run_fargene(sample_dir, outdir)
     run_rgi(sample_dir, outdir, rgi_work_dir)
-    run_deeparg(sample_dir, outdir)
+    run_deeparg(sample_dir, outdir, deeparg_hf_dir)

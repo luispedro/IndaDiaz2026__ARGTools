@@ -39,6 +39,9 @@ deeparg-modern = { git = "https://github.com/gaarangoa/deeparg.git", tag = "v2.0
 [feature.deeparg.tasks]
 # One-time DB download -- needs to run in *this* environment (huggingface_hub
 # comes from deeparg-modern's deps), never under the jug environment below.
+# jugfile.py's prepare_deeparg_db task runs this same script the same way, so
+# `pixi run jug-execute` covers the download; this task is for staging the
+# bundle by hand (e.g. on a login node before a batch run).
 download-deeparg-db = "python download_deeparg_db.py"
 
 [feature.ngless]
@@ -80,8 +83,10 @@ jug = { features = ["jug"], no-default-feature = true }
 
 # Usage:
 #   pixi install
-#   pixi run download-deeparg-db <dir>   # one-time DeepARG model/DB download
 #   Edit config.py (samples + shared settings), then:
 #   pixi run jug-status                  # what's done / pending
 #   pixi run jug-execute                 # run everything config.py asks for
-# jugfile.py is safe to re-run: jug skips work it already finished.
+# jugfile.py is safe to re-run: jug skips work it already finished. The
+# one-time database setup (CARD localDB, DeepARG model bundle) is part of the
+# graph, so jug-execute does it on the first run; to stage the DeepARG bundle
+# ahead of time instead, run `pixi run download-deeparg-db <DEEPARG_HF_DIR>`.
