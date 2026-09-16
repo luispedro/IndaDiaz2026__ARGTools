@@ -121,16 +121,18 @@ def tool_scratch(sample_dir, tool, compressed):
 
     The whole tree is removed on the way out, including on failure: jug runs
     without --keep-failed, so a failed task is retried from scratch anyway and
-    there is nothing here worth keeping.
+    there is nothing here worth keeping. Cleanup errors are deliberately not
+    suppressed: failing to remove the tree usually means something else went
+    wrong (a tool still holding files open, a read-only file it left behind).
     """
     if not os.path.isdir(sample_dir):
         raise RuntimeError(f"no read directory for this sample: {sample_dir}")
     tmp_parent = os.path.abspath(config.TMP_DIR) if config.TMP_DIR else None
     if tmp_parent:
         os.makedirs(tmp_parent, exist_ok=True)
-    scratch = tempfile.mkdtemp(prefix=f"{tool}.{os.path.basename(sample_dir)}.",
-                               dir=tmp_parent)
-    try:
+    with tempfile.TemporaryDirectory(
+            prefix=f"{tool}.{os.path.basename(sample_dir)}.",
+            dir=tmp_parent) as scratch:
         reads_dir = os.path.join(scratch, "reads")
         out_dir = os.path.join(scratch, "out")
         os.makedirs(reads_dir)
@@ -163,8 +165,6 @@ def tool_scratch(sample_dir, tool, compressed):
                 f"ngless wrote {sorted(os.listdir(reads_dir))}")
 
         yield scratch, out_dir, r1, r2
-    finally:
-        shutil.rmtree(scratch, ignore_errors=True)
 
 
 @TaskGenerator
