@@ -149,6 +149,8 @@ def tool_scratch(sample_dir, tool, compressed):
     """
     if not os.path.isdir(sample_dir):
         raise RuntimeError(f"no read directory for this sample: {sample_dir}")
+    pixi_run('fargene', [
+        'trim_galore', '--version'])
     tmp_parent = os.path.abspath(TMPDIR) if TMPDIR else None
     if tmp_parent:
         os.makedirs(tmp_parent, exist_ok=True)
