@@ -43,12 +43,8 @@ import tempfile
 
 from jug import TaskGenerator
 
-# One entry per sample. Reads are picked up from METAGENOMES_DIR/<name>/ by
-# ngless' load_fastq_directory, which accepts .fq/.fastq (optionally .gz/.bz2/
-# .xz) and pairs them up on a .1/.2 or _1/_2 suffix, e.g.
-#     data/metagenomes/s1/s1.pair.1.fq.gz
-#     data/metagenomes/s1/s1.pair.2.fq.gz
-SAMPLES = ["s1", "s2"]
+# Old fashioned NGLess-style sample-list+directories organisation
+SAMPLES = [line.strip() for line in open("data/samples.txt")]
 METAGENOMES_DIR = "data/metagenomes"
 
 OUTPUT_DIR = "output"
