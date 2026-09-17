@@ -1,12 +1,14 @@
 """
-Runs fargene/rgi/deeparg over the samples listed in the settings below.
+Runs fargene/rgi/deeparg over the samples listed in data/samples.txt.
 
     pixi run jug-status
     pixi run jug-execute
 
 Safe to re-run: jug skips tasks it already finished, even if you add new
-samples or edit shared settings in between runs (only the affected tasks'
-hashes change).
+samples in between runs. Only settings that are passed to the tasks as
+arguments (the directories, CARD_JSON, CARD_VERSION) are part of the task
+hashes; changing THREADS, TMPDIR or FARGENE_MODELS does *not* invalidate
+anything, so use `jug invalidate` if the results should be redone.
 
 Each tool lives in its own pixi environment (see pixi.toml) with its own
 binary -- this process (the 'jug' environment) only needs jug itself and
@@ -43,7 +45,12 @@ import tempfile
 
 from jug import TaskGenerator
 
-# Old fashioned NGLess-style sample-list+directories organisation
+# Old-fashioned NGLess-style organisation: data/samples.txt lists one sample
+# name per line, and each sample's reads are in METAGENOMES_DIR/<name>/, where
+# ngless' load_fastq_directory picks them up (.fq/.fastq, optionally
+# compressed, paired up on a .1/.2 or _1/_2 suffix), e.g.
+#     data/metagenomes/s1/s1.pair.1.fq.gz
+#     data/metagenomes/s1/s1.pair.2.fq.gz
 SAMPLES = [line.strip() for line in open("data/samples.txt")]
 METAGENOMES_DIR = "data/metagenomes"
 
@@ -59,11 +66,14 @@ TMPDIR = None
 THREADS = 4
 
 # `rgi --local` resolves its database as localDB/ relative to the directory it
-# is run from; jugfile.py builds it once here and symlinks it into each run's
-# scratch directory. Gitignored.
+# is run from; prepare_rgi_db builds it once under RGI_LOCALDB_DIR and run_rgi
+# symlinks it into each run's scratch directory. Gitignored.
 RGI_LOCALDB_DIR = "rgi_db"
+# Path to a local card.json to build the database from; None downloads CARD
+# release CARD_VERSION from card.mcmaster.ca instead.
 CARD_JSON = None
 CARD_VERSION = "4.0.0"
+# Where prepare_deeparg_db puts the DeepARG v2 model+database bundle. Gitignored.
 DEEPARG_HF_DIR = "deeparg_hf"
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -149,6 +159,9 @@ def tool_scratch(sample_dir, tool, compressed):
     """
     if not os.path.isdir(sample_dir):
         raise RuntimeError(f"no read directory for this sample: {sample_dir}")
+    # fargene quality-filters its input with trim_galore, and when that fails
+    # (as it does on some very old systems) fargene carries on regardless and
+    # produces empty results. Fail loudly up front instead.
     pixi_run('fargene', [
         'trim_galore', '--version'])
     tmp_parent = os.path.abspath(TMPDIR) if TMPDIR else None

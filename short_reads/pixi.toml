@@ -67,7 +67,7 @@ jug = "*"
 # are deliberately *not* exposed as pixi tasks: tasks always run from the
 # workspace root, while every tool here runs from a per-invocation scratch
 # directory (`rgi ... --local`, in particular, resolves localDB/ from its cwd).
-# --keep-going: one sample/tool failing (e.g. a missing localDB) must not
+# --keep-going: one sample/tool failing (e.g. a missing read directory) must not
 # stop unrelated, independent tasks from running; --keep-failed is
 # deliberately omitted so a fixed prerequisite gets retried on the next run
 # instead of staying locked as permanently failed.
@@ -83,7 +83,8 @@ jug = { features = ["jug"], no-default-feature = true }
 
 # Usage:
 #   pixi install
-#   Edit the settings at the top of jugfile.py (samples + shared settings), then:
+#   List the samples in data/samples.txt (reads in data/metagenomes/<sample>/),
+#   adjust the settings at the top of jugfile.py if needed, then:
 #   pixi run jug-status                  # what's done / pending
 #   pixi run jug-execute                 # run everything jugfile.py asks for
 # jugfile.py is safe to re-run: jug skips work it already finished. The
