@@ -34,9 +34,15 @@ bowtie2 scratch -- therefore dies with the scratch directory instead of
 accumulating in the output tree, and OUTPUT_DIR/<sample>/<tool>/ holds
 nothing but that tool's results (plus the ngless QC report for the reads it
 was given).
+
+Intermediates the tools write *inside* out/ are dealt with per tool (fargene
+is pointed at a tmp dir in scratch, rgi runs with --clean, deeparg's merged
+reads are deleted), and every published file is gzipped (see
+compress_results).
 """
 import contextlib
 import glob
+import gzip
 import os
 import shutil
 import re
@@ -121,14 +127,37 @@ def pixi_run(env, args, **kwargs):
                           check=True, **kwargs)
 
 
+# Formats that are already compressed; gzipping them again gains nothing.
+ALREADY_COMPRESSED = (".gz", ".bz2", ".bam", ".bai")
+
+
+def compress_results(out_dir):
+    """Gzip every file under `out_dir` in place (foo -> foo.gz).
+
+    The ngless QC report is left alone so that its index.html still opens
+    directly in a browser (it is small anyway).
+    """
+    for root, dirs, files in os.walk(out_dir):
+        dirs[:] = [d for d in dirs if d != "ngless-report"]
+        for fn in files:
+            path = os.path.join(root, fn)
+            if fn.endswith(ALREADY_COMPRESSED) or os.path.islink(path):
+                continue
+            with open(path, "rb") as src, \
+                    gzip.open(path + ".gz", "wb", compresslevel=6) as dst:
+                shutil.copyfileobj(src, dst, 16 * 1024 * 1024)
+            os.remove(path)
+
+
 def publish_results(src, dest):
-    """Copy the scratch directory's out/ tree to its final home in OUTPUT_DIR.
+    """Compress the scratch directory's out/ tree and copy it to OUTPUT_DIR.
 
     Staged next to `dest` and renamed into place so that an interrupted copy
     never leaves a half-written result looking like a finished one, and so
     that re-running an invalidated task replaces the old results wholesale
     rather than merging into them.
     """
+    compress_results(src)
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     staging = f"{dest}.incoming.{os.getpid()}"
     superseded = f"{dest}.superseded.{os.getpid()}"
@@ -208,15 +237,21 @@ def tool_scratch(sample_dir, tool, compressed):
 def run_fargene(sample_dir, outdir):
     with tool_scratch(sample_dir, "fargene", compressed=False) as (scratch, out_dir, r1, r2):
         for class_name, model in FARGENE_MODELS.items():
+            # By default fargene keeps its intermediates (including a FASTA
+            # copy of both read files, >500M per model per sample) in
+            # <-o>/tmpdir; keep them in scratch and drop them per model.
+            model_tmp = os.path.join(scratch, "fargene-tmp", class_name)
             pixi_run("fargene", [
                 "fargene",
                 "-i", r1, r2,
                 "--hmm-model", model,
                 "--meta",
                 "-o", os.path.join(out_dir, class_name),
+                "--tmp-dir", model_tmp,
                 "-p", str(THREADS),
                 "--force",
             ], cwd=scratch)
+            shutil.rmtree(model_tmp)
         # fargene appends to a fargene_analysis.log in its working directory
         # (not in -o); keep it rather than let it go with the scratch tree.
         log = os.path.join(scratch, "fargene_analysis.log")
@@ -303,6 +338,10 @@ def run_rgi(sample_dir, outdir, rgi_work_dir):
             "--output_file", os.path.join(out_dir, "sample.bwt"),
             "--local",
             "--threads", str(THREADS),
+            # Removes every <output_file>*.temp* file: the SAM, the unsorted
+            # and sorted-unfiltered BAMs, the per-read tables, ... (>1G per
+            # sample). The reports and sorted.length_100.bam are kept.
+            "--clean",
         ], cwd=scratch)
         return publish_results(out_dir, os.path.join(outdir, "rgi"))
 
@@ -348,7 +387,10 @@ def run_deeparg(sample_dir, outdir, hf_dir):
         # suffixes to the paths it is handed. The ones derived from the reads
         # land in reads/ and go with the scratch tree; these are the ones that
         # would otherwise be published alongside the actual results.
-        for pattern in ("*.paired", "*.unpaired", "*.merged", "*.unmerged"):
+        # sample.clean is the merged+unmerged reads as FASTA, i.e., DIAMOND's
+        # input (roughly the size of the reads themselves).
+        for pattern in ("*.paired", "*.unpaired", "*.merged", "*.unmerged",
+                        "*.clean"):
             for p in glob.glob(os.path.join(out_dir, pattern)):
                 os.remove(p)
         return publish_results(out_dir, os.path.join(outdir, "deeparg"))
