@@ -70,8 +70,9 @@ For every (sample, tool) pair, `jugfile.py`:
    directory; point it at node-local scratch on a cluster);
 2. runs `preprocess.ngl` to write the trimmed reads there;
 3. runs the tool with the scratch directory as working directory;
-4. copies the tool's `out/` directory atomically to `output/<sample>/<tool>/`
-   and deletes the scratch directory.
+4. deletes everything in the tool's `out/` directory except the files listed
+   in `KEEP` (see below), gzips what is left, copies it atomically to
+   `output/<sample>/<tool>/`, and deletes the scratch directory.
 
 Thus, reads are preprocessed separately for each tool (fARGene needs
 uncompressed FastQ, the others get gzipped files), and tool intermediates
@@ -79,13 +80,29 @@ never reach the output tree.
 
 ## Output
 
+Only these files are kept (all gzipped; the list is `KEEP` in `jugfile.py`):
+
 ```
-output/<sample>/fargene/<model>/          # one fARGene output directory per model
-output/<sample>/fargene/fargene_analysis.log
-output/<sample>/rgi/sample.bwt.*
-output/<sample>/deeparg/sample.*
-output/<sample>/<tool>/ngless-report/     # QC report of the preprocessing
+output/<sample>/rgi/sample.bwt.gene_mapping_data.txt.gz
+output/<sample>/rgi/sample.bwt.allele_mapping_data.txt.gz
+
+output/<sample>/deeparg/sample.clean.deeparg.align.daa.tsv.gz
+output/<sample>/deeparg/sample.clean.deeparg.mapping.ARG.gz
+output/<sample>/deeparg/sample.clean.deeparg.mapping.ARG.merged.gz
+output/<sample>/deeparg/sample.clean.deeparg.mapping.ARG.merged.quant.gz
+
+# fARGene, one directory per model (<class> is a key of FARGENE_MODELS)
+# reconstructed genes:
+output/<sample>/fargene/<class>/predictedGenes/predicted-orfs.fasta.gz
+# reads passing the HMM (<basename> is preproc.pair.):
+output/<sample>/fargene/<class>/retrievedFragments/<basename>_{1,2}_retrieved.fastq.gz
+output/<sample>/fargene/<class>/retrievedFragments/trimmedReads/<basename>_1_retrieved_val_1.fq.gz
+output/<sample>/fargene/<class>/retrievedFragments/trimmedReads/<basename>_2_retrieved_val_2.fq.gz
+output/<sample>/fargene/<class>/retrievedFragments/all_retrieved_{1,2}.fastq.gz
 ```
+
+A file (or directory) that a tool did not produce is simply missing, e.g.
+`predictedGenes/` for a model where fARGene reconstructed no genes.
 
 `output/`, `rgi_db/`, `deeparg_hf/`, and `jugfile.jugdata/` are gitignored.
 

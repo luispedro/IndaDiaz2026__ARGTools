@@ -32,16 +32,16 @@ scratch directory is deleted. Everything a tool leaves lying around outside
 that out/ directory -- deeparg's trimmomatic/vsearch intermediates, rgi's
 bowtie2 scratch -- therefore dies with the scratch directory instead of
 accumulating in the output tree, and OUTPUT_DIR/<sample>/<tool>/ holds
-nothing but that tool's results (plus the ngless QC report for the reads it
-was given).
+nothing but that tool's results.
 
-Intermediates the tools write *inside* out/ are dealt with per tool (fargene
-is pointed at a tmp dir in scratch, rgi runs with --clean, deeparg's merged
-reads are deleted), and every published file is gzipped (see
-compress_results).
+Only the files listed in KEEP are published, gzipped (see publish_results);
+everything else the tools write, inside out/ or not, dies with the scratch
+directory. fargene is additionally pointed at a tmp dir in scratch and rgi
+runs with --clean, so that their intermediates don't pile up in scratch while
+the tool is still running.
 """
 import contextlib
-import glob
+import fnmatch
 import gzip
 import os
 import shutil
@@ -127,21 +127,58 @@ def pixi_run(env, args, **kwargs):
                           check=True, **kwargs)
 
 
-# Formats that are already compressed; gzipping them again gains nothing.
-ALREADY_COMPRESSED = (".gz", ".bz2", ".bam", ".bai")
+# The files of each tool's out/ directory that are published, as fnmatch
+# patterns on the path relative to out/ (where `*` also matches `/`). They
+# name the files as the tools write them; they are gzipped on publishing, so
+# e.g. sample.bwt.gene_mapping_data.txt ends up as .txt.gz.
+KEEP = {
+    "rgi": [
+        "sample.bwt.gene_mapping_data.txt",
+        "sample.bwt.allele_mapping_data.txt",
+    ],
+    "deeparg": [
+        "sample.clean.deeparg.align.daa.tsv",
+        "sample.clean.deeparg.mapping.ARG",
+        "sample.clean.deeparg.mapping.ARG.merged",
+        "sample.clean.deeparg.mapping.ARG.merged.quant",
+    ],
+    # Per model (<class>/): the reconstructed genes, and the reads passing
+    # the HMM -- per mate, after trim_galore, and concatenated over inputs.
+    "fargene": [
+        "*/predictedGenes/predicted-orfs.fasta",
+        "*/retrievedFragments/*_1_retrieved.fastq",
+        "*/retrievedFragments/*_2_retrieved.fastq",
+        "*/retrievedFragments/trimmedReads/*_1_retrieved_val_1.fq",
+        "*/retrievedFragments/trimmedReads/*_2_retrieved_val_2.fq",
+        "*/retrievedFragments/all_retrieved_1.fastq",
+        "*/retrievedFragments/all_retrieved_2.fastq",
+    ],
+}
+
+
+def trim_results(out_dir, keep):
+    """Delete every file under `out_dir` not matching one of the `keep`
+    patterns (see KEEP), then any directories left empty."""
+    for root, dirs, files in os.walk(out_dir, topdown=False):
+        for fn in files:
+            path = os.path.join(root, fn)
+            # A .gz is matched by its uncompressed name, so that this also
+            # applies to already-published results.
+            rel = os.path.relpath(path, out_dir).removesuffix(".gz")
+            if not any(fnmatch.fnmatch(rel, pat) for pat in keep):
+                os.remove(path)
+        for d in dirs:
+            path = os.path.join(root, d)
+            if not os.path.islink(path) and not os.listdir(path):
+                os.rmdir(path)
 
 
 def compress_results(out_dir):
-    """Gzip every file under `out_dir` in place (foo -> foo.gz).
-
-    The ngless QC report is left alone so that its index.html still opens
-    directly in a browser (it is small anyway).
-    """
-    for root, dirs, files in os.walk(out_dir):
-        dirs[:] = [d for d in dirs if d != "ngless-report"]
+    """Gzip every file under `out_dir` in place (foo -> foo.gz)."""
+    for root, _, files in os.walk(out_dir):
         for fn in files:
             path = os.path.join(root, fn)
-            if fn.endswith(ALREADY_COMPRESSED) or os.path.islink(path):
+            if fn.endswith(".gz"):
                 continue
             with open(path, "rb") as src, \
                     gzip.open(path + ".gz", "wb", compresslevel=6) as dst:
@@ -149,14 +186,16 @@ def compress_results(out_dir):
             os.remove(path)
 
 
-def publish_results(src, dest):
-    """Compress the scratch directory's out/ tree and copy it to OUTPUT_DIR.
+def publish_results(src, dest, keep):
+    """Trim and compress the scratch directory's out/ tree and copy it to
+    OUTPUT_DIR.
 
     Staged next to `dest` and renamed into place so that an interrupted copy
     never leaves a half-written result looking like a finished one, and so
     that re-running an invalidated task replaces the old results wholesale
     rather than merging into them.
     """
+    trim_results(src, keep)
     compress_results(src)
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     staging = f"{dest}.incoming.{os.getpid()}"
@@ -175,10 +214,10 @@ def tool_scratch(sample_dir, tool, compressed):
     """Preprocess one sample into a fresh scratch directory, for one tool run.
 
     Yields (scratch, out_dir, r1, r2): the directory the tool should run in,
-    the directory it should be told to write to (copied out by
-    publish_results), and the two mate files. `compressed` picks the output
-    extension -- fargene cannot read gzipped FastQ, so it asks for plain .fq
-    and lets ngless decompress on the way out.
+    the directory it should be told to write to (whose KEEP files are copied
+    out by publish_results), and the two mate files. `compressed` picks the
+    output extension -- fargene cannot read gzipped FastQ, so it asks for
+    plain .fq and lets ngless decompress on the way out.
 
     The whole tree is removed on the way out, including on failure: jug runs
     without --keep-failed, so a failed task is retried from scratch anyway and
@@ -208,12 +247,11 @@ def tool_scratch(sample_dir, tool, compressed):
         pixi_run("ngless", [
             "ngless",
             "--jobs", str(THREADS),
-            # Keep ngless' own scratch inside ours, and its QC report inside
-            # out/ so it gets copied out next to the tool's results (the
+            # Keep ngless' own scratch and its QC report inside ours (the
             # default would be a single preprocess.ngl.output_ngless/ next to
             # the script, which concurrent invocations would fight over).
             "--temporary-directory", scratch,
-            "-o", os.path.join(out_dir, "ngless-report"),
+            "-o", os.path.join(scratch, "ngless-report"),
             PREPROCESS_NGL,
             sample_dir,
             os.path.join(reads_dir, PREPROC_BASE + ext),
@@ -252,12 +290,8 @@ def run_fargene(sample_dir, outdir):
                 "--force",
             ], cwd=scratch)
             shutil.rmtree(model_tmp)
-        # fargene appends to a fargene_analysis.log in its working directory
-        # (not in -o); keep it rather than let it go with the scratch tree.
-        log = os.path.join(scratch, "fargene_analysis.log")
-        if os.path.isfile(log):
-            shutil.move(log, os.path.join(out_dir, "fargene_analysis.log"))
-        return publish_results(out_dir, os.path.join(outdir, "fargene"))
+        return publish_results(out_dir, os.path.join(outdir, "fargene"),
+                               KEEP["fargene"])
 
 
 @TaskGenerator
@@ -340,10 +374,11 @@ def run_rgi(sample_dir, outdir, rgi_work_dir):
             "--threads", str(THREADS),
             # Removes every <output_file>*.temp* file: the SAM, the unsorted
             # and sorted-unfiltered BAMs, the per-read tables, ... (>1G per
-            # sample). The reports and sorted.length_100.bam are kept.
+            # sample) as soon as rgi is done with them.
             "--clean",
         ], cwd=scratch)
-        return publish_results(out_dir, os.path.join(outdir, "rgi"))
+        return publish_results(out_dir, os.path.join(outdir, "rgi"),
+                               KEEP["rgi"])
 
 
 @TaskGenerator
@@ -382,18 +417,8 @@ def run_deeparg(sample_dir, outdir, hf_dir):
             # prepare_deeparg_db has already put it here.
             "--hf-model-path", hf_dir,
         ], cwd=scratch)
-
-        # deeparg builds its trimmomatic/vsearch intermediates by appending
-        # suffixes to the paths it is handed. The ones derived from the reads
-        # land in reads/ and go with the scratch tree; these are the ones that
-        # would otherwise be published alongside the actual results.
-        # sample.clean is the merged+unmerged reads as FASTA, i.e., DIAMOND's
-        # input (roughly the size of the reads themselves).
-        for pattern in ("*.paired", "*.unpaired", "*.merged", "*.unmerged",
-                        "*.clean"):
-            for p in glob.glob(os.path.join(out_dir, pattern)):
-                os.remove(p)
-        return publish_results(out_dir, os.path.join(outdir, "deeparg"))
+        return publish_results(out_dir, os.path.join(outdir, "deeparg"),
+                               KEEP["deeparg"])
 
 
 # Prepared once, ahead of the samples; every run_rgi/run_deeparg task takes
