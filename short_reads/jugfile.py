@@ -1,22 +1,24 @@
 """
-Runs fargene/rgi/deeparg over the samples listed in data/samples.txt.
+Runs fargene/rgi/deeparg/resfinder over the samples listed in data/samples.txt.
 
     pixi run jug-status
     pixi run jug-execute
 
 Safe to re-run: jug skips tasks it already finished, even if you add new
 samples in between runs. Only settings that are passed to the tasks as
-arguments (the directories, CARD_JSON, CARD_VERSION) are part of the task
-hashes; changing THREADS, TMPDIR or FARGENE_MODELS does *not* invalidate
-anything, so use `jug invalidate` if the results should be redone.
+arguments (the directories, CARD_JSON, CARD_VERSION, RESFINDER_DB_VERSION,
+RESFINDER_MIN_COV, RESFINDER_THRESHOLD) are part of the task hashes; changing
+THREADS, TMPDIR or FARGENE_MODELS does *not* invalidate anything, so use `jug
+invalidate` if the results should be redone.
 
 Each tool lives in its own pixi environment (see pixi.toml) with its own
 binary -- this process (the 'jug' environment) only needs jug itself and
 shells out via `pixi run -e <env> ...` for the actual work.
 
 The one-time database setup is part of the graph too: prepare_rgi_db builds
-CARD's localDB and prepare_deeparg_db downloads the DeepARG model bundle,
-each once, with the run_* tasks that need them waiting on the result.
+CARD's localDB, prepare_deeparg_db downloads the DeepARG model bundle, and
+prepare_resfinder_db clones and indexes resfinder_db, each once, with the
+run_* tasks that need them waiting on the result.
 
 Every tool invocation gets a scratch directory of its own (under
 TMPDIR), laid out as
@@ -81,6 +83,17 @@ CARD_JSON = None
 CARD_VERSION = "4.0.0"
 # Where prepare_deeparg_db puts the DeepARG v2 model+database bundle. Gitignored.
 DEEPARG_HF_DIR = "deeparg_hf"
+# Where prepare_resfinder_db clones and KMA-indexes resfinder_db. Gitignored.
+RESFINDER_DB_DIR = "resfinder_db"
+RESFINDER_DB_URL = "https://bitbucket.org/genomicepidemiology/resfinder_db.git"
+# A tag of resfinder_db; 2.4.0 is the version used for the GMGC10 runs (and
+# the one bundled with ResFinder 4.6.0, the version in pixi.toml).
+RESFINDER_DB_VERSION = "2.4.0"
+RESFINDER_DB_STAMP = ".install-complete"
+# Minimum breadth of coverage (-l) and identity (-t), both as fractions: the
+# same values as in resfinder_dna/Snakefile_resfinder_dna.
+RESFINDER_MIN_COV = 0.6
+RESFINDER_THRESHOLD = 0.8
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PIXI_MANIFEST = os.path.join(SCRIPT_DIR, "pixi.toml")
@@ -123,8 +136,9 @@ def pixi_run(env, args, **kwargs):
     passed as plain commands rather than as pixi tasks for the same reason:
     tasks always run from the workspace root.
     """
+    kwargs.setdefault("check", True)
     return subprocess.run(["pixi", "run", "--manifest-path", PIXI_MANIFEST, "-e", env, *args],
-                          check=True, **kwargs)
+                          **kwargs)
 
 
 # The files of each tool's out/ directory that are published, as fnmatch
@@ -152,6 +166,17 @@ KEEP = {
         "*/retrievedFragments/trimmedReads/*_2_retrieved_val_2.fq",
         "*/retrievedFragments/all_retrieved_1.fastq",
         "*/retrievedFragments/all_retrieved_2.fastq",
+    ],
+    # The hits (flat, and split up by drug class), the sequence of the reads'
+    # consensus over each hit, the JSON with everything (per-hit depth
+    # included), and KMA's unfiltered per-template results, which carry the
+    # depth too.
+    "resfinder": [
+        "ResFinder_results_tab.txt",
+        "ResFinder_results_table.txt",
+        "ResFinder_Hit_in_genome_seq.fsa",
+        "sample.json",
+        "resfinder_kma/kma_*.res",
     ],
 }
 
@@ -421,16 +446,81 @@ def run_deeparg(sample_dir, outdir, hf_dir):
                                KEEP["deeparg"])
 
 
-# Prepared once, ahead of the samples; every run_rgi/run_deeparg task takes
-# the corresponding directory as an argument and so waits for it.
+@TaskGenerator
+def prepare_resfinder_db(db_dir, db_version):
+    """Clone resfinder_db at tag `db_version` into `db_dir` and index it with
+    KMA (which is what ResFinder uses on reads); returns `db_dir`.
+
+    Only resfinder_db is needed: run_resfinder asks for acquired genes only,
+    so neither pointfinder_db nor disinfinder_db is ever read.
+
+    A directory carrying the stamp file is taken as already built and left
+    alone; one without it is a leftover of a failed build and is redone.
+    """
+    stamp = os.path.join(db_dir, RESFINDER_DB_STAMP)
+    if os.path.isfile(stamp):
+        return db_dir
+    shutil.rmtree(db_dir, ignore_errors=True)
+    pixi_run("resfinder", [
+        "git", "-c", "advice.detachedHead=false",
+        "clone", "--quiet", "--depth", "1", "--branch", db_version,
+        RESFINDER_DB_URL, db_dir])
+    with open(os.path.join(db_dir, "VERSION")) as fh:
+        found = fh.read().strip()
+    if found != db_version:
+        raise RuntimeError(
+            f"resfinder_db tag {db_version} says it is version {found}")
+
+    # This is what the database's own INSTALL.py does (one index per drug
+    # class listed in config, plus all.fsa). `kma index` (1.6.17, at least)
+    # exits with a stale errno -- 17, EEXIST -- even when it succeeds, which
+    # is also why INSTALL.py's os.system ignores its status; check that the
+    # index files are there instead.
+    with open(os.path.join(db_dir, "config")) as fh:
+        drugs = [line.split("\t")[0].strip() for line in fh
+                 if line.strip() and not line.startswith("#")]
+    for drug in drugs + ["all"]:
+        pixi_run("resfinder", ["kma", "index", "-i", f"{drug}.fsa", "-o", drug],
+                 cwd=db_dir, stdout=subprocess.DEVNULL, check=False)
+        missing = [f"{drug}{ext}" for ext in (".comp.b", ".length.b", ".name", ".seq.b")
+                   if not os.path.isfile(os.path.join(db_dir, f"{drug}{ext}"))]
+        if missing:
+            raise RuntimeError(f"`kma index` did not produce {', '.join(missing)}")
+
+    open(stamp, "w").close()
+    return db_dir
+
+
+@TaskGenerator
+def run_resfinder(sample_dir, outdir, db_dir, min_cov, threshold):
+    with tool_scratch(sample_dir, "resfinder", compressed=True) as (scratch, out_dir, r1, r2):
+        pixi_run("resfinder", [
+            "python", "-m", "resfinder",
+            "--inputfastq", r1, r2,
+            "--outputPath", out_dir,
+            # Otherwise named after the first read file, i.e. preproc.json.
+            "--out_json", os.path.join(out_dir, "sample.json"),
+            "--acquired",
+            "--db_path_res", db_dir,
+            "--min_cov", str(min_cov),
+            "--threshold", str(threshold),
+        ], cwd=scratch)
+        return publish_results(out_dir, os.path.join(outdir, "resfinder"),
+                               KEEP["resfinder"])
+
+
+# Prepared once, ahead of the samples; every run_rgi/run_deeparg/run_resfinder
+# task takes the corresponding directory as an argument and so waits for it.
 rgi_work_dir = prepare_rgi_db(os.path.abspath(RGI_LOCALDB_DIR),
                               CARD_JSON, CARD_VERSION)
 deeparg_hf_dir = prepare_deeparg_db(os.path.abspath(DEEPARG_HF_DIR))
+resfinder_db_dir = prepare_resfinder_db(os.path.abspath(RESFINDER_DB_DIR),
+                                        RESFINDER_DB_VERSION)
 
 metagenomes_dir = os.path.abspath(METAGENOMES_DIR)
 output_dir = os.path.abspath(OUTPUT_DIR)
 
-# Adding a fourth tool is a run_<tool> task above plus one line here: jug
+# Adding another tool is a run_<tool> task above plus one line here: jug
 # schedules the new tasks and leaves every result already on disk untouched.
 for sample in SAMPLES:
     # Absolute, and passed as task arguments rather than looked up inside the
@@ -441,3 +531,5 @@ for sample in SAMPLES:
     run_fargene(sample_dir, outdir)
     run_rgi(sample_dir, outdir, rgi_work_dir)
     run_deeparg(sample_dir, outdir, deeparg_hf_dir)
+    run_resfinder(sample_dir, outdir, resfinder_db_dir,
+                  RESFINDER_MIN_COV, RESFINDER_THRESHOLD)

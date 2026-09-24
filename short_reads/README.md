@@ -1,6 +1,6 @@
 # Short-read ARG detection
 
-Runs three ARG detection tools directly on metagenomic short reads (rather
+Runs four ARG detection tools directly on metagenomic short reads (rather
 than on the GMGC10 gene catalog, as in the rest of this repository):
 
 | Tool    | Version                                  | Invocation                      |
@@ -8,6 +8,7 @@ than on the GMGC10 gene catalog, as in the rest of this repository):
 | fARGene | [indajuan/fargene@3be196d][fargene]      | `fargene --meta`, one run per HMM model (22 models) |
 | RGI     | 6.0.3, CARD 4.0.0                        | `rgi bwt --local`               |
 | DeepARG | [deeparg-modern v2.0.0][deeparg] (DeepARG v2 bundle) | `deeparg short_reads_pipeline` |
+| ResFinder | 4.6.0, resfinder_db 2.4.0 (KMA on reads) | `python -m resfinder --acquired -l 0.6 -t 0.8` |
 
 [fargene]: https://github.com/indajuan/fargene
 [deeparg]: https://github.com/gaarangoa/deeparg
@@ -25,7 +26,7 @@ lives in its own [pixi](https://pixi.sh) environment.
 - `download_deeparg_db.py` — downloads the DeepARG model/database bundle from
   Hugging Face. Run automatically by the pipeline; can also be run by hand.
 - `pixi.toml` / `pixi.lock` — environments `fargene`, `rgi`, `deeparg`,
-  `ngless`, and `jug` (the last one runs the pipeline itself).
+  `resfinder`, `ngless`, and `jug` (the last one runs the pipeline itself).
 
 ## Input
 
@@ -57,7 +58,11 @@ The first run also builds the prerequisites, once:
   from a local `card.json` if `CARD_JSON` is set);
 - **DeepARG bundle** in `deeparg_hf/`. To stage it ahead of time (e.g. on a
   login node with internet access), run
-  `pixi run download-deeparg-db deeparg_hf`.
+  `pixi run download-deeparg-db deeparg_hf`;
+- **resfinder_db** in `resfinder_db/`, cloned from bitbucket at tag
+  `RESFINDER_DB_VERSION` (2.4.0, the version used for GMGC10) and indexed with
+  `kma index`. Only acquired genes are searched, so PointFinder/DisinFinder
+  databases are not needed.
 
 `jug-execute` uses `--keep-going`, so a failing sample does not stop the
 others; failed tasks are retried on the next run.
@@ -91,6 +96,12 @@ output/<sample>/deeparg/sample.clean.deeparg.mapping.ARG.gz
 output/<sample>/deeparg/sample.clean.deeparg.mapping.ARG.merged.gz
 output/<sample>/deeparg/sample.clean.deeparg.mapping.ARG.merged.quant.gz
 
+output/<sample>/resfinder/ResFinder_results_tab.txt.gz        # hits, one per line
+output/<sample>/resfinder/ResFinder_results_table.txt.gz      # hits, by drug class
+output/<sample>/resfinder/ResFinder_Hit_in_genome_seq.fsa.gz  # consensus of the reads over each hit
+output/<sample>/resfinder/sample.json.gz                      # all of the above, plus per-hit depth
+output/<sample>/resfinder/resfinder_kma/kma_<class>.res.gz    # KMA's unfiltered per-template results
+
 # fARGene, one directory per model (<class> is a key of FARGENE_MODELS)
 # reconstructed genes:
 output/<sample>/fargene/<class>/predictedGenes/predicted-orfs.fasta.gz
@@ -104,15 +115,21 @@ output/<sample>/fargene/<class>/retrievedFragments/all_retrieved_{1,2}.fastq.gz
 A file (or directory) that a tool did not produce is simply missing, e.g.
 `predictedGenes/` for a model where fARGene reconstructed no genes.
 
-`output/`, `rgi_db/`, `deeparg_hf/`, and `jugfile.jugdata/` are gitignored.
+`output/`, `rgi_db/`, `deeparg_hf/`, `resfinder_db/`, and `jugfile.jugdata/`
+are gitignored.
 
 ## Caveats
 
 - Only settings passed to the tasks as arguments (directories, `CARD_JSON`,
-  `CARD_VERSION`) are part of jug's task hashes. After changing `THREADS`,
+  `CARD_VERSION`, `RESFINDER_DB_VERSION`, `RESFINDER_MIN_COV`,
+  `RESFINDER_THRESHOLD`) are part of jug's task hashes. After changing `THREADS`,
   `TMPDIR`, or `FARGENE_MODELS`, results are **not** recomputed automatically;
   use `jug invalidate` if needed.
-- `prepare_rgi_db` and `prepare_deeparg_db` skip the work if their target
-  directory already looks complete (`rgi_db/localDB/` exists, or
-  `deeparg_hf/.download-complete` exists). Delete the directory to force a
-  rebuild (e.g. after changing `CARD_VERSION`).
+- `prepare_rgi_db`, `prepare_deeparg_db`, and `prepare_resfinder_db` skip the
+  work if their target directory already looks complete (`rgi_db/localDB/`
+  exists, or `deeparg_hf/.download-complete` or
+  `resfinder_db/.install-complete` exists). Delete the directory to force a
+  rebuild (e.g. after changing `CARD_VERSION` or `RESFINDER_DB_VERSION`).
+- `kma index` exits with a non-zero status (17) even when it succeeds, so
+  `prepare_resfinder_db` ignores its exit status and checks for the index
+  files instead.

@@ -76,4 +76,5 @@ short_reads/jugfile.jugdata/
 short_reads/output/
 short_reads/rgi_db/
 short_reads/deeparg_hf/
+short_reads/resfinder_db/
 short_reads/fargene_analysis.log
