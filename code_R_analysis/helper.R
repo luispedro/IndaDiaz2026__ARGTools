@@ -514,11 +514,15 @@ get_unigene_classification <- function(unigenes,
                                        tool_b = "ABRicate-CARD",
                                        pipeline_a_label = "RGI",
                                        pipeline_b_label = "ABRicate-CARD",
-                                       both_label = "Both") {
+                                       both_label = "Both",
+                                       cluster_level = "cluster_99_cov90",
+                                       lst ) {
+  
+  print(paste(tool_a, tool_b))
   
   db_cluster_query <- db_cluster %>%
     filter(tool %in% c(.env$tool_a, .env$tool_b)) %>%
-    group_by(cluster_99) %>%
+    group_by(.data[[cluster_level]]) %>%
     mutate(n_tool = n_distinct(tool)) %>%
     mutate(label_gene = factor(
       ifelse(n_tool == 2, .env$both_label,
@@ -528,16 +532,22 @@ get_unigene_classification <- function(unigenes,
     slice_head(n = 1) %>%
     ungroup()
   
+  print("n_tool_by_cluster")
+  
   n_tools_by_cluster <- db_cluster %>%
     filter(tool %in% c(.env$tool_a, .env$tool_b)) %>%
-    group_by(cluster_99) %>%
+    group_by(.data[[cluster_level]]) %>%
     summarise(n = n_distinct(tool), .groups = "drop")
+  
+  print("modifying unigenes")
   
   unigenes_ref <- unigenes %>%
     filter(tool %in% basic_tools, tool %in% c(.env$tool_a, .env$tool_b)) %>%
-    mutate(label_gene = db_cluster_query$label_gene[match(cluster_99, db_cluster_query$cluster_99)]) %>%
-    mutate(present_in_others_db = n_tools_by_cluster$n[match(cluster_99, n_tools_by_cluster$cluster_99)]) %>%
-    group_by(query, cluster_99) %>%
+    mutate(label_gene = db_cluster_query$label_gene[
+      match(.data[[cluster_level]], db_cluster_query[[cluster_level]])]) %>%
+    mutate(present_in_others_db = n_tools_by_cluster$n[
+      match(.data[[cluster_level]], n_tools_by_cluster[[cluster_level]])]) %>%
+    group_by(query, .data[[cluster_level]]) %>%
     mutate(detected_by_both = n_distinct(tool) > 1) %>%
     ungroup() %>%
     group_by(query) %>%
@@ -548,20 +558,35 @@ get_unigene_classification <- function(unigenes,
       ifelse(detected_by_both_query, "Reported by both pipelines \ndifferent reference gene",
              ifelse(present_in_others_db > 1, "Reported by a single pipeline \nbut ref gene exists in both",
                     "Reported by a \nsingle pipeline")))) %>%
+    mutate(detected_by_both = ifelse(
+      detected_by_both %in%  c("Reported by a single pipeline \nbut ref gene exists in both", "Reported by a \nsingle pipeline") & 
+        ((tool_a %in% "fARGene" & tool_b != "AMRFinderPlus") | (tool_b %in% "fARGene" & tool_a != "AMRFinderPlus")),
+                                    "HMM vs. Alignment difference", detected_by_both)) %>% 
+    mutate(detected_by_both = ifelse(
+      detected_by_both %in%  c("Reported by a single pipeline \nbut ref gene exists in both","Reported by a \nsingle pipeline") & 
+      ((tool_a %in% "AMRFinderPlus" & tool_b != "fARGene") | (tool_b %in% "AMRFinderPlus" & tool_a!="fARGene"))  & 
+        query %in% lst$amrfinder.norm.prot$query[lst$amrfinder.norm.prot$Method=="HMM"], "HMM vs. Alignment difference", 
+      ifelse(
+        detected_by_both %in%  c("Reported by a single pipeline \nbut ref gene exists in both","Reported by a \nsingle pipeline") & 
+          ((tool_a %in% "AMRFinderPlus" & tool_b == "fARGene") | (tool_b %in% "AMRFinderPlus" & tool_a=="fARGene"))  & 
+          query %in% lst$amrfinder.norm.prot$query[lst$amrfinder.norm.prot$Method!="HMM"], "HMM vs. Alignment difference", 
+        detected_by_both))) %>%
     mutate(detected_by_both = factor(detected_by_both, levels = c(
       "Reported by a \nsingle pipeline",
       "Reported by a single pipeline \nbut ref gene exists in both",
       "Reported by both pipelines \ndifferent reference gene",
-      "Reported by both pipelines \nsame reference gene"
+      "Reported by both pipelines \nsame reference gene",
+      "HMM vs. Alignment difference"
     )))
   
+  print("query_classification")
   query_classification <- unigenes_ref %>%
     distinct(query, detected_by_both, label_gene) %>%
     mutate(tool_a = .env$tool_a, tool_b = .env$tool_b)
   
   n_dup <- query_classification %>% count(query) %>% filter(n > 1) %>% nrow()
   if (n_dup > 0) {
-    warning(sprintf("%d queries have more than one (x, color) classification — likely multiple cluster_99 assignments for the same query. Inspect with count(query) %%>%% filter(n > 1).", n_dup))
+    warning(sprintf("%d queries have more than one (x, color) classification — likely multiple .env$cluster_level assignments for the same query. Inspect with count(query) %%>%% filter(n > 1).", n_dup))
   }
   
   query_classification

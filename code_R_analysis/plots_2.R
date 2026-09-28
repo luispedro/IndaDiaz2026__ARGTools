@@ -249,7 +249,7 @@ pan <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/pan_
 pan <- pan %>% mutate(gene_class = ifelse(gene_class == "MFS efflux pump", "efflux pump", gene_class))
 
 ## database_clusters
-db_cluster <- read.delim("db_cluster/nested_out/nested_cluster_membership.tsv") 
+db_cluster <- read.delim("db_cluster/nested_with_coverage_out/nested_cluster_membership.tsv") 
 
 tool_map <- c(
   "abricate-argannot" = "ABRicate-ARGANNOT" ,
@@ -267,11 +267,87 @@ db_cluster <- db_cluster %>% mutate(tool = sapply(strsplit(protein_id, split = "
                                     gene = sapply(strsplit(protein_id, split = "@@@"), function(x) x[2])) %>% 
   mutate(tool = factor(tool_map[tool], levels = basic_tools))
 
-JI_db <- db_cluster %>% 
+JI_db_99 <- db_cluster %>% 
   select(tool, cluster_99) %>%
   mutate(tool = as.character(tool)) %>%
   distinct() %>%
   inner_join(., ., by = "cluster_99", relationship = "many-to-many") %>%
+  filter(tool.x < tool.y) %>%
+  count(tool.x, tool.y, name = "intersection") %>%
+  left_join(
+    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
+    by = c("tool.x" = "tool")
+  ) %>%
+  rename(size_x = size) %>%
+  left_join(
+    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
+    by = c("tool.y" = "tool")
+  ) %>%
+  rename(size_y = size) %>%
+  mutate(
+    union   = size_x + size_y - intersection,
+    jaccard = intersection / union
+  ) %>%
+  select(tool1 = tool.x, tool2 = tool.y, jaccard) %>%
+  arrange(desc(jaccard))
+
+
+JI_db_99_60 <- db_cluster %>% 
+  select(tool, cluster_99_cov60) %>%
+  mutate(tool = as.character(tool)) %>%
+  distinct() %>%
+  inner_join(., ., by = "cluster_99_cov60", relationship = "many-to-many") %>%
+  filter(tool.x < tool.y) %>%
+  count(tool.x, tool.y, name = "intersection") %>%
+  left_join(
+    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
+    by = c("tool.x" = "tool")
+  ) %>%
+  rename(size_x = size) %>%
+  left_join(
+    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
+    by = c("tool.y" = "tool")
+  ) %>%
+  rename(size_y = size) %>%
+  mutate(
+    union   = size_x + size_y - intersection,
+    jaccard = intersection / union
+  ) %>%
+  select(tool1 = tool.x, tool2 = tool.y, jaccard) %>%
+  arrange(desc(jaccard))
+
+
+JI_db_99_80 <- db_cluster %>% 
+  select(tool, cluster_99_cov80) %>%
+  mutate(tool = as.character(tool)) %>%
+  distinct() %>%
+  inner_join(., ., by = "cluster_99_cov80", relationship = "many-to-many") %>%
+  filter(tool.x < tool.y) %>%
+  count(tool.x, tool.y, name = "intersection") %>%
+  left_join(
+    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
+    by = c("tool.x" = "tool")
+  ) %>%
+  rename(size_x = size) %>%
+  left_join(
+    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
+    by = c("tool.y" = "tool")
+  ) %>%
+  rename(size_y = size) %>%
+  mutate(
+    union   = size_x + size_y - intersection,
+    jaccard = intersection / union
+  ) %>%
+  select(tool1 = tool.x, tool2 = tool.y, jaccard) %>%
+  arrange(desc(jaccard))
+
+
+
+JI_db_99_90 <- db_cluster %>% 
+  select(tool, cluster_99_cov90) %>%
+  mutate(tool = as.character(tool)) %>%
+  distinct() %>%
+  inner_join(., ., by = "cluster_99_cov90", relationship = "many-to-many") %>%
   filter(tool.x < tool.y) %>%
   count(tool.x, tool.y, name = "intersection") %>%
   left_join(
@@ -343,17 +419,32 @@ unigenes <- tibble(readRDS(file = "code_R_analysis/output_abundance_diversity_re
 # Overlap between tools by gene class
 # per class and tool
 recall_fnr <- create_class_overlaps(unigenes %>% filter(tool %in% basic_tools))
-recall_fnr_db <- create_class_overlaps(unigenes %>% filter(tool %in% basic_tools))
+#recall_fnr_db <- create_class_overlaps(unigenes %>% filter(tool %in% basic_tools))
 
 # overlap by pipeline (without considering classes)
 
 
 JI_all <- return_overlap_tools(unigenes %>% filter(tool %in% basic_tools))
 
-JI_all_db <- return_overlap_tools(unigenes %>% 
+JI_all_db_99 <- return_overlap_tools(unigenes %>% 
                                     filter(tool %in% basic_tools) %>%
                                     filter(!tool %in% "fARGene") %>% 
                                     mutate(query = cluster_99))
+
+JI_all_db_99_60 <- return_overlap_tools(unigenes %>% 
+                                       filter(tool %in% basic_tools) %>%
+                                       filter(!tool %in% "fARGene") %>% 
+                                       mutate(query = cluster_99_cov60))
+
+JI_all_db_99_80 <- return_overlap_tools(unigenes %>% 
+                                          filter(tool %in% basic_tools) %>%
+                                          filter(!tool %in% "fARGene") %>% 
+                                          mutate(query = cluster_99_cov80))
+
+JI_all_db_99_90 <- return_overlap_tools(unigenes %>% 
+                                          filter(tool %in% basic_tools) %>%
+                                          filter(!tool %in% "fARGene") %>% 
+                                          mutate(query = cluster_99_cov90))
 
 top_abundance_JI <- c("class A beta-lactamase",
                       "class B beta-lactamase",
@@ -435,23 +526,36 @@ expected_jaccard_df <- compute_expected_jaccard(unigenes %>% filter(tool %in% ba
 all_jaccard <- JI_all %>% mutate(rank = "reported ARGs") %>% 
   filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>%
   select(tool_ref, tool_comp, rank, jaccard) %>% 
-  bind_rows(
-    JI_all_db %>% mutate(rank = "reported ref gene") %>% 
-      filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>%
-      select(tool_ref, tool_comp, rank, jaccard)) %>% 
-  bind_rows(
-    JI_db %>% 
-      rename(tool_ref = tool1, tool_comp = tool2) %>% 
-      filter(tool_ref != tool_comp, tool_ref < tool_comp) %>%   
-      mutate(rank = "expected")
-  ) %>% 
+  #bind_rows(
+  #  JI_all_db %>% mutate(rank = "reported ref gene") %>% 
+  #    filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>%
+  #    select(tool_ref, tool_comp, rank, jaccard)) %>% 
+  #bind_rows(
+  #  JI_db %>% 
+  #    rename(tool_ref = tool1, tool_comp = tool2) %>% 
+  #    filter(tool_ref != tool_comp, tool_ref < tool_comp) %>%   
+  #    mutate(rank = "expected")
+  #) %>% 
   bind_rows(JI_all_rank_I_blast, JI_all_rank_II_blast,JI_all_rank_III_blast,JI_all_rank_IV_blast) %>% 
   bind_rows(JI_all_rank_I_aro, JI_all_rank_II_aro, JI_all_rank_III_aro, JI_all_rank_IV_aro) %>% 
   bind_rows(JI_all_some_gene_classes) %>% 
-  bind_rows(JI_db %>% filter(tool1 %in% basic_tools, tool2 %in% basic_tools) %>% 
+  bind_rows(JI_db_99 %>% filter(tool1 %in% basic_tools, tool2 %in% basic_tools) %>% 
               rename(tool_ref = tool1, tool_comp = tool2) %>% 
               filter(tool_ref<tool_comp) %>% 
-              mutate(rank = "DB"))
+              mutate(rank = "DB - id90"))%>% 
+  bind_rows(JI_db_99_60 %>% filter(tool1 %in% basic_tools, tool2 %in% basic_tools) %>% 
+              rename(tool_ref = tool1, tool_comp = tool2) %>% 
+              filter(tool_ref<tool_comp) %>% 
+              mutate(rank = "DB - id90 - cov60")) %>% 
+  bind_rows(JI_db_99_80 %>% filter(tool1 %in% basic_tools, tool2 %in% basic_tools) %>% 
+              rename(tool_ref = tool1, tool_comp = tool2) %>% 
+              filter(tool_ref<tool_comp) %>% 
+              mutate(rank = "DB - id90 - cov80")) %>% 
+  bind_rows(JI_db_99_90 %>% filter(tool1 %in% basic_tools, tool2 %in% basic_tools) %>% 
+              rename(tool_ref = tool1, tool_comp = tool2) %>% 
+              filter(tool_ref<tool_comp) %>% 
+              mutate(rank = "DB - id90 - cov90"))
+
 
 all_jaccard %>% group_by(rank) %>% summarise(n = n(), mean = mean(jaccard), median = median(jaccard))
 all_jaccard %>%
@@ -461,7 +565,8 @@ all_jaccard %>%
 
 all_jaccard <- all_jaccard %>%
   mutate(rank = factor(rank, levels = c(
-    "DB","reported ARGs", "reported ref gene", "expected", "12 gene classes",
+    "DB - id90", "DB - id90 - cov60", "DB - id90 - cov80", "DB - id90 - cov90",
+    "reported ARGs", "12 gene classes",
     "BLAST: risk I", "BLAST: risk II", "BLAST: risk III", "BLAST: risk IV",
     "ARO: risk I", "ARO: risk II", "ARO: risk III", "ARO: risk IV"
   ))) %>%
@@ -516,39 +621,80 @@ all_jaccard_plot <- ggplot(all_jaccard, aes(x = tool_comp, y = tool_ref, fill = 
 # a unigene would pass the threshold to another reference gene present in both pipelines
 # the pipelines just report the highest hit
 
+delta_jaccard <-delta_jaccard <- all_jaccard %>%
+  group_by(tool_ref, tool_comp) %>%
+  mutate(
+    delta_vs_db     = jaccard - jaccard[match("reported ARGs", rank)],
+    jaccard_reported = jaccard[match("reported ARGs", rank)]
+  ) %>%
+  ungroup() #%>%
+  # mutate(
+  #   rank = as.character(rank),
+  #   rank = case_when(
+  #     rank == "reported ARGs"  ~ "All reported ARGs",
+  #     rank == "DB"              ~ "Reference database",
+  #     rank == "ARO: risk I"     ~ "ARGs risk I (ARO)",
+  #     rank == "ARO: risk II"    ~ "ARGs risk II (ARO)",
+  #     rank == "ARO: risk III"   ~ "ARGs risk III (ARO)",
+  #     rank == "ARO: risk IV"    ~ "ARGs risk IV (ARO)",
+  #     rank == "BLAST: risk I"   ~ "ARGs risk I (BLAST)",
+  #     rank == "BLAST: risk II"  ~ "ARGs risk II (BLAST)",
+  #     rank == "BLAST: risk III" ~ "ARGs risk III (BLAST)",
+  #     rank == "BLAST: risk IV"  ~ "ARGs risk IV (BLAST)",
+  #     rank == "12 gene classes" ~ "Gene classes (12)",
+  #     TRUE ~ NA_character_
+  #   ),
+  #   rank = factor(rank, levels = c(
+  #     "Gene classes (12)",
+  #     "ARGs risk IV (BLAST)", "ARGs risk III (BLAST)", "ARGs risk II (BLAST)", "ARGs risk I (BLAST)",
+  #     "ARGs risk IV (ARO)",   "ARGs risk III (ARO)",   "ARGs risk II (ARO)",   "ARGs risk I (ARO)",
+  #     "Reference database",
+  #     "All reported ARGs"
+  #   ))
+  # )  
 
-ResFinder_discrepancy <- plot_db_discrepancy(unigenes, db_cluster, theme1, JI_db, JI_all_db, JI_all,
-                      tool_a = "ResFinder", tool_b = "ABRicate-ResFinder",
-                      pipeline_a_label = "ResFinder", pipeline_b_label = "ABRicate-ResFinder",
-                      pattern_a = "none", pattern_b = "stripe")
-
-CARD_discrepancy <- plot_db_discrepancy(unigenes, db_cluster, theme1, JI_db, JI_all_db, JI_all,
-                                               tool_a = "RGI-DIAMOND", tool_b = "ABRicate-CARD",
-                                               pipeline_a_label = "RGI", pipeline_b_label = "ABRicate-CARD",
-                                               pattern_a = "none", pattern_b = "stripe")
-
-AMRFinderPlus_discrepancy <- plot_db_discrepancy(unigenes, db_cluster, theme1, JI_db, JI_all_db, JI_all,
-                                          tool_a = "AMRFinderPlus", tool_b = "ABRicate-NCBI",
-                                          pipeline_a_label = "AMRFinderPlus", pipeline_b_label = "ABRicate-NCBI",
-                                          pattern_a = "none", pattern_b = "stripe")
-
-RIG_DeepARG_discrepancy <- plot_db_discrepancy(unigenes, db_cluster, theme1, JI_db, JI_all_db, JI_all,
-                                                   tool_a = "RGI-DIAMOND", tool_b = "DeepARG",
-                                                   pipeline_a_label = "RGI", pipeline_b_label = "DeepARG",
-                                                   pattern_a = "none", pattern_b = "stripe")
-
-plot_db_discrepancy(unigenes, db_cluster, theme1, JI_db, JI_all_db, JI_all,
-                    tool_a = "ABRicate-MEGARes", tool_b = "ABRicate-ARGANNOT",
-                    pipeline_a_label = "ABRicate-MEGARes", pipeline_b_label = "ABRicate-ARGANNOT",
-                    pattern_a = "none", pattern_b = "stripe")
+delta_jaccard %>% 
+  ggplot(aes (x = jaccard, y = rank, fill = rank)) +
+  geom_boxplot() + 
+  xlab("Pairwise Jaccard index distribution")+
+  ylab("Grouping") + 
+  scale_fill_manual(values = c(rep("#e6ab02",4),"#e7298a","#7570b3",rep("#66a61e",4),rep("#666666",4)), guide = guide_legend(nrow = 1)) +
+  theme1
 
 
-all_pairs_summary <- purrr::map_dfr(
+meg_argannot <- unigenes %>% filter(tool %in% c("ABRicate-ARGANNOT","ABRicate-MEGARes")) %>% 
+  group_by(query) %>% mutate(n= n_distinct(tool)) %>% filter(n==1) %>% 
+  ungroup() %>% 
+  group_by(cluster_99_cov90) %>% 
+  mutate(inother = ifelse(tool == "ABRicate-MEGARes", 
+                          cluster_99 %in% db_cluster$cluster_99[db_cluster$tool=="ABRicate-ARGANNOT"], 
+                          cluster_99 %in% db_cluster$cluster_99[db_cluster$tool=="ABRicate-MEGARes"])) 
+sum(meg_argannot$inother)
+
+lst$abricate.megares.norm %>% 
+  filter(query %in% meg_argannot$query[meg_argannot$tool=="ABRicate-MEGARes" & meg_argannot$inother]) %>% 
+  pull(cluster_99)  %in% lst$abricate.argannot.norm$cluster_99
+lst$abricate.argannot.norm %>% 
+  filter(query %in% meg_argannot$query[meg_argannot$tool!="ABRicate-MEGARes"]) %>% 
+  pull(cluster_99) %in% db_cluster$cluster_99[db_cluster$tool=="ABRicate-MEGARes"]
+
+#ResFinder_discrepancy <- plot_db_discrepancy(unigenes, db_cluster, theme1, JI_db, JI_all_db, JI_all,
+#                      tool_a = "ResFinder", tool_b = "ABRicate-ResFinder",
+#                      pipeline_a_label = "ResFinder", pipeline_b_label = "ABRicate-ResFinder",
+#                      pattern_a = "none", pattern_b = "stripe")
+
+
+
+all_pairs_summary_99 <- purrr::map_dfr(
   combn(as.character(basic_tools), 2, simplify = FALSE),
   function(p) {
-    get_unigene_classification(unigenes, db_cluster,
+    get_unigene_classification(unigenes, db_cluster = db_cluster,
                                tool_a = p[1], tool_b = p[2],
-                               pipeline_a_label = p[1], pipeline_b_label = p[2]) %>%
+                               pipeline_a_label = p[1], 
+                               pipeline_b_label = p[2],
+                               both_label = "Both",
+                               cluster_level = "cluster_99",
+                               lst) %>%
       ungroup() %>%
       group_by(query) %>%
       slice_head(n = 1) %>%
@@ -558,25 +704,103 @@ all_pairs_summary <- purrr::map_dfr(
   }
 )
 
-table(all_pairs_summary$detected_by_both)
+all_pairs_summary_99_60 <- purrr::map_dfr(
+  combn(as.character(basic_tools), 2, simplify = FALSE),
+  function(p) {
+    get_unigene_classification(unigenes, db_cluster = db_cluster,
+                               tool_a = p[1], tool_b = p[2],
+                               pipeline_a_label = p[1], 
+                               pipeline_b_label = p[2],
+                               both_label = "Both",
+                               cluster_level = "cluster_99_cov60",
+                               lst) %>%
+      ungroup() %>%
+      group_by(query) %>%
+      slice_head(n = 1) %>%
+      ungroup() %>%
+      group_by(tool_a, tool_b, detected_by_both) %>%
+      summarise(n = n(), .groups = "drop")
+  }
+)
+
+all_pairs_summary_99_80 <- purrr::map_dfr(
+  combn(as.character(basic_tools), 2, simplify = FALSE),
+  function(p) {
+    get_unigene_classification(unigenes, db_cluster = db_cluster,
+                               tool_a = p[1], tool_b = p[2],
+                               pipeline_a_label = p[1], 
+                               pipeline_b_label = p[2],
+                               both_label = "Both",
+                               cluster_level = "cluster_99_cov80",
+                               lst) %>%
+      ungroup() %>%
+      group_by(query) %>%
+      slice_head(n = 1) %>%
+      ungroup() %>%
+      group_by(tool_a, tool_b, detected_by_both) %>%
+      summarise(n = n(), .groups = "drop")
+  }
+)
+
+all_pairs_summary_99_90 <- purrr::map_dfr(
+  combn(as.character(basic_tools), 2, simplify = FALSE),
+  function(p) {
+    get_unigene_classification(unigenes, db_cluster = db_cluster,
+                               tool_a = p[1], tool_b = p[2],
+                               pipeline_a_label = p[1], 
+                               pipeline_b_label = p[2],
+                               both_label = "Both",
+                               cluster_level = "cluster_99_cov90",
+                               lst) %>%
+      ungroup() %>%
+      group_by(query) %>%
+      slice_head(n = 1) %>%
+      ungroup() %>%
+      group_by(tool_a, tool_b, detected_by_both) %>%
+      summarise(n = n(), .groups = "drop")
+  }
+)
+
+ all_pairs_summary <- bind_rows(
+  all_pairs_summary_99 %>% 
+    mutate(cov = "None"),
+  all_pairs_summary_99_60 %>% 
+    mutate(cov = "cov60"),
+  all_pairs_summary_99_80 %>% 
+    mutate(cov = "cov80"),
+  all_pairs_summary_99_90 %>% 
+    mutate(cov = "cov90"))
+
+#all_pairs_summary <- all_pairs_summary_99_90 %>% 
+#  mutate(cov = "cov90")
 
 all_pairs_summary_2 <- all_pairs_summary %>%  
   #filter(!tool_a %in% "fARGene", !tool_b %in% "fARGene") %>% 
   mutate(g = ifelse(detected_by_both %in% c("Reported by both pipelines \ndifferent reference gene",
                                             "Reported by both pipelines \nsame reference gene"), 
                     "Overlap\n(Jaccard Index)",
-                    ifelse(detected_by_both == "Reported by a \nsingle pipeline", 
-                           "Database-driven\n difference", "Pipeline-driven\n difference"))) %>% 
-  mutate(g = ifelse((tool_a %in% "fARGene" | tool_b %in% "fARGene") & g != "Overlap\n(Jaccard Index)", "Pipeline-driven\n difference", g)) %>% 
-  mutate(g = ifelse((tool_a %in% "fARGene" | tool_b %in% "fARGene") & is.na(detected_by_both), "Pipeline-driven\n difference", g)) %>% 
+                    ifelse(detected_by_both == "Reported by a single pipeline \nbut ref gene exists in both", 
+                           "Pipeline-driven\n difference", 
+                           ifelse(detected_by_both == "Reported by a \nsingle pipeline" & 
+                                    (tool_a %in% c("fARGene","AMRFinderPlus") & tool_b %in% c("fARGene","AMRFinderPlus")),
+                                  "Pipeline-driven\n difference",
+                                  ifelse(detected_by_both == "Reported by a \nsingle pipeline",
+                                         "Database-driven\n difference", "HMM vs. Alignment \ndifference"))))) %>% 
+  mutate(g = ifelse(is.na(detected_by_both) & (tool_a %in% c("fARGene","AMRFinderPlus") & tool_b %in% c("fARGene","AMRFinderPlus")),
+                    "Pipeline-driven\n difference",
+                    ifelse(is.na(detected_by_both), "HMM vs. Alignment \ndifference", g))) %>% 
+  #mutate(g = ifelse((tool_a %in% "fARGene" | tool_b %in% "fARGene") & g != "Overlap\n(Jaccard Index)", "Pipeline-driven\n difference", g)) %>% 
+  #mutate(g = ifelse((tool_a %in% "fARGene" | tool_b %in% "fARGene") & is.na(detected_by_both), "Pipeline-driven\n difference", g)) %>% 
   #filter(g != "Reported by both" ) %>% 
-  group_by(tool_a, tool_b, g) %>% 
+  group_by(tool_a, tool_b, cov, g) %>% 
   summarise(n = sum(n)) %>% 
   mutate(N = sum(n)) %>% 
   mutate(p = n / N)  %>% 
-  mutate(g = factor(g, levels = c("Overlap\n(Jaccard Index)", "Database-driven\n difference", "Pipeline-driven\n difference")))
+  mutate(g = factor(g, levels = c("Overlap\n(Jaccard Index)", "Database-driven\n difference", 
+                                  "Pipeline-driven\n difference","HMM vs. Alignment \ndifference")))
 
 decompose_difference_plot <- all_pairs_summary_2 %>%
+  filter(cov == "cov90") %>% 
   mutate(tool_a = factor(tools_labels[tool_a], levels = tools_labels_factor),
          tool_b = factor(tools_labels[tool_b], levels = rev(tools_labels_factor))) %>%
   ggplot(aes(x = 1, y = p, fill = g)) +
@@ -585,7 +809,7 @@ decompose_difference_plot <- all_pairs_summary_2 %>%
   facet_grid(tool_b ~ tool_a, switch = "both") +
   labs(fill = "") + 
   theme_void() +
-  scale_fill_manual(values = c("#e7298a","#e6ab02","#66a61e"), guide = guide_legend(nrow = 1)) +
+  scale_fill_manual(values = c("#d95f02","#1b9e77","#7570b3","#666666"), guide = guide_legend(nrow = 1)) +
   theme(
     strip.text = element_text(size = general_size),
     strip.text.y.left = element_text(angle = 0),
