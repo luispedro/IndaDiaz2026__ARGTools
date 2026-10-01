@@ -1646,18 +1646,18 @@ c("rank_aro", "ARO", "rank_highest_bit_80", "rank_80", "cluster_99")
 
 # abundance per aro
 
-# lst_abundance_diversity_aro <- bind_rows(
-#  bind_rows(lapply(lst, function(d) abundance_other_aggregation(args_abundances, d, "ARO"))))
+lst_abundance_diversity_aro <- bind_rows(
+  bind_rows(lapply(lst, function(d) abundance_other_aggregation(args_abundances, d, "ARO"))))
 
-# lst_abundance_diversity_aro <- lst_abundance_diversity_aro %>% 
-#   mutate(habitat = metadata$habitat[match(sample, metadata$sample_id)]) %>% 
-#   mutate(abundance = normed10m/10) %>% 
-#   rename(richness = distinct_unigenes_rarefied, richness_no_rarified = distinct_unigenes_raw) %>% 
-#   select(c(sample, gene, aggregation, tool, abundance, richness, richness_no_rarified, new_level))
-# 
-# saveRDS(lst_abundance_diversity_aro, file = "code_R_analysis/output_abundance_diversity_resistome/abundance_diversity_aro.rds", compress = T)
-# write.csv(lst_abundance_diversity_aro, file = gzfile("code_R_analysis/output_abundance_diversity_resistome/abundance_diversity_aro.csv.gz"), row.names = F)
-# rm(lst_abundance_diversity_aro)
+lst_abundance_diversity_aro <- lst_abundance_diversity_aro %>% 
+   mutate(habitat = metadata$habitat[match(sample, metadata$sample_id)]) %>% 
+   mutate(abundance = normed10m/10) %>% 
+   rename(richness = distinct_unigenes_rarefied, richness_no_rarified = distinct_unigenes_raw) %>% 
+   select(c(sample, gene, aggregation, tool, abundance, richness, richness_no_rarified, new_level))
+ 
+ saveRDS(lst_abundance_diversity_aro, file = "code_R_analysis/output_abundance_diversity_resistome/abundance_diversity_aro.rds", compress = T)
+write.csv(lst_abundance_diversity_aro, file = gzfile("code_R_analysis/output_abundance_diversity_resistome/abundance_diversity_aro.csv.gz"), row.names = F)
+rm(lst_abundance_diversity_aro)
 
 # abundance per rank_aro
 
@@ -1939,4 +1939,86 @@ df.pan2 <- bind_rows(df.pan.list)
 
 saveRDS(df.pan2, file = "code_R_analysis/output_abundance_diversity_resistome/pan_resistome.rds", compress = T)
 write.csv(df.pan2, file = gzfile("code_R_analysis/output_abundance_diversity_resistome/pan_resistome.csv.gz"), row.names = F)
+
+
+
+
+
+######
+#######
+######
+
+
+args_abundances_rarified <- args_abundances %>% filter(rarified_count > 0)
+
+tool_map <- bind_rows(lapply(lst, function(d) {
+  d %>% ungroup() %>% select(query, tool, new_level_centroid) %>% distinct()
+}))
+
+# One merged long table: every (sample, query, centroid, habitat) that some
+# tool called, tagged with which tool(s) called it and that tool's
+# new_level_centroid. This replaces the repeated per-iteration join.
+
+base_long <- bind_rows(lapply(unique(tool_map$tool), function(tl) {
+  tm <- tool_map %>% filter(tool == tl)
+  args_abundances_rarified %>%
+    inner_join(tm, by = "query", relationship = "many-to-one") %>%
+    select(sample, query, centroid, habitat, tool, new_level_centroid)
+}))
+
+
+samples_to_collect <- metadata %>%
+  group_by(habitat) %>%
+  distinct(sample_id) %>%
+  rename(sample = sample_id) %>%
+  mutate(n_unique = n()) %>%
+  ungroup() %>%
+  group_by(habitat)
+
+CUT <- 0.5
+seeds <- seq(2001, 2500, 1)
+mx_sample_size <- 100
+
+draw_subsample <- function(sed, mx_size) {
+  set.seed(sed)
+  samples_to_collect %>%
+    slice_sample(n = mx_size, replace = FALSE) %>%
+    ungroup()
+}
+
+core_iteration <- function(sed) {
+  drawn <- draw_subsample(sed, mx_sample_size)
+  N <- drawn %>% count(habitat, name = "N")
+  
+  base_long %>%
+    inner_join(drawn %>% select(sample, habitat), by = c("sample", "habitat")) %>%
+    left_join(N, by = "habitat") %>%
+    group_by(tool, habitat, centroid) %>%
+    mutate(n = n_distinct(sample), p = n / N) %>%
+    ungroup() %>%
+    filter(p >= CUT) %>%
+    distinct(query, centroid, new_level_centroid, habitat, tool, p) %>%
+    mutate(seed = sed)
+}
+
+
+pan_iteration <- function(sed) {
+  drawn <- draw_subsample(sed, mx_sample_size)
+  
+  base_long %>%
+    inner_join(drawn %>% select(sample, habitat), by = c("sample", "habitat")) %>%
+    distinct(query, centroid, new_level_centroid, habitat, tool) %>%
+    mutate(seed = sed)
+}
+
+core_list <- vector("list", length(seeds))
+pan_list  <- vector("list", length(seeds))
+for (j in seq_along(seeds)) {
+  print(j)
+  core_list[[j]] <- core_iteration(seeds[j])
+  pan_list[[j]]  <- pan_iteration(seeds[j])
+}
+
+core_resistome_detail <- bind_rows(core_list)   # (query, centroid, new_level_centroid, habitat, tool, p, seed)
+pan_resistome_detail  <- bind_rows(pan_list)
 

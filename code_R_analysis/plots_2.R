@@ -16,6 +16,7 @@ source("code_R_analysis/helper.R")
 
 # Sourced gene classes 
 
+
 general_size <- 6
 lab_fn <- function(x) {
   x <- gsub("-", "-\n", x)
@@ -85,6 +86,19 @@ tag_to_tool <- c(
 )
 
 
+tool_map <- c(
+  "abricate-argannot" = "ABRicate-ARGANNOT" ,
+  "abricate-card"      = "ABRicate-CARD",
+  "abricate-megares"   = "ABRicate-MEGARes",
+  "abricate-ncbi"      =  "ABRicate-NCBI",
+  "abricate-resfinder" = "ABRicate-ResFinder",
+  "amrfinderplus"      = "AMRFinderPlus",
+  "deeparg"            = "DeepARG",
+  "resfinder"          = "ResFinder",
+  "rgi-card"        = "RGI-DIAMOND"
+)
+
+
 # add the name of each tool to the color palet 
 names(pal_10_q) <- basic_tools
 
@@ -135,9 +149,50 @@ tools_db_factor <- c(" ", "  ", "   ", "    ",
 
 tools_texture <- c("ABRicate-CARD", "ABRicate-NCBI", "ABRicate-ResFinder")
 
+
+##
+
+
+################################################################################################
+
+# vector to encode the texture of the bars - 
+# striped for abricate with card, ncbi, and resfinder
+
+tools_texture_code <- rep("none", length(tools_labels))
+tools_texture_code[tools_levels %in% tools_texture] <- "stripe"
+
+# base format for the plots 
+
+theme1 <- theme_minimal() +
+  theme(
+    legend.position = "none",
+    text = element_text(size = general_size, color = "black"),
+    title = element_text(size = general_size + 2, face = "bold"),
+    axis.title = element_text(size = general_size , face = "bold"),
+    strip.text = element_text(size = general_size, angle = 0),
+    panel.background = element_blank(),
+    axis.text.x = element_text(size = general_size, angle = 90,
+                               vjust = 0.5, hjust = 1),
+    axis.text.y = element_text(size = general_size),
+    panel.border = element_rect(color =  "black"),
+    plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+    legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
+    legend.margin = margin(0, 0, 0, 0, unit = "pt"),
+    panel.spacing = unit(0, "pt"),
+    legend.text = element_text(size = general_size),
+    panel.grid.minor.y = element_blank(),
+    legend.spacing.y = unit(0, "cm"),
+    legend.spacing.x = unit(0.1, "cm"),
+    legend.key.height = unit(0.35, "cm"),
+    legend.key.width  = unit(0.35, "cm"),
+    legend.box.spacing = unit(0.1, "cm"))
+
+
+
 ################################################################################
 ################################################################################
 ## DATASETS 
+unigenes_per_habitat <-  read.delim("data/abundances/args_by_habitat.tsv")
 
 # gene classes 
 
@@ -217,6 +272,7 @@ abundance_class <- abundance %>%
 ## CORE RESISTOME 
 
 core <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/core_resistome.rds")
+core <- core %>% filter(tool %in% basic_tools)
 
 # convert MFS to efflux pump
 core <- core %>% mutate(gene_class_centroid = ifelse(new_level_centroid == "MFS efflux pump", "efflux pump", new_level_centroid))
@@ -241,6 +297,9 @@ sumcore <- sum_core_adjust(core, 450, 0.5) %>%
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
          tools_db = factor(tools_db[tool], levels = tools_db_factor))
 
+
+unigenes_basic <- unigenes %>% filter(tool %in% basic_tools)
+
 ## PAN RESISTOME
 
 pan <- readRDS(file = "code_R_analysis/output_abundance_diversity_resistome/pan_resistome.rds")
@@ -251,96 +310,10 @@ pan <- pan %>% mutate(gene_class = ifelse(gene_class == "MFS efflux pump", "effl
 ## database_clusters
 db_cluster <- read.delim("db_cluster/nested_with_coverage_out/nested_cluster_membership.tsv") 
 
-tool_map <- c(
-  "abricate-argannot" = "ABRicate-ARGANNOT" ,
-  "abricate-card"      = "ABRicate-CARD",
-  "abricate-megares"   = "ABRicate-MEGARes",
-  "abricate-ncbi"      =  "ABRicate-NCBI",
-  "abricate-resfinder" = "ABRicate-ResFinder",
-  "amrfinderplus"      = "AMRFinderPlus",
-  "deeparg"            = "DeepARG",
-  "resfinder"          = "ResFinder",
-  "rgi-card"        = "RGI-DIAMOND"
-)
 
 db_cluster <- db_cluster %>% mutate(tool = sapply(strsplit(protein_id, split = "@@@"), function(x) x[1]),
                                     gene = sapply(strsplit(protein_id, split = "@@@"), function(x) x[2])) %>% 
-  mutate(tool = factor(tool_map[tool], levels = basic_tools))
-
-JI_db_99 <- db_cluster %>% 
-  select(tool, cluster_99) %>%
-  mutate(tool = as.character(tool)) %>%
-  distinct() %>%
-  inner_join(., ., by = "cluster_99", relationship = "many-to-many") %>%
-  filter(tool.x < tool.y) %>%
-  count(tool.x, tool.y, name = "intersection") %>%
-  left_join(
-    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
-    by = c("tool.x" = "tool")
-  ) %>%
-  rename(size_x = size) %>%
-  left_join(
-    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
-    by = c("tool.y" = "tool")
-  ) %>%
-  rename(size_y = size) %>%
-  mutate(
-    union   = size_x + size_y - intersection,
-    jaccard = intersection / union
-  ) %>%
-  select(tool1 = tool.x, tool2 = tool.y, jaccard) %>%
-  arrange(desc(jaccard))
-
-
-JI_db_99_60 <- db_cluster %>% 
-  select(tool, cluster_99_cov60) %>%
-  mutate(tool = as.character(tool)) %>%
-  distinct() %>%
-  inner_join(., ., by = "cluster_99_cov60", relationship = "many-to-many") %>%
-  filter(tool.x < tool.y) %>%
-  count(tool.x, tool.y, name = "intersection") %>%
-  left_join(
-    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
-    by = c("tool.x" = "tool")
-  ) %>%
-  rename(size_x = size) %>%
-  left_join(
-    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
-    by = c("tool.y" = "tool")
-  ) %>%
-  rename(size_y = size) %>%
-  mutate(
-    union   = size_x + size_y - intersection,
-    jaccard = intersection / union
-  ) %>%
-  select(tool1 = tool.x, tool2 = tool.y, jaccard) %>%
-  arrange(desc(jaccard))
-
-
-JI_db_99_80 <- db_cluster %>% 
-  select(tool, cluster_99_cov80) %>%
-  mutate(tool = as.character(tool)) %>%
-  distinct() %>%
-  inner_join(., ., by = "cluster_99_cov80", relationship = "many-to-many") %>%
-  filter(tool.x < tool.y) %>%
-  count(tool.x, tool.y, name = "intersection") %>%
-  left_join(
-    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
-    by = c("tool.x" = "tool")
-  ) %>%
-  rename(size_x = size) %>%
-  left_join(
-    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
-    by = c("tool.y" = "tool")
-  ) %>%
-  rename(size_y = size) %>%
-  mutate(
-    union   = size_x + size_y - intersection,
-    jaccard = intersection / union
-  ) %>%
-  select(tool1 = tool.x, tool2 = tool.y, jaccard) %>%
-  arrange(desc(jaccard))
-
+  mutate(tool = factor(tool_map[tool], levels = basic_tools)) 
 
 
 JI_db_99_90 <- db_cluster %>% 
@@ -351,12 +324,12 @@ JI_db_99_90 <- db_cluster %>%
   filter(tool.x < tool.y) %>%
   count(tool.x, tool.y, name = "intersection") %>%
   left_join(
-    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
+    db_cluster %>% select(tool, cluster_99_cov90) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
     by = c("tool.x" = "tool")
   ) %>%
   rename(size_x = size) %>%
   left_join(
-    db_cluster %>% select(tool, cluster_99) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
+    db_cluster %>% select(tool, cluster_99_cov90) %>% mutate(tool = as.character(tool)) %>% distinct() %>% count(tool, name = "size"),
     by = c("tool.y" = "tool")
   ) %>%
   rename(size_y = size) %>%
@@ -426,32 +399,13 @@ recall_fnr <- create_class_overlaps(unigenes %>% filter(tool %in% basic_tools))
 
 JI_all <- return_overlap_tools(unigenes %>% filter(tool %in% basic_tools))
 
-JI_all_db_99 <- return_overlap_tools(unigenes %>% 
-                                    filter(tool %in% basic_tools) %>%
-                                    filter(!tool %in% "fARGene") %>% 
-                                    mutate(query = cluster_99))
-
-JI_all_db_99_60 <- return_overlap_tools(unigenes %>% 
-                                       filter(tool %in% basic_tools) %>%
-                                       filter(!tool %in% "fARGene") %>% 
-                                       mutate(query = cluster_99_cov60))
-
-JI_all_db_99_80 <- return_overlap_tools(unigenes %>% 
-                                          filter(tool %in% basic_tools) %>%
-                                          filter(!tool %in% "fARGene") %>% 
-                                          mutate(query = cluster_99_cov80))
-
-JI_all_db_99_90 <- return_overlap_tools(unigenes %>% 
-                                          filter(tool %in% basic_tools) %>%
-                                          filter(!tool %in% "fARGene") %>% 
-                                          mutate(query = cluster_99_cov90))
-
+#JI_db_99_90
 top_abundance_JI <- c("class A beta-lactamase",
                       "class B beta-lactamase",
                       "class C beta-lactamase",
                       "class D beta-lactamase",
-                      "erm", "mph", "aac", "aph",
-                      "tet RPG", "tet enzyme")
+                      "erm", "mph", "aac", "aph", "ant",
+                      "tet RPG", "tet enzyme", "qnr")
 
 JI_all_some_gene_classes <- return_overlap_tools(unigenes %>% 
                                             filter(tool %in% basic_tools,
@@ -489,68 +443,45 @@ JI_all_rank_IV_aro <- return_overlap_tools(unigenes %>%
   mutate(rank = "ARO: risk IV") %>% 
   select(tool_ref, tool_comp, rank, jaccard)
 
-JI_all_rank_I_blast <- return_overlap_tools(unigenes %>% 
-                                            filter(tool %in% basic_tools,
-                                                   rank_highest_bit_80 == "I")) %>% 
-  filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>% 
-  mutate(rank = "BLAST: risk I") %>% 
-  select(tool_ref, tool_comp, rank, jaccard)
-
-JI_all_rank_II_blast <- return_overlap_tools(unigenes %>% 
-                                             filter(tool %in% basic_tools,
-                                                    rank_highest_bit_80 == "II")) %>% 
-  filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>% 
-  mutate(rank = "BLAST: risk II") %>% 
-  select(tool_ref, tool_comp, rank, jaccard)
-
-JI_all_rank_III_blast <- return_overlap_tools(unigenes %>% 
-                                              filter(tool %in% basic_tools,
-                                                     rank_highest_bit_80 == "III")) %>% 
-  filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>% 
-  mutate(rank = "BLAST: risk III") %>% 
-  select(tool_ref, tool_comp, rank, jaccard)
-
-JI_all_rank_IV_blast <- return_overlap_tools(unigenes %>% 
-                                             filter(tool %in% basic_tools,
-                                                    rank_highest_bit_80 == "IV")) %>% 
-  filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>% 
-  mutate(rank = "BLAST: risk IV") %>% 
-  select(tool_ref, tool_comp, rank, jaccard)
-
-expected_jaccard_df <- compute_expected_jaccard(unigenes %>% filter(tool %in% basic_tools), 
-                                                db_cluster %>% filter(tool %in% basic_tools)) %>% 
-  rename(jaccard = expected_jaccard, tool_ref = tool1, tool_comp = tool2) %>% 
-  filter(tool_ref != tool_comp, tool_ref < tool_comp) %>%   
-  mutate(rank = "expected")
+# JI_all_rank_I_blast <- return_overlap_tools(unigenes %>% 
+#                                             filter(tool %in% basic_tools,
+#                                                    rank_highest_bit_80 == "I")) %>% 
+#   filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>% 
+#   mutate(rank = "BLAST: risk I") %>% 
+#   select(tool_ref, tool_comp, rank, jaccard)
+# 
+# JI_all_rank_II_blast <- return_overlap_tools(unigenes %>% 
+#                                              filter(tool %in% basic_tools,
+#                                                     rank_highest_bit_80 == "II")) %>% 
+#   filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>% 
+#   mutate(rank = "BLAST: risk II") %>% 
+#   select(tool_ref, tool_comp, rank, jaccard)
+# 
+# JI_all_rank_III_blast <- return_overlap_tools(unigenes %>% 
+#                                               filter(tool %in% basic_tools,
+#                                                      rank_highest_bit_80 == "III")) %>% 
+#   filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>% 
+#   mutate(rank = "BLAST: risk III") %>% 
+#   select(tool_ref, tool_comp, rank, jaccard)
+# 
+# JI_all_rank_IV_blast <- return_overlap_tools(unigenes %>% 
+#                                              filter(tool %in% basic_tools,
+#                                                     rank_highest_bit_80 == "IV")) %>% 
+#   filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>% 
+#   mutate(rank = "BLAST: risk IV") %>% 
+#   select(tool_ref, tool_comp, rank, jaccard)
+# 
+# expected_jaccard_df <- compute_expected_jaccard(unigenes %>% filter(tool %in% basic_tools), 
+#                                                 db_cluster %>% filter(tool %in% basic_tools)) %>% 
+#   rename(jaccard = expected_jaccard, tool_ref = tool1, tool_comp = tool2) %>% 
+#   filter(tool_ref != tool_comp, tool_ref < tool_comp) %>%   
+#   mutate(rank = "expected")
 
 all_jaccard <- JI_all %>% mutate(rank = "reported ARGs") %>% 
   filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>%
   select(tool_ref, tool_comp, rank, jaccard) %>% 
-  #bind_rows(
-  #  JI_all_db %>% mutate(rank = "reported ref gene") %>% 
-  #    filter(tool_ref != tool_comp, as.numeric(tool_ref) < as.numeric(tool_comp)) %>%
-  #    select(tool_ref, tool_comp, rank, jaccard)) %>% 
-  #bind_rows(
-  #  JI_db %>% 
-  #    rename(tool_ref = tool1, tool_comp = tool2) %>% 
-  #    filter(tool_ref != tool_comp, tool_ref < tool_comp) %>%   
-  #    mutate(rank = "expected")
-  #) %>% 
-  bind_rows(JI_all_rank_I_blast, JI_all_rank_II_blast,JI_all_rank_III_blast,JI_all_rank_IV_blast) %>% 
   bind_rows(JI_all_rank_I_aro, JI_all_rank_II_aro, JI_all_rank_III_aro, JI_all_rank_IV_aro) %>% 
   bind_rows(JI_all_some_gene_classes) %>% 
-  bind_rows(JI_db_99 %>% filter(tool1 %in% basic_tools, tool2 %in% basic_tools) %>% 
-              rename(tool_ref = tool1, tool_comp = tool2) %>% 
-              filter(tool_ref<tool_comp) %>% 
-              mutate(rank = "DB - id90"))%>% 
-  bind_rows(JI_db_99_60 %>% filter(tool1 %in% basic_tools, tool2 %in% basic_tools) %>% 
-              rename(tool_ref = tool1, tool_comp = tool2) %>% 
-              filter(tool_ref<tool_comp) %>% 
-              mutate(rank = "DB - id90 - cov60")) %>% 
-  bind_rows(JI_db_99_80 %>% filter(tool1 %in% basic_tools, tool2 %in% basic_tools) %>% 
-              rename(tool_ref = tool1, tool_comp = tool2) %>% 
-              filter(tool_ref<tool_comp) %>% 
-              mutate(rank = "DB - id90 - cov80")) %>% 
   bind_rows(JI_db_99_90 %>% filter(tool1 %in% basic_tools, tool2 %in% basic_tools) %>% 
               rename(tool_ref = tool1, tool_comp = tool2) %>% 
               filter(tool_ref<tool_comp) %>% 
@@ -563,45 +494,44 @@ all_jaccard %>%
   group_by(rank) %>%
   summarise(n = n(), mean = mean(jaccard), median = median(jaccard))
 
-all_jaccard <- all_jaccard %>%
+
+all_jaccard2 <- all_jaccard %>%
+  mutate(rank = ifelse(rank == "DB - id90 - cov90", "Reference database",
+                ifelse(rank == "reported ARGs", "Reported ARGs",
+                       ifelse(rank == "ARO: risk I", "Risk I",
+                              ifelse(rank == "ARO: risk II", "Risk II",
+                                     ifelse(rank == "ARO: risk III", "Risk III",
+                                            ifelse(rank == "ARO: risk IV", "Risk IV","Subset gene classes"))))))) %>%
   mutate(rank = factor(rank, levels = c(
-    "DB - id90", "DB - id90 - cov60", "DB - id90 - cov80", "DB - id90 - cov90",
-    "reported ARGs", "12 gene classes",
-    "BLAST: risk I", "BLAST: risk II", "BLAST: risk III", "BLAST: risk IV",
-    "ARO: risk I", "ARO: risk II", "ARO: risk III", "ARO: risk IV"
-  ))) %>%
+    "Reference database",
+    "Reported ARGs", "Subset gene classes",
+    "Risk I", "Risk II", "Risk III", "Risk IV"))) %>%
   group_by(rank) %>%
   mutate(
     rank_label = sprintf(
       "%s (mean = %s, median = %s)",
       rank,
       percent(mean(jaccard), accuracy = 0.1),
-      percent(median(jaccard), accuracy = 0.1)
-    )
-  ) %>%
-  ungroup() %>%
-  mutate(
-    rank_label = factor(rank_label, levels = unique(rank_label[order(rank)]))
-  )
+      percent(median(jaccard), accuracy = 0.1))) %>%
+  ungroup() 
 
-
-all_jaccard <- all_jaccard %>%
-  mutate(
-    a = as.character(tool_ref),
-    b = as.character(tool_comp)
-  ) %>%
-  mutate(
-    tool_ref  = pmin(a, b),
-    tool_comp = pmax(a, b)
-  ) %>%
-  select(-a, -b) %>%
-  distinct(tool_ref, tool_comp, rank, rank_label, .keep_all = TRUE)  # or summarise(jaccard = mean(jaccard)) if the metric can differ by direction
+all_jaccard2 <- all_jaccard2 %>% 
+  bind_rows(all_jaccard2 %>% rename(tool_comp = tool_ref, tool_ref = tool_comp)) %>% 
+  mutate(rank_label = factor(rank_label, levels = unique(rank_label[order(rank)]))) %>%
+  mutate(tool_ref = factor(tools_labels[tool_ref], levels = tools_labels_factor[1:10]),
+         tool_comp = factor(tools_labels[tool_comp], levels = tools_labels_factor[1:10])) %>%
+  filter(as.numeric(tool_ref) > as.numeric(tool_comp)) #%>%
+  #distinct(tool_ref, tool_comp, rank, rank_label, .keep_all = TRUE) 
 
   
-all_jaccard_plot <- ggplot(all_jaccard, aes(x = tool_comp, y = tool_ref, fill = jaccard)) +
+all_jaccard_plot <- ggplot(all_jaccard2, aes(x = tool_comp, y = tool_ref, fill = jaccard)) +
   geom_tile(color = "white") +
-  geom_text(aes(label = percent(jaccard, accuracy = 1)),
-            size = 2, color = "black") +
+  geom_text(
+    data = all_jaccard2 %>% filter(jaccard >= 0.0),  # only these get labels
+    aes(label = scales::percent(jaccard, accuracy = 1),
+        color = jaccard >= 0.65), 
+    size = general_size / .pt, show.legend = F) +
+  scale_color_manual(values = c( "black", "white")) +
   facet_wrap(~ rank_label) +
   scale_fill_gradientn(
     colors = brewer.pal(9, "YlOrBr"),
@@ -609,140 +539,29 @@ all_jaccard_plot <- ggplot(all_jaccard, aes(x = tool_comp, y = tool_ref, fill = 
     breaks = c(0, 0.2, 0.4, 0.6, 0.8),
     limits = c(0, NA)
   ) +
-  theme_minimal() +
+  theme1 +
   theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
+    #axis.text.x = element_text(angle = 45, hjust = 1),
     panel.grid  = element_blank()
   ) +
-  labs(x = NULL, y = NULL, fill = "Jaccard\nindex") + theme1
+  labs(x = NULL, y = NULL, fill = "Jaccard\nindex") 
 
-# the expected jaccard index is bounded below, it could be higher if:
-# in the single pipeline column for x tool (not for both): 
-# a unigene would pass the threshold to another reference gene present in both pipelines
-# the pipelines just report the highest hit
 
-delta_jaccard <-delta_jaccard <- all_jaccard %>%
+delta_jaccard <- all_jaccard2 %>%
   group_by(tool_ref, tool_comp) %>%
   mutate(
-    delta_vs_db     = jaccard - jaccard[match("reported ARGs", rank)],
-    jaccard_reported = jaccard[match("reported ARGs", rank)]
+    jaccard_reported = jaccard[match("Reported ARGs", rank)]
   ) %>%
-  ungroup() #%>%
-  # mutate(
-  #   rank = as.character(rank),
-  #   rank = case_when(
-  #     rank == "reported ARGs"  ~ "All reported ARGs",
-  #     rank == "DB"              ~ "Reference database",
-  #     rank == "ARO: risk I"     ~ "ARGs risk I (ARO)",
-  #     rank == "ARO: risk II"    ~ "ARGs risk II (ARO)",
-  #     rank == "ARO: risk III"   ~ "ARGs risk III (ARO)",
-  #     rank == "ARO: risk IV"    ~ "ARGs risk IV (ARO)",
-  #     rank == "BLAST: risk I"   ~ "ARGs risk I (BLAST)",
-  #     rank == "BLAST: risk II"  ~ "ARGs risk II (BLAST)",
-  #     rank == "BLAST: risk III" ~ "ARGs risk III (BLAST)",
-  #     rank == "BLAST: risk IV"  ~ "ARGs risk IV (BLAST)",
-  #     rank == "12 gene classes" ~ "Gene classes (12)",
-  #     TRUE ~ NA_character_
-  #   ),
-  #   rank = factor(rank, levels = c(
-  #     "Gene classes (12)",
-  #     "ARGs risk IV (BLAST)", "ARGs risk III (BLAST)", "ARGs risk II (BLAST)", "ARGs risk I (BLAST)",
-  #     "ARGs risk IV (ARO)",   "ARGs risk III (ARO)",   "ARGs risk II (ARO)",   "ARGs risk I (ARO)",
-  #     "Reference database",
-  #     "All reported ARGs"
-  #   ))
-  # )  
-
-delta_jaccard %>% 
-  ggplot(aes (x = jaccard, y = rank, fill = rank)) +
-  geom_boxplot() + 
-  xlab("Pairwise Jaccard index distribution")+
-  ylab("Grouping") + 
-  scale_fill_manual(values = c(rep("#e6ab02",4),"#e7298a","#7570b3",rep("#66a61e",4),rep("#666666",4)), guide = guide_legend(nrow = 1)) +
-  theme1
+  ungroup() 
 
 
-meg_argannot <- unigenes %>% filter(tool %in% c("ABRicate-ARGANNOT","ABRicate-MEGARes")) %>% 
-  group_by(query) %>% mutate(n= n_distinct(tool)) %>% filter(n==1) %>% 
-  ungroup() %>% 
-  group_by(cluster_99_cov90) %>% 
-  mutate(inother = ifelse(tool == "ABRicate-MEGARes", 
-                          cluster_99 %in% db_cluster$cluster_99[db_cluster$tool=="ABRicate-ARGANNOT"], 
-                          cluster_99 %in% db_cluster$cluster_99[db_cluster$tool=="ABRicate-MEGARes"])) 
-sum(meg_argannot$inother)
-
-lst$abricate.megares.norm %>% 
-  filter(query %in% meg_argannot$query[meg_argannot$tool=="ABRicate-MEGARes" & meg_argannot$inother]) %>% 
-  pull(cluster_99)  %in% lst$abricate.argannot.norm$cluster_99
-lst$abricate.argannot.norm %>% 
-  filter(query %in% meg_argannot$query[meg_argannot$tool!="ABRicate-MEGARes"]) %>% 
-  pull(cluster_99) %in% db_cluster$cluster_99[db_cluster$tool=="ABRicate-MEGARes"]
-
-#ResFinder_discrepancy <- plot_db_discrepancy(unigenes, db_cluster, theme1, JI_db, JI_all_db, JI_all,
-#                      tool_a = "ResFinder", tool_b = "ABRicate-ResFinder",
-#                      pipeline_a_label = "ResFinder", pipeline_b_label = "ABRicate-ResFinder",
-#                      pattern_a = "none", pattern_b = "stripe")
+bind_rows(delta_jaccard,
+          delta_jaccard %>% 
+            rename(tool_ref = tool_comp, tool_comp = tool_ref))
 
 
 
-all_pairs_summary_99 <- purrr::map_dfr(
-  combn(as.character(basic_tools), 2, simplify = FALSE),
-  function(p) {
-    get_unigene_classification(unigenes, db_cluster = db_cluster,
-                               tool_a = p[1], tool_b = p[2],
-                               pipeline_a_label = p[1], 
-                               pipeline_b_label = p[2],
-                               both_label = "Both",
-                               cluster_level = "cluster_99",
-                               lst) %>%
-      ungroup() %>%
-      group_by(query) %>%
-      slice_head(n = 1) %>%
-      ungroup() %>%
-      group_by(tool_a, tool_b, detected_by_both) %>%
-      summarise(n = n(), .groups = "drop")
-  }
-)
-
-all_pairs_summary_99_60 <- purrr::map_dfr(
-  combn(as.character(basic_tools), 2, simplify = FALSE),
-  function(p) {
-    get_unigene_classification(unigenes, db_cluster = db_cluster,
-                               tool_a = p[1], tool_b = p[2],
-                               pipeline_a_label = p[1], 
-                               pipeline_b_label = p[2],
-                               both_label = "Both",
-                               cluster_level = "cluster_99_cov60",
-                               lst) %>%
-      ungroup() %>%
-      group_by(query) %>%
-      slice_head(n = 1) %>%
-      ungroup() %>%
-      group_by(tool_a, tool_b, detected_by_both) %>%
-      summarise(n = n(), .groups = "drop")
-  }
-)
-
-all_pairs_summary_99_80 <- purrr::map_dfr(
-  combn(as.character(basic_tools), 2, simplify = FALSE),
-  function(p) {
-    get_unigene_classification(unigenes, db_cluster = db_cluster,
-                               tool_a = p[1], tool_b = p[2],
-                               pipeline_a_label = p[1], 
-                               pipeline_b_label = p[2],
-                               both_label = "Both",
-                               cluster_level = "cluster_99_cov80",
-                               lst) %>%
-      ungroup() %>%
-      group_by(query) %>%
-      slice_head(n = 1) %>%
-      ungroup() %>%
-      group_by(tool_a, tool_b, detected_by_both) %>%
-      summarise(n = n(), .groups = "drop")
-  }
-)
-
-all_pairs_summary_99_90 <- purrr::map_dfr(
+all_pairs_summary <- purrr::map_dfr(
   combn(as.character(basic_tools), 2, simplify = FALSE),
   function(p) {
     get_unigene_classification(unigenes, db_cluster = db_cluster,
@@ -761,21 +580,9 @@ all_pairs_summary_99_90 <- purrr::map_dfr(
   }
 )
 
- all_pairs_summary <- bind_rows(
-  all_pairs_summary_99 %>% 
-    mutate(cov = "None"),
-  all_pairs_summary_99_60 %>% 
-    mutate(cov = "cov60"),
-  all_pairs_summary_99_80 %>% 
-    mutate(cov = "cov80"),
-  all_pairs_summary_99_90 %>% 
-    mutate(cov = "cov90"))
 
-#all_pairs_summary <- all_pairs_summary_99_90 %>% 
-#  mutate(cov = "cov90")
 
 all_pairs_summary_2 <- all_pairs_summary %>%  
-  #filter(!tool_a %in% "fARGene", !tool_b %in% "fARGene") %>% 
   mutate(g = ifelse(detected_by_both %in% c("Reported by both pipelines \ndifferent reference gene",
                                             "Reported by both pipelines \nsame reference gene"), 
                     "Overlap\n(Jaccard Index)",
@@ -789,60 +596,83 @@ all_pairs_summary_2 <- all_pairs_summary %>%
   mutate(g = ifelse(is.na(detected_by_both) & (tool_a %in% c("fARGene","AMRFinderPlus") & tool_b %in% c("fARGene","AMRFinderPlus")),
                     "Pipeline-driven\n difference",
                     ifelse(is.na(detected_by_both), "HMM vs. Alignment \ndifference", g))) %>% 
-  #mutate(g = ifelse((tool_a %in% "fARGene" | tool_b %in% "fARGene") & g != "Overlap\n(Jaccard Index)", "Pipeline-driven\n difference", g)) %>% 
-  #mutate(g = ifelse((tool_a %in% "fARGene" | tool_b %in% "fARGene") & is.na(detected_by_both), "Pipeline-driven\n difference", g)) %>% 
-  #filter(g != "Reported by both" ) %>% 
-  group_by(tool_a, tool_b, cov, g) %>% 
+  group_by(tool_a, tool_b, g) %>% 
   summarise(n = sum(n)) %>% 
   mutate(N = sum(n)) %>% 
   mutate(p = n / N)  %>% 
   mutate(g = factor(g, levels = c("Overlap\n(Jaccard Index)", "Database-driven\n difference", 
                                   "Pipeline-driven\n difference","HMM vs. Alignment \ndifference")))
 
-decompose_difference_plot <- all_pairs_summary_2 %>%
-  filter(cov == "cov90") %>% 
+all_pairs_summary_2_2 <- all_pairs_summary_2 %>% 
+  ungroup() %>%
+  mutate(g = as.character(g)) %>% 
+  mutate(g = ifelse(g == "HMM vs. Alignment \ndifference", "Pipeline-driven\n difference", g)) %>%
+  mutate(g = factor(g, levels = c("Overlap\n(Jaccard Index)", "Database-driven\n difference", 
+                                  "Pipeline-driven\n difference"))) %>%
+  group_by(tool_a, tool_b, g) %>% 
+  summarise(n = sum(n)) %>% 
+  mutate(N = sum(n)) %>% 
+  mutate(p = n / N) 
+  
+non_overlap <- all_pairs_summary_2_2 %>% filter(g != "Overlap\n(Jaccard Index)") %>% 
+  ungroup() %>% 
+  group_by(tool_a, tool_b) %>% 
+  mutate(p = n/sum(n))
+  
+non_overlap %>% 
+  filter(grepl("ABR",tool_a) | grepl("Res",tool_a), grepl("ABR",tool_b) | grepl("Res",tool_b)) %>% 
+  ungroup() %>% 
+  group_by(g) %>% 
+  summarise(mn = mean(p), sd = sd(p))
+
+non_overlap %>% 
+  filter((grepl("RGI",tool_a) & grepl("Dee",tool_b)) | (grepl("RGI",tool_b) & grepl("Dee",tool_a))) %>% 
+  ungroup() %>% 
+  group_by(g)
+
+non_overlap %>% 
+  filter((grepl("RGI",tool_a) & grepl("CAR",tool_b)) | (grepl("RGI",tool_b) & grepl("CAR",tool_a))) %>% 
+  ungroup() %>% 
+  group_by(g)
+
+non_overlap %>%  
+  filter(grepl("RGI",tool_a) | grepl("RGI",tool_b)) %>% 
+  filter(!grepl("fARG",tool_a), !grepl("fARG",tool_b), !grepl("AMR",tool_a), !grepl("AMR",tool_b)) %>% 
+  group_by(g) %>% summarise(mn = mean(p), sd = sd(p))
+
+non_overlap %>%  
+  filter(grepl("ResF",tool_a) & grepl("ResF",tool_b), grepl("ResF",tool_b) & grepl("ResF",tool_a)) %>% 
+  group_by(g) %>% summarise(mn = mean(p), sd = sd(p))
+
+
+decompose_difference_plot <- all_pairs_summary_2_2 %>%
+  bind_rows(all_pairs_summary_2_2 %>% rename(tool_a = tool_b, tool_b = tool_a)) %>% 
   mutate(tool_a = factor(tools_labels[tool_a], levels = tools_labels_factor),
-         tool_b = factor(tools_labels[tool_b], levels = rev(tools_labels_factor))) %>%
-  ggplot(aes(x = 1, y = p, fill = g)) +
-  geom_col(width = 1, color = "black", linewidth = 0.2) +
-  coord_polar(theta = "y") +
-  facet_grid(tool_b ~ tool_a, switch = "both") +
-  labs(fill = "") + 
-  theme_void() +
-  scale_fill_manual(values = c("#d95f02","#1b9e77","#7570b3","#666666"), guide = guide_legend(nrow = 1)) +
+         tool_b = factor(tools_labels[tool_b], levels = tools_labels_factor)) %>%
+  filter(as.numeric(tool_a) < as.numeric(tool_b)) %>%
+  ggplot(aes(y = tool_b, x = p, fill = g)) +
+  geom_col(width = 0.9, color = "black", linewidth = 0.2) +
+  facet_grid(. ~ tool_a, switch = "both") +
+  labs(fill = "") +
+  xlab("") +
+  ylab("") +
+  scale_fill_manual(values = c("#e6ab02","#a6761d","#d95f02","#666666"), guide = guide_legend(nrow = 1)) +
   theme(
+    axis.text.x  = element_blank(),
+    axis.text.y  = element_text(size = general_size),
+    axis.ticks = element_blank(),
     strip.text = element_text(size = general_size),
+    strip.background.x = element_blank(),
     strip.text.y.left = element_text(angle = 0),
     strip.text.x.bottom = element_text(angle = 90),
     legend.position = "bottom",
-    legend.text = element_text(size = general_size)
+    plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+    legend.text = element_text(size = general_size),
+    title = element_text(size = general_size + 2, face = "bold"),
+    panel.background = element_blank()
   )
 
-# all_pairs_summary_2 <- all_pairs_summary %>%  
-#   filter(!tool_a %in% "fARGene", !tool_b %in% "fARGene") %>% 
-#   mutate(g = ifelse(detected_by_both %in% c("Reported by both pipelines \ndifferent reference gene",
-#                                             "Reported by both pipelines \nsame reference gene"), "Both",
-#                     detected_by_both)) %>% 
-#   group_by(tool_a, tool_b) %>% 
-#   mutate(N = sum(n)) %>% 
-#   mutate(p = n / N) %>% 
-#   group_by(detected_by_both) %>% 
-#   group_by(tool_a, tool_b) %>% 
-#   pivot_longer(cols = c(tool_a, tool_b), names_to = "role", values_to = "tool") %>%
-#   group_by(tool, detected_by_both) %>%
-#   summarise(mean_p = mean(p), .groups = "drop")
-  
 
-#
-
-
-#plot_rank_distribution(unigenes, db_cluster, theme1,
-#                       tool_a = "RGI-DIAMOND", tool_b = "ABRicate-CARD",
-#                       pipeline_a_label = "RGI", pipeline_b_label = "ABRicate-CARD",
-#                       pattern_a = "none", pattern_b = "stripe")
-
-# sort the gene classes by abundance and richness to decide which classes to
-# show in sup_abundance plots
 
 levels_abundance_div <- abundance_class %>% 
   group_by(habitat, tool, gene) %>% 
@@ -880,39 +710,6 @@ df_abundance_class_human <- abundance_class %>%
          tools_db = factor(tools_db[tool], levels = tools_db[!duplicated(tools_db)]))
 
 
-################################################################################################
-
-# vector to encode the texture of the bars - 
-# striped for abricate with card, ncbi, and resfinder
-
-tools_texture_code <- rep("none", length(tools_labels))
-tools_texture_code[tools_levels %in% tools_texture] <- "stripe"
-
-# base format for the plots 
-
-theme1 <- theme_minimal() +
-  theme(
-    legend.position = "none",
-    text = element_text(size = general_size, color = "black"),
-    title = element_text(size = general_size + 2, face = "bold"),
-    axis.title = element_text(size = general_size , face = "bold"),
-    strip.text = element_text(size = general_size, angle = 0),
-    panel.background = element_blank(),
-    axis.text.x = element_text(size = general_size, angle = 90,
-                               vjust = 0.5, hjust = 1),
-    axis.text.y = element_text(size = general_size),
-    panel.border = element_rect(color =  "black"),
-    plot.margin = margin(0, 0, 0, 0, unit = "pt"),
-    legend.box.margin = margin(0, 0, 0, 0, unit = "pt"),
-    legend.margin = margin(0, 0, 0, 0, unit = "pt"),
-    panel.spacing = unit(0, "pt"),
-    legend.text = element_text(size = general_size),
-    panel.grid.minor.y = element_blank(),
-    legend.spacing.y = unit(0, "cm"),
-    legend.spacing.x = unit(0.1, "cm"),
-    legend.key.height = unit(0.35, "cm"),
-    legend.key.width  = unit(0.35, "cm"),
-    legend.box.spacing = unit(0.1, "cm"))
 
 
 # plot the number of unigenes considered ARG by tool
@@ -941,6 +738,7 @@ p2a <- unigenes %>%
   theme(panel.border = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
+        plot.margin = margin(0, 0, 0, 0, unit = "pt"),
         strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5))
 
 # Create the ECDF data for the plot, merging ABRicate and ResFinder, 
@@ -969,7 +767,7 @@ id_plot_data %>% group_by(tool_2) %>% summarise(n = n())
 
 id_plot <- id_plot_data %>% 
   mutate(tool_3 = factor(tool_3, levels = c("DeepARG\n(n = 100,075)","RGI\n(n = 65,937)",
-                                            "ABRicate/\nResFinder\n(n = 37,772)", "AMRFinder-\nPlus (aa)\n(n = 3,141)"))) %>% 
+                                            "ABRicate/\nResFinder\n(n = 39,170)", "AMRFinder-\nPlus (aa)\n(n = 3,141)"))) %>% 
   mutate(data_number = factor(data_type, levels = c( "nucleotide", "amino acid"))) %>% 
   ggplot(aes(x = id , color = tool_3, fill = tool_3)) +
   stat_ecdf(geom = "step", linewidth = 1) + 
@@ -983,7 +781,8 @@ id_plot <- id_plot_data %>%
   scale_x_continuous(limits = c(0,100), expand = c(0, 0.5)) + 
   theme_minimal() + 
   theme1 +
-  theme(legend.position = "bottom", panel.border = element_blank())
+  theme(legend.position = "bottom", panel.border = element_blank(),
+        plot.margin = margin(0, 0, 0, 0, unit = "pt"))
 
 
 # prepare the data for the proportion of gene class in each tool
@@ -995,7 +794,7 @@ df_plot <- unigenes %>%
   mutate(p = n / sum(n)) %>% 
   ungroup() %>% 
   group_by(gene_class) %>%
-  filter(max(p, na.rm = TRUE) >= 0.03) %>%  
+  filter(max(p, na.rm = TRUE) >= 0.04) %>%  
   ungroup() %>%
   # change the name of gene classes to fit in the plot
   mutate(gene_class = gsub(" beta-lactamase","", gene_class)) %>%
@@ -1004,6 +803,9 @@ df_plot <- unigenes %>%
   mutate(gene_class = gsub("efflux pump","efflux", gene_class)) %>%
   mutate(gene_class = gsub("beta-lactam modulation resistance","beta-lactam\nmod.", gene_class)) %>%
   mutate(gene_class = gsub("target-modifying enzyme","target-modif.\nenzyme", gene_class)) %>%
+  mutate(gene_class = gsub("RIF-inact. enz.", "RIF-inact.\nenz.",gene_class)) %>%
+  mutate(gene_class = gsub("self-resistance", "self-\nresistance",gene_class)) %>%
+  mutate(gene_class = gsub("cell wall charge","cell wall\ncharge", gene_class)) %>%
   mutate(gene_class = gsub("self-resistance","self-resistance", gene_class)) 
 
 # plot the heatmap of the proportion of each gene class by tool
@@ -1025,7 +827,7 @@ df_plot1 <-  df_plot %>%
     parse(text = out)
   }) + 
   geom_text(
-    data = df_plot %>% filter(tool %in% basic_tools, p >= 0.03),  # only these get labels
+    data = df_plot %>% filter(tool %in% basic_tools, p >= 0.04),  # only these get labels
     aes(label = scales::percent(p, accuracy = 1),
         color = p >= 0.40), 
     size = general_size / .pt, show.legend = F) +
@@ -1036,79 +838,246 @@ df_plot1 <-  df_plot %>%
   theme1 +
   theme(legend.position = "bottom", panel.grid = element_blank(),
         panel.border =  element_blank(),
-        plot.margin = margin(0, 0, 0, 20, unit = "pt"),
+        axis.text.y = element_text(size = general_size, angle = 0, vjust = 0.5, hjust = 1),
+        plot.margin = margin(0, 0, 0, 0, unit = "pt"),
         strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5))
 
 
-# prepare the data for the Jaccard index plot 
 
-mat <- JI_all %>% 
-  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>% 
-  select(tool_ref, tool_comp, jaccard) %>%
-  pivot_wider(names_from = tool_comp, values_from = jaccard)
-
-mat_matrix <- as.matrix(mat[,-1])   # remove tool_ref column
-rownames(mat_matrix) <- mat$tool_ref
-dist_mat <- as.dist(1 - mat_matrix)
-
-# hierarchical clustering to order the matrix
-hc <- hclust(dist_mat)  # or "ward.D2"
-#plot(hc)
-ordered_tools <- hc$labels[hc$order]
-
-# filter the tools and rearrange the data
-
-JI_all_plot <- JI_all %>% 
-  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>% 
-  mutate(tool_lab_ref = factor(tools_labels[tool_ref], levels = tools_labels[ordered_tools]),
-         tool_lab_comp = factor(tools_labels[tool_comp], levels = tools_labels[ordered_tools]))
+#JI_all_plot <- JI_all %>% 
+#  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>% 
+#  mutate(tool_lab_ref = factor(tools_labels[tool_ref], levels = tools_labels[ordered_tools]),
+#         tool_lab_comp = factor(tools_labels[tool_comp], levels = tools_labels[ordered_tools]))
 
 
 # plot the jaccard index 
 
-jaccard_plot <-  JI_all_plot %>% filter(as.numeric(tool_lab_ref) < as.numeric(tool_lab_comp)) %>% 
-  filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools) %>% 
-  ggplot(aes(x = tool_lab_ref, y = tool_lab_comp, fill = jaccard)) + 
-  geom_tile(color = "grey") + 
+tri0 <- delta_jaccard %>% 
+  filter(rank %in% c("Reference database", "Reported ARGs")) %>% 
+  select(tool_ref, tool_comp, rank, jaccard)
+
+tri <- bind_rows(tri0,
+                 tri0 %>% rename(tool_ref = tool_comp,
+                                tool_comp = tool_ref)) %>% 
+  distinct(tool_ref, tool_comp, rank, .keep_all = TRUE) %>% 
+  mutate(tool_comp = factor(tools_labels[tool_comp], levels = tools_labels_factor[rev(c(3,4,6,8,9,10,1,5,7,2))])) %>% 
+  mutate(tool_ref = factor(tools_labels[tool_ref], levels = tools_labels_factor[rev(c(3,4,6,8,9,10,1,5,7,2))])) %>% 
+  mutate(
+         x = as.numeric(tool_ref),
+         y = as.numeric(tool_comp)) %>% 
+  filter((rank == "Reference database" & y > x) |
+           (rank == "Reported ARGs"     & y < x))
+
+tri2 <- bind_rows(tri0,
+                 tri0 %>% rename(tool_ref = tool_comp,
+                                tool_comp = tool_ref)) %>% 
+  distinct(tool_ref, tool_comp, rank, .keep_all = TRUE) %>% 
+  mutate(tool_comp = factor(tools_labels[tool_comp], levels = tools_labels_factor[rev(c(3,4,6,8,9,10,1,5,7,2))])) %>% 
+  mutate(tool_ref = factor(tools_labels[tool_ref], levels = tools_labels_factor[rev(c(3,4,6,8,9,10,1,5,7,2))])) %>% 
+  mutate(
+    x = as.numeric(tool_ref),
+    y = as.numeric(tool_comp)) %>% 
+  filter((rank == "Reported ARGs" & y > x) |
+           (rank ==   "Reference database"   & y < x))
+
+
+
+jaccard_plot1 <-   tri2 %>% 
+  filter(rank == "Reported ARGs") %>% 
+  ggplot(aes(x = tool_ref, y = tool_comp, fill = jaccard)) + 
+  geom_tile(color = "grey") +
   scale_fill_gradientn( colors = brewer.pal(9, "YlOrBr"),
                         labels = percent_format(accuracy = 1),
-                        breaks = c(0, 0.2, 0.4, 0.6, 0.8)) + 
+                        breaks = c(0.25, 0.5, 0.75)) + 
   geom_text(
-    data = JI_all_plot %>% 
-      filter(tool_ref %in% basic_tools, tool_comp %in% basic_tools, 
-             as.numeric(tool_lab_ref) < as.numeric(tool_lab_comp), 
-             jaccard >= 0.05),
+    data = tri2 %>% filter(rank == "Reported ARGs") %>% 
+      filter(jaccard >= 0.1),
     aes(label = scales::percent(jaccard, accuracy = 1),
-        color = jaccard >= 0.50), 
+        color = jaccard >= .5), 
     size = general_size / .pt, show.legend = F) +
   scale_color_manual(values = c( "black", "white")) +
-  scale_y_discrete(labels = function(x) {
-    x <- gsub("ABRicate-\n", "ABRicate-", x)
-    x <- gsub("-\nPlus", "Plus", x)
-    x}, expand = 0) +
   labs(fill = "") + 
   ylab("") + 
   xlab("") + 
   theme1 +
   theme(legend.position = "bottom", panel.grid = element_blank(),
         panel.border =  element_blank(),
-        plot.margin = margin(0, 0, 0, 10, unit = "pt"),
+        plot.margin = margin(0, 0, 0, 0, unit = "pt"),
         strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5))
+
+jaccard_plot1
+
+delta_jaccard2 <- delta_jaccard %>% bind_rows(
+  delta_jaccard %>% rename(tool_comp = tool_ref, tool_ref = tool_comp)
+) %>% 
+  ungroup() %>% 
+  group_by(tool_ref, rank) %>% 
+  summarise(md = median(jaccard), q1 = quantile(jaccard, 0.25), q3 = quantile(jaccard, 0.75))
+
+
+ #delta_jaccard2 <- delta_jaccard2 %>% mutate(
+ #  tool_ref = factor(as.character(tool_ref), levels = tools_labels_factor[rev(c(3,4,6,8,9,10,1,5,7,2))]))
+# 
+# sel  <- c("Reference database", "Reported ARGs", "Risk I")
+# cols <- setNames(c("#a6761d", "#d95f02", "#1b9e77"), sel)
+# 
+# mixw <- function(col, a) rgb(a * t(col2rgb(col)) / 255 + (1 - a))   # solid tint of col
+# 
+# w <- delta_jaccard2 %>% 
+#   ungroup() %>% 
+#   filter(rank %in% sel) %>% 
+#   mutate(x = as.numeric(tool_ref)) %>% 
+#   select(x, rank, md) %>% 
+#   pivot_wider(names_from = rank, values_from = md) %>% 
+#   complete(x = seq_len(nlevels(delta_jaccard2$tool_ref))) %>% 
+#   arrange(x)
+# 
+# wf <- w %>% mutate(across(-x, ~ approx(x, .x, x)$y))
+# 
+# f <- function(r, xq) {
+#   i <- pmin(findInterval(xq, wf$x), nrow(wf) - 1)
+#   wf[[r]][i] + (xq - wf$x[i]) * (wf[[r]][i + 1] - wf[[r]][i])
+# }
+# 
+# rib <- tibble(x = sort(unique(c(wf$x, unlist(combn(sel, 2, function(p) {
+#   dd <- wf[[p[1]]] - wf[[p[2]]]
+#   i  <- which(head(dd, -1) * tail(dd, -1) < 0)
+#   wf$x[i] + dd[i] / (dd[i] - dd[i + 1])
+# }, simplify = FALSE)))))) %>% 
+#   mutate(x1 = lead(x)) %>% 
+#   filter(!is.na(x1)) %>% 
+#   rowwise() %>% 
+#   reframe({
+#     o <- names(sort(sapply(sel, f, xq = (x + x1) / 2), decreasing = TRUE))
+#     n <- length(o)
+#     y <- sapply(o, f, xq = c(x, x1))
+#     bind_rows(
+#       if (n >= 2) tibble(band = "upper", ymin = y[, 2], ymax = y[, 1], fill = o[1]),
+#       if (n == 3) tibble(band = "lower", ymin = y[, 3], ymax = y[, 2], fill = o[2]),
+#       if (n >= 1) tibble(band = "base",  ymin = 0,      ymax = y[, n], fill = o[n])
+#     ) %>% 
+#       mutate(id = x, x = rep(c(x, x1), length.out = n()))
+#   }) %>% 
+#   mutate(fillcol = mixw(cols[fill], ifelse(band == "base", 0.12, 0.35))) %>% 
+#   arrange(band, id, x) %>% 
+#   group_by(band) %>% 
+#   mutate(run = cumsum(fillcol != lag(fillcol, default = first(fillcol)))) %>% 
+#   ungroup()
+# 
+# jc3 <- ggplot(pivot_longer(w, -x, names_to = "rank"), aes(x, value)) +
+#   geom_ribbon(data = rib, aes(x, ymin = ymin, ymax = ymax, fill = fillcol,
+#                               group = interaction(band, run)),
+#               inherit.aes = FALSE, colour = NA) +
+#   geom_line(data = pivot_longer(wf, -x, names_to = "rank"),
+#             aes(colour = rank), linetype = "dashed", linewidth = 0.3, na.rm = TRUE) +
+#   geom_line(aes(colour = rank), na.rm = TRUE) +
+#   geom_point(aes(colour = rank), size = 1, na.rm = TRUE) +
+#   scale_fill_identity() +
+#   scale_colour_manual(values = cols) +
+#   scale_x_continuous(breaks = seq_len(nlevels(delta_jaccard2$tool_ref)),
+#                      labels = levels(delta_jaccard2$tool_ref), expand = c(0, 0.3)) +
+#   labs(x = NULL, y = "Jaccard index", colour = NULL) +
+#   theme1 +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+#         panel.border = element_blank(),
+#         legend.position = "bottom")
+# 
+# jc3
+
+
+jc2 <- ggplot(delta_jaccard2 %>% 
+                ungroup() %>% 
+                filter(rank %in% c("Reference database", "Reported ARGs")), 
+              aes(x = tool_ref, y = md, color = rank, fill = rank, group = rank)) +
+  geom_ribbon(aes(ymin = q1, ymax = q3), colour = NA) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 1, color = "black") +
+  scale_color_manual(values = c("#bf812d", "#35978f")) + 
+  scale_fill_manual(values = c("#f6e8c3", "#c7eae5")) +
+  scale_x_discrete(expand = c(0, 0.5)) +
+  labs(x = "", y = "Jaccard index", color = "", fill = "") + 
+  theme1 +
+  theme(panel.border = element_blank(),
+        legend.position = "bottom")
+
+#jc2 <- jc2 + coord_flip()
+
+
+jaccard_plot <-   tri %>% 
+  ggplot(aes(x = tool_ref, y = tool_comp, fill = jaccard)) + 
+  geom_tile(color = "grey") +
+  scale_fill_gradientn( colors = brewer.pal(9, "YlOrBr"),
+                        labels = percent_format(accuracy = 1),
+                        breaks = c(0.25, 0.5, 0.75)) + 
+  geom_text(
+    data = tri %>% 
+      filter((rank == "reported ARGs" & jaccard >= 0.15) | 
+               (rank != "reported ARGs" & jaccard >= 0.3)),
+    aes(label = scales::percent(jaccard, accuracy = 1),
+        color = jaccard > 0.65), 
+    size = general_size / .pt, show.legend = F) +
+  scale_color_manual(values = c( "black", "white")) +
+  labs(fill = "") + 
+  ylab("") + 
+  xlab("") + 
+  theme1 +
+  theme(legend.position = "bottom", panel.grid = element_blank(),
+        panel.border =  element_blank(),
+        panel.background = element_rect(fill = "#666666", colour = NA),
+        plot.margin = margin(0, 0, 0, 0, unit = "pt"),
+        strip.text.x = element_text(size = general_size, angle = 0, vjust = 0, hjust = 0.5)) +
+  scale_x_discrete(expand = c(0,0)) +
+  scale_y_discrete(expand = c(0,0))
 
 jaccard_plot
 
-# merge all panels of figure 1 together 
 
 
 p2_1 <- ((p2a + ggtitle("a")) /
-           (jaccard_plot + ggtitle("c")) /
+           (jaccard_plot1 + ggtitle("c")) /
            (id_plot + ggtitle("d")) +
-           patchwork::plot_layout(heights = c(1,1,1)) |
-           (df_plot1 + ggtitle("b"))) + 
+           patchwork::plot_layout(heights = c(1,2.2,1)) |
+           (df_plot1 + theme(plot.margin = margin(0, 0, 0, 20, unit = "pt")) + ggtitle("b"))) + 
   patchwork::plot_layout(widths = c(1,1))
 
 
+top_p2 <- (p2a + ggtitle("a") | id_plot + ggtitle("b")+ theme(plot.margin = margin(0, 0, 0, 10, unit = "pt")))
+
+left_bottom_p2 <- (decompose_difference_plot + 
+                     theme1 + 
+                     theme(panel.grid = element_blank(),
+                           legend.position = "bottom",
+                           panel.border = element_blank(),
+                           axis.text.x = element_blank(),
+                           strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 1)) + ggtitle("c")) /
+  (jc2 + ggtitle("c")) +
+  patchwork::plot_layout(heights = c(3,1))
+
+bottom_p2 <- left_bottom_p2 | (df_plot1 + theme(plot.margin = margin(0, 0, 0, 10, unit = "pt")) + ggtitle("d"))
+
+left_p2 <- ((p2a + ggtitle("a")) /
+              (decompose_difference_plot + 
+                 theme1 + 
+                 theme(panel.grid = element_blank(),
+                       legend.position = "bottom",
+                       panel.border = element_blank(),
+                       axis.text.x = element_blank(),
+                       strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 1)) + ggtitle("c")) /
+              (jc2 + ggtitle("c")) +
+              patchwork::plot_layout(heights = c(1,2,1)))
+
+right_p2 <- ((id_plot + ggtitle("b")+ theme(plot.margin = margin(0, 0, 0, 10, unit = "pt"))) /
+            (df_plot1 + theme(plot.margin = margin(0, 0, 0, 10, unit = "pt")) + ggtitle("d"))) +
+              patchwork::plot_layout(heights = c(1,5.5))
+            
+p2_1 <- (top_p2 / bottom_p2) + 
+  patchwork::plot_layout(heights = c(1,6))
+
+p2_1_1 <- (left_p2 | right_p2) 
+
+
 ggsave("code_R_analysis/output_plots/fig2.svg", p2_1, width = 180, height = 180, unit = "mm")
+ggsave("code_R_analysis/output_plots/sup_jaccards.svg", all_jaccard_plot, width = 180, height = 180, unit = "mm")
 
 
 # tools 
@@ -1194,7 +1163,7 @@ for(j in 1:length(EN)){
           strip.text.x = element_text(size = general_size, angle = 90, vjust = 0.5, hjust = 0),
           panel.grid.major.x = element_blank(),
           panel.grid.minor.x = element_blank(),
-          plot.margin = margin(5.5, 5.5, 5.5, 5.5, unit = "pt")) 
+          plot.margin = margin(1, 1, 1, 1, unit = "pt")) 
 }
 
 # plot figure 2 panel a in the paper
@@ -1316,8 +1285,8 @@ left_block <- (left1/patchwork::wrap_elements(full = g_legend(a0))) +
 # merge all panels in figure 2 
 
 p30 <- (left_block | (a0 + theme(legend.position = "none"))) + patchwork::plot_layout(widths = c(4,1))
-
 ggsave("code_R_analysis/output_plots/fig3.svg", p30, width = 180, height = 130, unit = "mm")
+
 
 
 # create the supplementary figure sup_abundance.svg abundance per class and habitat
@@ -1342,6 +1311,20 @@ sup_abundance_right <-
 sup_abundance <- sup_abundance_left | sup_abundance_right
 
 ggsave("code_R_analysis/output_plots/sup_abundance.svg", sup_abundance, width = 180, height = 180, unit = "mm")
+
+
+
+###
+
+df_a0 %>%  
+  filter(habitat %in% "soil", tool %in% basic_tools) %>% 
+  filter(gene %in% c("efflux", "class A", "tet RPG")) %>% 
+ggplot(aes(x = richness, y = log(abundance+1), color = tool)) +
+  geom_point() + 
+  facet_grid(gene ~ . , scales = "free") 
+  
+
+
 
 ################################################################################################
 
