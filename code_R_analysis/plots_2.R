@@ -168,6 +168,9 @@ tools_db_factor <- c("CARD", "NCBI", "ResFinder", "   ", "    ",
 
 tools_texture <- c("ABRicate-CARD", "ABRicate-NCBI", "ABRicate-ResFinder")
 
+shape_tools <- rep(21, length(tools_labels[tools_levels %in% basic_tools]))
+shape_tools[tools_levels[tools_levels %in% basic_tools] %in% tools_texture] <- 24
+
 
 ##
 
@@ -179,6 +182,13 @@ tools_texture <- c("ABRicate-CARD", "ABRicate-NCBI", "ABRicate-ResFinder")
 
 tools_texture_code <- rep("none", length(tools_labels))
 tools_texture_code[tools_levels %in% tools_texture] <- "stripe"
+
+tool_lv <- c("RGI", "ABRicate-CARD", "AMRFinderPlus", "ABRicate-NCBI", "ResFinder",
+             "ABRicate-ResFinder", "ABRicate-ARGANNOT", "ABRicate-MEGARes", "fARGene", "DeepARG")  # your order
+pal_tool <- setNames(pal_10_q[seq_along(tool_lv)], tool_lv)
+names(pal_tool) <- gsub("^(ABRicate|AMRFinder)-", "\\1-\n", names(pal_tool))
+names(pal_tool)[names(pal_tool) == "AMRFinderPlus"] <- "AMRFinder-\nPlus"
+
 
 # base format for the plots 
 
@@ -229,7 +239,7 @@ metadata <- read.delim("data/metadata_GMGC10.sample.meta.tsv")
 metadata <- metadata %>% filter(!habitat %in% c("amplicon", "isolate", "built-environment"))
 
 # metadata0 will be merged with abundance 
-metadata0 <- metadata %>% select(sample_id, habitat) %>% rename(sample = sample_id)
+metadata0 <- metadata %>% dplyr::select(sample_id, habitat) %>% rename(sample = sample_id)
 
 abundance <- readRDS("code_R_analysis/output_abundance_diversity_resistome/abundance_diversity.rds")
 abundance <- abundance %>% filter(tool %in% basic_tools)
@@ -254,7 +264,8 @@ abundance <- metadata0 %>%
          tool = factor(tool, levels = tools_levels)) %>%
   mutate(tools_labels = factor(tools_labels[tool], levels = tools_labels_factor),
          texture = ifelse(tool %in% tools_texture, "yes", "no"),
-         tools_db = factor(tools_db[tool], levels = tools_db_factor))
+         tools_db = factor(tools_db[tool], levels = tools_db_factor)) %>% 
+  filter(tool %in% basic_tools)
 
 
 # total abundance per sample
@@ -265,10 +276,10 @@ abundance_tool_sample <- abundance %>%
   summarise(abundance = sum(abundance), richness = sum(richness)) %>% 
   ungroup() %>% 
   complete(sample, tool) %>% # complete all samples for all tools with NAs
-  left_join(abundance %>% select(sample, habitat) %>% 
+  left_join(abundance %>% dplyr::select(sample, habitat) %>% 
               distinct(), by = "sample") %>% 
   mutate(habitat  = coalesce(habitat.x, habitat.y)) %>%
-  select(-habitat.x, -habitat.y) %>% 
+  dplyr::select(-habitat.x, -habitat.y) %>% 
   mutate(abundance = replace_na(abundance, 0)) %>%  
   mutate(richness = replace_na(richness, 0)) %>% 
   arrange(tool, sample) %>%
@@ -280,7 +291,7 @@ abundance_tool_sample <- abundance %>%
 
 abundance_class <- abundance %>% 
   ungroup() %>% 
-  select(-c(richness_no_rarified)) %>%
+  dplyr::select(-c(richness_no_rarified)) %>%
   mutate(gene = factor(gene), sample = factor(sample), 
          tool = factor(tool, levels = tools_levels)) %>%
   complete( sample, gene, tool, 
@@ -402,17 +413,13 @@ db_cluster <- db_cluster %>%
 
 db_cluster <- db_cluster %>% mutate(gene_revised = ifelse(tool %in% "fargene", norm_prime(gene), gene_revised))
 
-db_cluster <- db_cluster %>% bind_rows(db_cluster %>% filter(tool %in% "deeparg") %>% mutate(tool = "deeparg-aa"))
-db_cluster <- db_cluster %>% bind_rows(db_cluster %>% filter(tool %in% "fargene") %>% mutate(tool = "fargene.prot"))
-db_cluster <- db_cluster %>% bind_rows(db_cluster %>% filter(tool %in% "rgi-card") %>% mutate(tool = "rgi-blast"))
-db_cluster <- db_cluster %>% bind_rows(db_cluster %>% filter(tool %in% "rgi-card") %>% mutate(tool = "rgi-diamond-prot-card"))
-db_cluster <- db_cluster %>% bind_rows(db_cluster %>% filter(tool %in% "amrfinderplus") %>% mutate(tool = "amrfinderplus.nt"))
+db_cluster$tool <- as.vector(tag_to_tool[db_cluster$tool])
 
-db_cluster0 <- db_cluster %>% 
-  filter(tool %in% c("resfinder","abricate-resfinder","abricate-argannot",
-                     "abricate-megares", "abricate-card", "abricate-ncbi",
-                     "deeparg", "fargene", "amrfinderplus", "rgi-card"))
-
+#db_cluster <- db_cluster %>% bind_rows(db_cluster %>% filter(tool %in% "deeparg") %>% mutate(tool = "deeparg-aa"))
+#db_cluster <- db_cluster %>% bind_rows(db_cluster %>% filter(tool %in% "fargene") %>% mutate(tool = "fargene.prot"))
+#db_cluster <- db_cluster %>% bind_rows(db_cluster %>% filter(tool %in% "rgi-card") %>% mutate(tool = "rgi-blast"))
+#db_cluster <- db_cluster %>% bind_rows(db_cluster %>% filter(tool %in% "rgi-card") %>% mutate(tool = "rgi-diamond-prot-card"))
+#db_cluster <- db_cluster %>% bind_rows(db_cluster %>% filter(tool %in% "amrfinderplus") %>% mutate(tool = "amrfinderplus.nt"))
 
 
 # Overlap between tools by gene class
@@ -537,15 +544,7 @@ all_jaccard <- all_jaccard %>%
   mutate(tool_ref = factor(tools_labels[tool_ref], levels = tools_labels_factor[1:10]),
          tool_comp = factor(tools_labels[tool_comp], levels = tools_labels_factor[1:10]))
 
-all_jaccard2 <- all_jaccard %>%
-  group_by(rank) %>%
-  mutate(
-    rank_label = sprintf(
-      "%s (mean = %s, median = %s)",
-      rank,
-      percent(mean(jaccard), accuracy = 0.1),
-      percent(median(jaccard), accuracy = 0.1))) %>%
-  ungroup() 
+all_jaccard2 <- all_jaccard 
 
 all_jaccard2 <- all_jaccard2 %>% 
   bind_rows(all_jaccard2 %>% rename(tool_comp = tool_ref, tool_ref = tool_comp)) %>% 
@@ -607,10 +606,10 @@ all_jaccard %>% filter(tool_ref != tool_comp) %>%
 
 all_jaccard %>% 
   filter(tool_ref != tool_comp) %>% 
-  select(tool_ref, tool_comp, csc, rank) %>% 
+  dplyr::select(tool_ref, tool_comp, csc, rank) %>% 
   rename(x = csc) %>% 
   left_join(all_jaccard %>% filter(tool_ref != tool_comp) %>% 
-              select(tool_comp, csc, rank, tool_ref) %>% 
+              dplyr::select(tool_comp, csc, rank, tool_ref) %>% 
               rename(y = csc, tool_ref = tool_comp, tool_comp = tool_ref), by = c("tool_ref","tool_comp", "rank")) %>% 
   filter(rank %in% c("Reported ARGs")) %>% #, "Risk I", "Subset gene classes",
                      #"Reference database (ID99%, COV90%)")) %>% 
@@ -620,10 +619,10 @@ all_jaccard %>%
 
 all_jaccard %>% 
   filter(tool_ref != tool_comp) %>% 
-  select(tool_ref, tool_comp, csc, rank) %>% 
+  dplyr::select(tool_ref, tool_comp, csc, rank) %>% 
   mutate(direction = "by") %>% 
   bind_rows(all_jaccard %>% filter(tool_ref != tool_comp) %>% 
-              select(tool_comp, csc, rank, tool_ref) %>% 
+              dplyr::select(tool_comp, csc, rank, tool_ref) %>% 
               mutate(direction = "on") %>% 
               rename(tool_ref = tool_comp, tool_comp = tool_ref)) %>% 
   filter(rank %in% c("Reported ARGs", "Risk I", "Subset gene classes",
@@ -635,10 +634,10 @@ all_jaccard %>%
 
 all_jaccard %>% 
   filter(tool_ref != tool_comp) %>% 
-  select(tool_ref, tool_comp, csc, rank) %>% 
+  dplyr::select(tool_ref, tool_comp, csc, rank) %>% 
   mutate(direction = "by") %>% 
   bind_rows(all_jaccard %>% filter(tool_ref != tool_comp) %>% 
-              select(tool_comp, csc, rank, tool_ref) %>% 
+              dplyr::select(tool_comp, csc, rank, tool_ref) %>% 
               mutate(direction = "on") %>% 
               rename(tool_ref = tool_comp, tool_comp = tool_ref)) %>% 
   filter(rank %in% c("Reported ARGs", "Risk I", "Subset gene classes",
@@ -701,6 +700,12 @@ non_overlap <- non_overlap %>% mutate(g = detected_by_both)
   
 non_overlap %>% 
   filter(grepl("ABR",tool_a) | grepl("Res",tool_a), grepl("ABR",tool_b) | grepl("Res",tool_b)) %>% 
+  ungroup() %>% 
+  group_by(g) %>% 
+  summarise(mn = mean(p), sd = sd(p))
+
+non_overlap %>% 
+  filter((!grepl("ABR",tool_a)) | grepl("Res",tool_a), (!grepl("ABR",tool_b)) | grepl("Res",tool_b)) %>% 
   ungroup() %>% 
   group_by(g) %>% 
   summarise(mn = mean(p), sd = sd(p))
@@ -890,7 +895,7 @@ d <- all_pairs_summary_2 %>%
 
 
 w <- d %>% 
-  select(tool_a, tool_b, g, p) %>% 
+  dplyr::select(tool_a, tool_b, g, p) %>% 
   pivot_wider(names_from = g, values_from = p) %>% 
   mutate(db_share = db / (db + pipe))
 
@@ -1160,7 +1165,7 @@ df_plot1_alt <-  df_plot %>%
 
 tri0 <- delta_jaccard %>% 
   filter(rank %in% c("Reference database (ID99%, COV90%)", "Reported ARGs")) %>% 
-  select(tool_ref, tool_comp, rank, jaccard)
+  dplyr::select(tool_ref, tool_comp, rank, jaccard)
 
 tri <- bind_rows(tri0,
                  tri0 %>% rename(tool_ref = tool_comp,
@@ -1369,6 +1374,7 @@ p2_flip <- (p2a + ggtitle("a") + theme(strip.clip = "off",
   (decompose_difference_plot3 + ggtitle("d") +
      theme(plot.margin = margin(0, 0, 0, 5, unit = "pt"))) +
   patchwork::plot_layout(ncol = 2, widths = c(1.4, 3), heights = c(1.3, 1))
+
 
 ggsave("code_R_analysis/output_plots/fig2_flip.svg", p2_flip, 
        width = 180, height = 180, unit = "mm")
@@ -1648,7 +1654,7 @@ hg <- abundance_class %>% filter(habitat == "human gut", !is.na(new_level), tool
 joint_umap <- function(d, value, seed = 1) {
   w <- d %>% pivot_wider(id_cols = c(sample, tools_labels, tool, tools_db, texture), names_from = gene,
                          values_from = {{ value }}, values_fn = sum, values_fill = 0)
-  m <- log10(as.matrix(select(w, -sample, -tools_labels, -tool, -tools_db, -texture)) + 1)
+  m <- log10(as.matrix(dplyr::select(w, -sample, -tools_labels, -tool, -tools_db, -texture)) + 1)
   keep <- rowSums(m) > 0
   set.seed(seed)
   u <- umap(m[keep, apply(m[keep, ], 2, var) > 0], n_neighbors = 30, min_dist = 0.3)
@@ -1785,6 +1791,99 @@ u3_plot3 <- umap3.1 %>%
            guide_legend(nrow = 2, override.aes = list(shape = shape_tools,
                                                       color = "black", stroke = 0.4)), shape = "none")  
 
+
+#### PCA and PCoA
+
+meta_cols <- c("sample", "tools_labels", "tool", "tools_db", "texture")
+
+build_mat <- function(d, value) {
+  w <- d %>% pivot_wider(id_cols = all_of(meta_cols), names_from = gene,
+                         values_from = {{ value }}, values_fn = sum, values_fill = 0)
+  m <- log10(as.matrix(dplyr::select(w, -all_of(meta_cols))) + 1)
+  keep <- rowSums(m) > 0
+  list(w = w[keep, ], m = m[keep, apply(m[keep, ], 2, var) > 0, drop = FALSE])
+}
+
+## ---- PCA ---------------------------------------------------------------
+
+joint_pca <- function(d, value, seed = 1) {
+  x <- build_mat(d, {{ value }})
+  set.seed(seed)
+  p <- prcomp(x$m, center = TRUE, scale. = FALSE)
+  ve <- round(100 * p$sdev^2 / sum(p$sdev^2), 1)
+  out <- tibble(x$w[, meta_cols], u1 = p$x[, 1], u2 = p$x[, 2])
+  attr(out, "var_exp") <- ve[1:2]
+  out
+}
+
+## ---- PCoA (Bray-Curtis) ------------------------------------------------
+
+joint_pcoa <- function(d, value, seed = 1, method = "bray") {
+  x <- build_mat(d, {{ value }})
+  set.seed(seed)
+  dm <- vegan::vegdist(x$m, method = method)
+  p  <- cmdscale(dm, k = 2, eig = TRUE)
+  ve <- round(100 * p$eig[1:2] / sum(p$eig[p$eig > 0]), 1)
+  out <- tibble(x$w[, meta_cols], u1 = p$points[, 1], u2 = p$points[, 2])
+  attr(out, "var_exp") <- ve
+  out
+}
+
+
+#pca1  <- joint_pca(hg, abundance)
+pca1  <- joint_pca(abundance_class, abundance)
+#pcoa1 <- joint_pcoa(hg, abundance)
+pcoa3 <- joint_pcoa(abundance_class %>% filter(sample %in% umap3.1$sample), 
+                    abundance)
+pcoa3$habitat <- abundance_class$habitat[match(pcoa3$sample, abundance_class$sample)]
+pcoa3 <- pcoa3 %>% 
+  mutate(place = ifelse(habitat %in% c("soil", "marine", "freshwater", "soil","wastewater"), "External", 
+                        ifelse(grepl("gut", habitat), "Gut-associated", "Human (non-gut)"))) 
+
+
+pca1$habitat <- abundance_class$habitat[match(pca1$sample, abundance_class$sample)]
+pca1 <- pca1 %>% 
+  mutate(place = ifelse(habitat %in% c("soil", "marine", "freshwater", "soil","wastewater"), "External", 
+                        ifelse(grepl("gut", habitat), "Gut-associated", "Human (non-gut)"))) 
+
+
+place_plot <- function(d, which_place, pal, title = NULL, colour_var = tool) {
+  ve <- attr(d, "var_exp")
+  lab <- if (is.null(ve)) c("UMAP1", "UMAP2")
+  else sprintf(c("Axis1 (%.1f%%)", "Axis2 (%.1f%%)"), ve)
+  d %>%
+    mutate(al = place == which_place) %>%
+    ggplot(aes(u1, u2, colour = {{ colour_var }}, fill = {{ colour_var }},
+               shape = texture, size = al, alpha = al)) +
+    geom_point(color = "black", stroke = .2, key_glyph = draw_key_point_line) +
+    scale_size_manual(values = c("TRUE" = 0.7, "FALSE" = 0.05), guide = "none") +
+    scale_colour_manual(values = pal, name = "") +
+    scale_fill_manual(values = pal, name = "") +
+    scale_alpha_manual(values = c("TRUE" = 1, "FALSE" = 0.1), guide = "none") +
+    scale_shape_manual(values = c("no" = 21, "yes" = 24)) +
+    guides(colour = guide_legend(override.aes = list(size = 2, alpha = 1), nrow = 2),
+           fill = guide_legend(nrow = 2, override.aes = list(shape = shape_tools,
+                                                             color = "black", stroke = 0.4)),
+           shape = "none") +
+    theme1 +
+    theme(plot.subtitle = element_text(size = general_size, color = "black")) +
+    xlab(lab[1]) + ylab(lab[2]) +
+    labs(title = title, subtitle = which_place)
+}
+
+p1 <- place_plot(pca1[pca1$sample %in% umap3.1$sample,], "External",        pal_tool,  colour_var = tools_labels)
+p2 <- place_plot(pca1[pca1$sample %in% umap3.1$sample,], "Gut-associated",  pal_10_q,  title = "c")
+p3 <- place_plot(pca1[pca1$sample %in% umap3.1$sample,], "Human (non-gut)", pal_10_q)
+
+p2 +xlab("") +ylab("PC2") | p3 +xlab("PC1") +ylab("")| p1 +xlab("") +ylab("")
+
+p11 <- place_plot(pcoa3[pcoa3$sample %in% umap3.1$sample,], "External",        pal_tool,  colour_var = tools_labels)
+p22 <- place_plot(pcoa3[pcoa3$sample %in% umap3.1$sample,], "Gut-associated",  pal_10_q,  title = "c")
+p33 <- place_plot(pcoa3[pcoa3$sample %in% umap3.1$sample,], "Human (non-gut)", pal_10_q)
+
+p22 +xlab("") + ylab("PCo2") | p33 +xlab("PCo1") +ylab("")| p11 +xlab("") +ylab("")
+
+
 #u3_plot2 + xlab("") | u3_plot3 + ylab("") | u3_plot1 + ylab("") + xlab("")
 
 main_abundance_left <- 
@@ -1833,7 +1932,7 @@ w <- hg %>% filter(!is.na(new_level), sample %in% ids) %>%
   pivot_wider(id_cols = c(sample, tools_labels), names_from = new_level,
               values_from = abundance, values_fn = sum, values_fill = 0)
 
-m <- log10(as.matrix(select(w, -sample, -tools_labels)) + 1)
+m <- log10(as.matrix(dplyr::select(w, -sample, -tools_labels)) + 1)
 d <- vegan::vegdist(m, method = "euclidean")     # about 5,000 rows, about 12 million distances
 
 # pipeline effect, permutations restricted within sample
@@ -1869,8 +1968,6 @@ ggsave("code_R_analysis/output_plots/sup_abundance.svg", sup_abundance, width = 
 # create vector for shaping the geom_points in the core-resistome and pan-resistome plots
 
 
-shape_tools <- rep(21, length(tools_labels[tools_levels %in% basic_tools]))
-shape_tools[tools_levels[tools_levels %in% basic_tools] %in% tools_texture] <- 24
 
 # for the pan and core, define only one metric name for both and add the type of data (core or pan)
 
@@ -2104,11 +2201,6 @@ for(j in 1:length(places)){
   
 plot_core_pan_list <- list()
 
-tool_lv <- c("RGI", "ABRicate-CARD", "AMRFinderPlus", "ABRicate-NCBI", "ResFinder",
-             "ABRicate-ResFinder", "ABRicate-ARGANNOT", "ABRicate-MEGARes", "fARGene", "DeepARG")  # your order
-pal_tool <- setNames(pal_10_q[seq_along(tool_lv)], tool_lv)
-names(pal_tool) <- gsub("^(ABRicate|AMRFinder)-", "\\1-\n", names(pal_tool))
-names(pal_tool)[names(pal_tool) == "AMRFinderPlus"] <- "AMRFinder-\nPlus"
 
 for(j in 1:length(places)){
   plot_core_pan_list[[j]] <- 
@@ -2861,7 +2953,7 @@ for( j in 1:length(EN)){
   all_top_abundance <- unique(
     levels_abundance_div %>% 
       filter(habitat %in% EN[j]) %>% 
-      select(gene) %>% distinct() %>% slice_head(n=10) %>%
+      dplyr::select(gene) %>% distinct() %>% slice_head(n=10) %>%
       ungroup() %>% pull())
   
   # add the "other" class
@@ -3273,7 +3365,7 @@ ARO <- ARO %>% rename(gene_class = new_level, ARO_Term_ID = Term_ID) %>%
 
 write.csv(ARO, file = "code_R_analysis/output_plots/TableS2.csv") 
 write.csv(tools_core, file = "code_R_analysis/output_plots/TableS3.csv") 
-write.csv(metadata %>% select(sample_id, habitat) %>% rename(sample = sample_id), "code_R_analysis/output_plots/TableS1.csv")
+write.csv(metadata %>% dplyr::select(sample_id, habitat) %>% rename(sample = sample_id), "code_R_analysis/output_plots/TableS1.csv")
 
 
 
@@ -3390,7 +3482,7 @@ for(j in (1:20)*5){
            p_core = phyper(t - 1, k, N - k, m, lower.tail = FALSE),
            cnt    = p_core * 500) %>% 
     filter(p_core > 0) %>% 
-    select(centroid, new_level_centroid, tool, habitat, cut, p_core, cnt)
+    dplyr::select(centroid, new_level_centroid, tool, habitat, cut, p_core, cnt)
   core_accumulation[[j/5]] <- df %>% filter(cnt > 450)   %>% 
     mutate(m = j) %>% 
     filter(tool %in% basic_tools) %>% 
@@ -3772,7 +3864,7 @@ ggplot(hab_med, aes(tool, rank, group = habitat, colour = habitat)) +
   scale_y_reverse(breaks = 1:13) +
   theme_classic()
 
-rk <- hab_med %>% select(tool, habitat, med) %>% pivot_wider(names_from = tool, values_from = med)
+rk <- hab_med %>% dplyr::select(tool, habitat, med) %>% pivot_wider(names_from = tool, values_from = med)
 cor(rk[,-1], method = "spearman")
 
 
@@ -3810,3 +3902,5 @@ as.data.frame(cm) %>%
   labs(x = NULL, y = NULL) +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
