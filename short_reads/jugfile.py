@@ -117,6 +117,10 @@ FARGENE_MODELS = {
     "tet_efflux": "tet_efflux", "qnr": "qnr",
 }
 
+# fargene's (only) output for a single-end sample, which it cannot handle: an
+# empty file, so that the task still succeeds (and is not retried).
+FARGENE_SINGLE_END_MARKER = "SINGLE_END_UNSUPPORTED"
+
 # Basename handed to preprocess.ngl; ngless turns it into <base>.pair.1.<ext>,
 # <base>.pair.2.<ext> and (only for samples that carry unpaired reads)
 # <base>.singles.<ext>.
@@ -213,15 +217,20 @@ def compress_results(out_dir):
 
 def publish_results(src, dest, keep):
     """Trim and compress the scratch directory's out/ tree and copy it to
-    OUTPUT_DIR.
+    OUTPUT_DIR (see install_results)."""
+    trim_results(src, keep)
+    compress_results(src)
+    return install_results(src, dest)
+
+
+def install_results(src, dest):
+    """Copy the directory `src` to `dest`, as is.
 
     Staged next to `dest` and renamed into place so that an interrupted copy
     never leaves a half-written result looking like a finished one, and so
     that re-running an invalidated task replaces the old results wholesale
     rather than merging into them.
     """
-    trim_results(src, keep)
-    compress_results(src)
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     staging = f"{dest}.incoming.{os.getpid()}"
     superseded = f"{dest}.superseded.{os.getpid()}"
@@ -240,7 +249,8 @@ def tool_scratch(sample_dir, tool, compressed):
 
     Yields (scratch, out_dir, r1, r2): the directory the tool should run in,
     the directory it should be told to write to (whose KEEP files are copied
-    out by publish_results), and the two mate files. `compressed` picks the
+    out by publish_results), and the two mate files. For a single-end sample,
+    r1 is the (only) read file and r2 is None. `compressed` picks the
     output extension -- fargene cannot read gzipped FastQ, so it asks for
     plain .fq and lets ngless decompress on the way out.
 
@@ -250,55 +260,91 @@ def tool_scratch(sample_dir, tool, compressed):
     suppressed: failing to remove the tree usually means something else went
     wrong (a tool still holding files open, a read-only file it left behind).
     """
-    if not os.path.isdir(sample_dir):
-        raise RuntimeError(f"no read directory for this sample: {sample_dir}")
     # fargene quality-filters its input with trim_galore, and when that fails
     # (as it does on some very old systems) fargene carries on regardless and
     # produces empty results. Fail loudly up front instead.
     pixi_run('fargene', [
         'trim_galore', '--version'])
+    with scratch_dir(f"{tool}.{os.path.basename(sample_dir)}.") as scratch:
+        out_dir = os.path.join(scratch, "out")
+        os.makedirs(out_dir)
+        r1, r2 = preprocess_sample(sample_dir, scratch, compressed)
+        yield scratch, out_dir, r1, r2
+
+
+@contextlib.contextmanager
+def scratch_dir(prefix):
+    """A fresh directory under TMPDIR, removed (with everything in it) on the
+    way out."""
     tmp_parent = os.path.abspath(TMPDIR) if TMPDIR else None
     if tmp_parent:
         os.makedirs(tmp_parent, exist_ok=True)
-    with tempfile.TemporaryDirectory(
-            prefix=f"{tool}.{os.path.basename(sample_dir)}.",
-            dir=tmp_parent) as scratch:
-        reads_dir = os.path.join(scratch, "reads")
-        out_dir = os.path.join(scratch, "out")
-        os.makedirs(reads_dir)
-        os.makedirs(out_dir)
+    with tempfile.TemporaryDirectory(prefix=prefix, dir=tmp_parent) as scratch:
+        yield scratch
 
-        ext = ".fq.gz" if compressed else ".fq"
-        pixi_run("ngless", [
-            "ngless",
-            "--jobs", str(THREADS),
-            # Keep ngless' own scratch and its QC report inside ours (the
-            # default would be a single preprocess.ngl.output_ngless/ next to
-            # the script, which concurrent invocations would fight over).
-            "--temporary-directory", scratch,
-            "-o", os.path.join(scratch, "ngless-report"),
-            PREPROCESS_NGL,
-            sample_dir,
-            os.path.join(reads_dir, PREPROC_BASE + ext),
-        ], cwd=scratch)
 
-        r1 = os.path.join(reads_dir, f"{PREPROC_BASE}.pair.1{ext}")
-        r2 = os.path.join(reads_dir, f"{PREPROC_BASE}.pair.2{ext}")
-        missing = [p for p in (r1, r2) if not os.path.isfile(p)]
-        if missing:
-            # ngless omits the paired outputs entirely for a single-end
-            # sample, which none of these three tools are wired up for here.
-            raise RuntimeError(
-                f"preprocessing {sample_dir} did not produce paired reads "
-                f"(missing {', '.join(os.path.basename(p) for p in missing)}); "
-                f"ngless wrote {sorted(os.listdir(reads_dir))}")
+def preprocess_sample(sample_dir, scratch, compressed):
+    """Run preprocess.ngl on `sample_dir`, writing into <scratch>/reads/.
 
-        yield scratch, out_dir, r1, r2
+    Returns (r1, r2), the two mate files, or (reads, None) for a single-end
+    sample. ngless' QC report (including fq.tsv, with per-file read counts)
+    is left in <scratch>/ngless-report/.
+    """
+    if not os.path.isdir(sample_dir):
+        raise RuntimeError(f"no read directory for this sample: {sample_dir}")
+    reads_dir = os.path.join(scratch, "reads")
+    os.makedirs(reads_dir)
+
+    ext = ".fq.gz" if compressed else ".fq"
+    pixi_run("ngless", [
+        "ngless",
+        "--jobs", str(THREADS),
+        # Keep ngless' own scratch and its QC report inside ours (the
+        # default would be a single preprocess.ngl.output_ngless/ next to
+        # the script, which concurrent invocations would fight over).
+        "--temporary-directory", scratch,
+        "-o", os.path.join(scratch, "ngless-report"),
+        PREPROCESS_NGL,
+        sample_dir,
+        os.path.join(reads_dir, PREPROC_BASE + ext),
+    ], cwd=scratch)
+
+    r1 = os.path.join(reads_dir, f"{PREPROC_BASE}.pair.1{ext}")
+    r2 = os.path.join(reads_dir, f"{PREPROC_BASE}.pair.2{ext}")
+    # A single-end sample comes out under the bare output name, with no
+    # .pair/.singles marker (keep_singles=False does not drop its reads: it
+    # only applies to mates orphaned by the preprocessing).
+    single = os.path.join(reads_dir, PREPROC_BASE + ext)
+    if os.path.isfile(r1) and os.path.isfile(r2):
+        return r1, r2
+    if os.path.isfile(single):
+        return single, None
+    raise RuntimeError(
+        f"preprocessing {sample_dir} produced neither paired nor single-end "
+        f"reads; ngless wrote {sorted(os.listdir(reads_dir))}")
+
+
+def fastq_to_fasta(fastq, fasta):
+    """Convert a (possibly gzipped) 4-line FastQ file into FASTA."""
+    opener = gzip.open if fastq.endswith(".gz") else open
+    with opener(fastq, "rt") as src, open(fasta, "w") as dst:
+        for i, line in enumerate(src):
+            if i % 4 == 0:
+                dst.write(">" + line[1:])
+            elif i % 4 == 1:
+                dst.write(line)
 
 
 @TaskGenerator
 def run_fargene(sample_dir, outdir):
     with tool_scratch(sample_dir, "fargene", compressed=False) as (scratch, out_dir, r1, r2):
+        if r2 is None:
+            # fargene --meta needs mates throughout (it retrieves each hit's
+            # mate, then runs trim_galore --paired and metaSPAdes -1/-2).
+            # Leave a marker instead of results, and let the task succeed so
+            # that it is not retried on every run.
+            open(os.path.join(out_dir, FARGENE_SINGLE_END_MARKER), "w").close()
+            return install_results(out_dir, os.path.join(outdir, "fargene"))
         for class_name, model in FARGENE_MODELS.items():
             # By default fargene keeps its intermediates (including a FASTA
             # copy of both read files, >500M per model per sample) in
@@ -382,6 +428,36 @@ def prepare_rgi_db(work_dir, card_json, card_version):
     return work_dir
 
 
+def ensure_rgi_bowtie2_index(rgi_work_dir):
+    """Build the bowtie2 index that `rgi bwt --aligner bowtie2 --local` uses,
+    unless it is already there.
+
+    rgi would otherwise build it on first use, inside the localDB/ that all
+    samples share, and concurrent runs would build it over each other. Here
+    it is built under a lock, into a temporary name that is only renamed into
+    place once complete. The paths are those of rgi 6.0.3's BWT.py (CARD
+    canonical only, i.e. no --include_wildcard / --include_other_models), and
+    its check is the same: all six files present.
+    """
+    import fcntl
+
+    localdb = os.path.join(rgi_work_dir, "localDB")
+    index_dir = os.path.join(localdb, "bwt", "card_reference")
+    prefix = os.path.join(index_dir, "bowtie2")
+    suffixes = [".1.bt2", ".2.bt2", ".3.bt2", ".4.bt2", ".rev.1.bt2", ".rev.2.bt2"]
+    with open(os.path.join(rgi_work_dir, ".bowtie2-index.lock"), "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if all(os.path.isfile(prefix + s) for s in suffixes):
+            return
+        os.makedirs(prefix, exist_ok=True)  # rgi makes this (empty) dir too
+        tmp_prefix = os.path.join(index_dir, f"bowtie2.incoming.{os.getpid()}")
+        pixi_run("rgi", [
+            "bowtie2-build", "--quiet", "--threads", str(THREADS),
+            os.path.join(localdb, "card_reference.fasta"), tmp_prefix])
+        for s in suffixes:
+            os.rename(tmp_prefix + s, prefix + s)
+
+
 @TaskGenerator
 def run_rgi(sample_dir, outdir, rgi_work_dir):
     with tool_scratch(sample_dir, "rgi", compressed=True) as (scratch, out_dir, r1, r2):
@@ -390,10 +466,18 @@ def run_rgi(sample_dir, outdir, rgi_work_dir):
         # copy) keeps this cheap and lets concurrent samples share the build.
         os.symlink(os.path.join(rgi_work_dir, "localDB"),
                    os.path.join(scratch, "localDB"))
+        if r2 is not None:
+            reads = ["--read_one", r1, "--read_two", r2]
+        else:
+            # With KMA (the default aligner, used for paired-end samples),
+            # rgi 6.0.3 runs a lone --read_one as `kma -int`, i.e. as
+            # *interleaved* pairs, so that consecutive unrelated reads would
+            # be treated as mates. bowtie2 aligns it as unpaired (-U).
+            ensure_rgi_bowtie2_index(rgi_work_dir)
+            reads = ["--read_one", r1, "--aligner", "bowtie2"]
         pixi_run("rgi", [
             "rgi", "bwt",
-            "--read_one", r1,
-            "--read_two", r2,
+            *reads,
             "--output_file", os.path.join(out_dir, "sample.bwt"),
             "--local",
             "--threads", str(THREADS),
@@ -433,10 +517,21 @@ def prepare_deeparg_db(hf_dir):
 @TaskGenerator
 def run_deeparg(sample_dir, outdir, hf_dir):
     with tool_scratch(sample_dir, "deeparg", compressed=True) as (scratch, out_dir, r1, r2):
+        if r2 is not None:
+            reads = ["--forward_pe_file", r1, "--reverse_pe_file", r2]
+        else:
+            # The FastQ route needs both mates (Trimmomatic PE, then vsearch
+            # merging). --input-fasta skips both and goes straight to
+            # DeepARG-SS; the reads are already quality-trimmed by ngless,
+            # and for paired-end samples the unmerged mates go into DeepARG
+            # as separate reads anyway. Outputs are named as in the paired
+            # route (<output_file>.clean.deeparg.*).
+            fasta = os.path.join(scratch, "reads", "preproc.fa")
+            fastq_to_fasta(r1, fasta)
+            reads = ["--input-fasta", fasta]
         pixi_run("deeparg", [
             "deeparg", "short_reads_pipeline",
-            "--forward_pe_file", r1,
-            "--reverse_pe_file", r2,
+            *reads,
             "--output_file", os.path.join(out_dir, "sample"),
             # Without this deeparg downloads the bundle itself, once per run;
             # prepare_deeparg_db has already put it here.
@@ -496,7 +591,8 @@ def run_resfinder(sample_dir, outdir, db_dir, min_cov, threshold):
     with tool_scratch(sample_dir, "resfinder", compressed=True) as (scratch, out_dir, r1, r2):
         pixi_run("resfinder", [
             "python", "-m", "resfinder",
-            "--inputfastq", r1, r2,
+            # One file is taken as single-end, two as paired-end.
+            "--inputfastq", r1, *([r2] if r2 is not None else []),
             "--outputPath", out_dir,
             # Otherwise named after the first read file, i.e. preproc.json.
             "--out_json", os.path.join(out_dir, "sample.json"),

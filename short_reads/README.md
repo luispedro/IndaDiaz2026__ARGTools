@@ -38,7 +38,19 @@ data/metagenomes/<sample>/*.1.fq.gz    # paired-end reads, as understood by
 data/metagenomes/<sample>/*.2.fq.gz    # ngless' load_fastq_directory
 ```
 
-Only paired-end samples are supported.
+Single-end samples (a directory with unpaired FastQ files only) are supported
+too, except by fARGene:
+
+- **RGI** aligns them with bowtie2 (`--aligner bowtie2`) instead of the
+  default KMA used for paired-end samples: rgi 6.0.3 runs a lone `--read_one`
+  through `kma -int`, i.e. as *interleaved* pairs. The bowtie2 index is built
+  once, under a lock, in `rgi_db/localDB/bwt/card_reference/`.
+- **DeepARG** gets the trimmed reads as FASTA through `--input-fasta`, which
+  skips Trimmomatic and vsearch merging.
+- **ResFinder** is given the single file, which it treats as single-end.
+- **fARGene** `--meta` requires mate pairs throughout, so for a single-end
+  sample it publishes only an empty
+  `output/<sample>/fargene/SINGLE_END_UNSUPPORTED` file; the task succeeds.
 
 ## Running
 
