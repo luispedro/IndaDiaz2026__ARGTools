@@ -324,6 +324,15 @@ def preprocess_sample(sample_dir, scratch, compressed):
         f"reads; ngless wrote {sorted(os.listdir(reads_dir))}")
 
 
+def count_fastq_reads(fastq):
+    """Number of reads in an uncompressed 4-line FastQ file."""
+    lines = 0
+    with open(fastq, "rb") as fh:
+        while chunk := fh.read(16 * 1024 * 1024):
+            lines += chunk.count(b"\n")
+    return lines // 4
+
+
 def fastq_to_fasta(fastq, fasta):
     """Convert a (possibly gzipped) 4-line FastQ file into FASTA."""
     opener = gzip.open if fastq.endswith(".gz") else open
@@ -605,6 +614,50 @@ def run_resfinder(sample_dir, outdir, db_dir, min_cov, threshold):
                                KEEP["resfinder"])
 
 
+@TaskGenerator
+def preprocess_stats(sample, sample_dir):
+    """Run only the preprocessing, and return the sample's read counts.
+
+    Reads are counted one by one, i.e. the two mates of a pair count as two.
+    input_reads comes from ngless' own QC report (fq.tsv, one row per input
+    file and per preprocessing output), summed over the files it loaded from
+    `sample_dir`. postqc_reads is counted in what preprocess.ngl wrote and
+    the tools get: for a paired-end sample that is both mate files, so any
+    reads in unpaired files in the sample directory count towards
+    input_reads but not postqc_reads.
+    """
+    import csv
+
+    with scratch_dir(f"stats.{sample}.") as scratch:
+        r1, r2 = preprocess_sample(sample_dir, scratch, compressed=False)
+        prefix = sample_dir.rstrip("/") + "/"
+        with open(os.path.join(scratch, "ngless-report", "fq.tsv"), newline="") as fh:
+            rows = [row for row in csv.DictReader(fh, delimiter="\t")
+                    if row["file"].startswith(prefix)]
+        if not rows:
+            raise RuntimeError(f"no input files from {sample_dir} in ngless' fq.tsv")
+        return {
+            "sample": sample,
+            "layout": "paired" if r2 is not None else "single",
+            "input_reads": sum(int(row["numSeqs"]) for row in rows),
+            "postqc_reads": sum(count_fastq_reads(r) for r in (r1, r2) if r is not None),
+        }
+
+
+@TaskGenerator
+def write_preprocess_table(stats, path):
+    """Write the preprocess_stats results as a TSV table; returns its path."""
+    columns = ["sample", "layout", "input_reads", "postqc_reads"]
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.incoming.{os.getpid()}"
+    with open(tmp, "w") as fh:
+        fh.write("\t".join(columns) + "\n")
+        for s in stats:
+            fh.write("\t".join(str(s[c]) for c in columns) + "\n")
+    os.rename(tmp, path)
+    return path
+
+
 # Prepared once, ahead of the samples; every run_rgi/run_deeparg/run_resfinder
 # task takes the corresponding directory as an argument and so waits for it.
 rgi_work_dir = prepare_rgi_db(os.path.abspath(RGI_LOCALDB_DIR),
@@ -618,14 +671,19 @@ output_dir = os.path.abspath(OUTPUT_DIR)
 
 # Adding another tool is a run_<tool> task above plus one line here: jug
 # schedules the new tasks and leaves every result already on disk untouched.
+stats = []
 for sample in SAMPLES:
     # Absolute, and passed as task arguments rather than looked up inside the
     # tasks, so that moving METAGENOMES_DIR invalidates the affected tasks.
     sample_dir = os.path.join(metagenomes_dir, sample)
     outdir = os.path.join(output_dir, sample)
 
+    stats.append(preprocess_stats(sample, sample_dir))
+
     run_fargene(sample_dir, outdir)
     run_rgi(sample_dir, outdir, rgi_work_dir)
     run_deeparg(sample_dir, outdir, deeparg_hf_dir)
     run_resfinder(sample_dir, outdir, resfinder_db_dir,
                   RESFINDER_MIN_COV, RESFINDER_THRESHOLD)
+
+write_preprocess_table(stats, os.path.join(output_dir, "preprocess_stats.tsv"))

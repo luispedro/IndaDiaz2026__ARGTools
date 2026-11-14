@@ -127,6 +127,18 @@ output/<sample>/fargene/<class>/retrievedFragments/all_retrieved_{1,2}.fastq.gz
 A file (or directory) that a tool did not produce is simply missing, e.g.
 `predictedGenes/` for a model where fARGene reconstructed no genes.
 
+There is also one table over all samples, from a separate task that only runs
+the preprocessing:
+
+```
+output/preprocess_stats.tsv   # sample, layout (paired/single), input_reads, postqc_reads
+```
+
+Reads are counted individually (the two mates of a pair count as two).
+`input_reads` comes from ngless' QC report (`fq.tsv`) and covers every file
+loaded from the sample directory. `postqc_reads` counts what the tools get:
+for a paired-end sample, that is both mate files, without any unpaired reads.
+
 `output/`, `rgi_db/`, `deeparg_hf/`, `resfinder_db/`, and `jugfile.jugdata/`
 are gitignored.
 
